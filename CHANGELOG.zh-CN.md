@@ -2,6 +2,22 @@
 
 [English](CHANGELOG.md)
 
+## 0.1.1 - 2026-09-26
+
+构建、体检与 CI。除模板头注释外，插件渲染结果不变。
+
+- 构建：作用域化与产物生成收进 `src/build.mjs`；`scripts/install-plugin.mjs` 与新增的 `scripts/build.mjs`
+  都调它，`theme.css` 与 `client.js` 不会再互相漂移。
+- 体检：`scripts/check-repo.mjs`（`npm run check`）校验语法、JSON、清单自洽、产物与源样式同源、样式表卫生、
+  双语文档成对、机器专属路径，不需要宿主。
+- 宿主路径：`scripts/host-paths.mjs` 按 `DSH_ASAR` / `DSH_GLOBAL_MODULES` / `DSH_CHROME`、已 gitignore 的
+  `scripts/host.local.json`、常见安装位置扫描的次序解析 `app.asar`、全局 `@deepseek-ai` 包与 Chromium；
+  四支夹具验收与真 GUI 探针不再写死机器路径。
+- 真 GUI 探针：量 pending 窗口前先开一个新会话；对实测到的阴影、两条分界线、pending 窗口断言（10 项），
+  量不到的阶段打印 `SKIP`，断言不过退出码非 0。
+- CI：`.github/workflows/ci.yml` 在 Ubuntu 与 Windows、Node 22 与 24 上跑上述两条命令。
+- npm 脚本：`build`、`check`、`install:web`、`install:desktop`。
+
 ## 0.1.0 - 2026-09-26
 
 首个版本。

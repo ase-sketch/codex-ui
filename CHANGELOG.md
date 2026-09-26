@@ -2,6 +2,23 @@
 
 [简体中文](CHANGELOG.zh-CN.md)
 
+## 0.1.1 - 2026-09-26
+
+Build, checks and CI. No change to what the plugin renders beyond the template header comment.
+
+- Build: scoping and artifact generation moved to `src/build.mjs`; `scripts/install-plugin.mjs` and the new
+  `scripts/build.mjs` both call it, so `theme.css` and `client.js` cannot drift from each other.
+- Check: `scripts/check-repo.mjs` (`npm run check`) verifies syntax, JSON, the manifest, artifact-to-source
+  equality, stylesheet hygiene, bilingual doc pairing and machine-specific paths. It needs no host.
+- Host paths: `scripts/host-paths.mjs` resolves `app.asar`, the global `@deepseek-ai` modules and Chromium from
+  `DSH_ASAR` / `DSH_GLOBAL_MODULES` / `DSH_CHROME`, a gitignored `scripts/host.local.json`, or a scan of the
+  standard locations. The four fixture suites and the live probe no longer hardcode a machine path.
+- Live probe: opens a new conversation before timing the pending window, asserts the measured shadows, both
+dividers and the pending window (10 assertions), prints `SKIP` for a stage it cannot measure and exits non-zero
+on failure.
+- CI: `.github/workflows/ci.yml` runs both commands on Ubuntu and Windows, Node 22 and 24.
+- npm scripts: `build`, `check`, `install:web`, `install:desktop`.
+
 ## 0.1.0 - 2026-09-26
 
 Initial release.

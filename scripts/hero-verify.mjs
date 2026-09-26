@@ -10,14 +10,15 @@ import fs from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { chromePath, globalModules, tempDir } from './host-paths.mjs';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const WB = dirname(HERE);
 const EVID = join(WB, 'assets', 'screenshots');
 /** 夹具 HTML 是中间产物，落系统临时目录，不堆进 assets/screenshots/。 */
 const FIX = join(tmpdir(), 'codex-ui-fixtures');
-const ROOT = 'D:/npm-global/node_modules/@deepseek-ai/dsh/node_modules/@deepseek-ai';
-const CONV = ROOT + '/dsh-client-ui-conversation/lib/client.js';
+const ROOT = join(globalModules(), '@deepseek-ai');
+const CONV = join(ROOT, 'dsh-client-ui-conversation', 'lib', 'client.js');
 const SRC = fs.readFileSync(CONV, 'utf8');
 
 /** 取某个 .module.css 的内联样式串：按 tagId 回退到最近的一条 `const cssN = "…";`。 */
@@ -114,12 +115,13 @@ fs.mkdirSync(EVID, { recursive: true });
 const htmlPath = join(FIX, 'hero-verify.html');
 fs.writeFileSync(htmlPath, page);
 
-const CHROME = 'C:/Users/Zs/AppData/Local/ms-playwright/chromium-1234/chrome-win64/chrome.exe';
+const CHROME = chromePath();
 const PORT = 9347;
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 // file:// 也吃磁盘缓存：夹具同路径反复改写时会读到旧内容，每次跑前清干净 profile。
-fs.rmSync('C:/Users/Zs/AppData/Local/Temp/dsh-cdp-hero', { recursive: true, force: true });
-const child = spawn(CHROME, ['--headless=new', '--remote-debugging-port=' + PORT, '--user-data-dir=C:/Users/Zs/AppData/Local/Temp/dsh-cdp-hero', '--no-first-run', '--disable-gpu', '--hide-scrollbars', '--window-size=1100,760', 'about:blank'], { stdio: 'ignore' });
+const PROFILE = tempDir('dsh-cdp-hero');
+fs.rmSync(PROFILE, { recursive: true, force: true });
+const child = spawn(CHROME, ['--headless=new', '--remote-debugging-port=' + PORT, '--user-data-dir=' + PROFILE, '--no-first-run', '--disable-gpu', '--hide-scrollbars', '--window-size=1100,760', 'about:blank'], { stdio: 'ignore' });
 let info; for (let i = 0; i < 60 && !info; i++) { try { const r = await fetch('http://127.0.0.1:' + PORT + '/json/version'); if (r.ok) info = await r.json(); } catch {} if (!info) await sleep(250); }
 if (!info) { child.kill(); throw new Error('headless chrome did not start'); }
 const ws = new WebSocket(info.webSocketDebuggerUrl);

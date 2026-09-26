@@ -26,6 +26,7 @@ import http from 'node:http';
 import fs from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { chromePath, tempDir } from './host-paths.mjs';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const WB = dirname(HERE);
@@ -35,7 +36,7 @@ const arg = (name, fallback) => {
 };
 const TOKEN_URL = arg('url', '');
 const OUT = arg('out', join(WB, 'assets', 'screenshots', 'live-gui.png'));
-const CHROME = arg('chrome', 'C:/Users/Zs/AppData/Local/ms-playwright/chromium-1234/chrome-win64/chrome.exe');
+const CHROME = arg('chrome', '') || chromePath();
 const PORT = Number(arg('cdp-port', '9340'));
 /* 设备像素比：默认 2；对 Windows 桌面壳做发丝线粗细对账时用 1.5（与实机 device-scale-factor 一致）。 */
 const DPR = Number(arg('dpr', '2'));
@@ -57,7 +58,7 @@ if (!cookie.includes('=')) { console.error('拿不到 dsh-auth cookie，token �
 
 /* ── 起 headless Chromium 并接 CDP ────────────────────────────────────── */
 const child = spawn(CHROME, ['--headless=new', '--remote-debugging-port=' + PORT,
-  '--user-data-dir=' + join(process.env.TEMP || '/tmp', 'dsh-cdp-live-gui'), '--no-first-run',
+  '--user-data-dir=' + tempDir('dsh-cdp-live-gui'), '--no-first-run',
   '--no-default-browser-check', '--disable-gpu', '--window-size=1280,800', '--hide-scrollbars', 'about:blank'], { stdio: 'ignore' });
 let info;
 for (let i = 0; i < 60 && !info; i += 1) { try { const r = await fetch('http://127.0.0.1:' + PORT + '/json/version'); if (r.ok) info = await r.json(); } catch { /* 未就绪 */ } if (!info) await sleep(250); }
@@ -108,7 +109,8 @@ const FRAME = '(() => {'
   + '  handleLeft: read(document.querySelector("[data-side=sidebar]")),'
   + '  handleRight: read(document.querySelector("[data-side=rightbar]")),'
   + '}); })()';
-console.log('IDLE  ' + (await evaluate(FRAME, sessionId)));
+const idle = JSON.parse(await evaluate(FRAME, sessionId));
+console.log('IDLE  ' + JSON.stringify(idle));
 if (await evaluate('!!document.querySelector("[data-side=sidebar]")', sessionId)) {
   await send('Input.dispatchMouseEvent', { type: 'mouseMoved', x: 280, y: 400 }, sessionId);
   await sleep(600);
@@ -117,19 +119,29 @@ if (await evaluate('!!document.querySelector("[data-side=sidebar]")', sessionId)
 
 /* ── 打开右侧边栏，量面板两条边 ───────────────────────────────────────── */
 const openRight = await evaluate('(() => { const b = [...document.querySelectorAll("button")].find(x => x.getAttribute("aria-label") === "打开右侧边栏"); if (!b) return null; const r = b.getBoundingClientRect(); return { x: Math.round(r.left + r.width / 2), y: Math.round(r.top + r.height / 2) }; })()', sessionId);
+let panel = null;
 if (openRight) {
   await click(openRight.x, openRight.y, sessionId);
   await sleep(1200);
-  console.log('PANEL ' + (await evaluate(FRAME, sessionId)));
+  panel = JSON.parse(await evaluate(FRAME, sessionId));
+  console.log('PANEL ' + JSON.stringify(panel));
 } else {
   console.log('SKIP 右侧边栏：找不到「打开右侧边栏」按钮');
 }
 
 /* ── 模型菜单 pending 时序 ────────────────────────────────────────────── */
+/* 没有打开的会话时，composer 的模型槽指向工作区选择器，菜单里没有推理档位。
+   先点一次新会话（幂等：已有会话时只是又开一个空会话），等 composer 就绪再量。 */
+const startedNew = await evaluate('(() => {'
+  + 'const b = [...document.querySelectorAll("button")].find((x) => x.textContent.trim() === "新会话");'
+  + 'if (!b) return false; b.click(); return true; })()', sessionId);
+if (startedNew) { console.log('NEW 点了新会话，等 composer 就绪'); await sleep(2500); }
 const SLOT_BTN = '([...document.querySelectorAll("[data-slot]")]'
   + '.find(e => e.getAttribute("data-slot") === "conversation.input.model")'
   + ' || { querySelector: () => null }).querySelector("button")';
 let trigger = null;
+/** pending 窗口内逐帧快照，供末尾断言。 */
+let pendingSnaps = [];
 for (let i = 0; i < 20 && !trigger; i += 1) {
   trigger = await evaluate('(() => { const b = ' + SLOT_BTN + '; if (!b) return null;'
     + 'const r = b.getBoundingClientRect(); if (!r.width) return null;'
@@ -139,22 +151,28 @@ for (let i = 0; i < 20 && !trigger; i += 1) {
 if (!trigger) console.log('SKIP 模型菜单：composer 的 conversation.input.model 槽没出现（会话未就绪）');
 if (trigger) {
   await click(trigger.x, trigger.y, sessionId);
-  await sleep(500);
+  await sleep(900);
   const cell = await evaluate('(() => { const m = document.querySelector("body > div[role=menu]"); if (!m) return null;'
     + 'const b = [...m.querySelectorAll("button")].find(x => /推理|Reasoning/.test(x.textContent)); if (!b) return null;'
     + 'const r = b.getBoundingClientRect(); return { x: Math.round(r.left + r.width / 2), y: Math.round(r.top + r.height / 2) }; })()', sessionId);
+  if (!cell) {
+    const dump = await evaluate('(() => { const m = document.querySelector("body > div[role=menu]"); if (!m) return "(没有菜单)"; const rows = [...m.querySelectorAll("button")].map((b) => b.textContent.trim()); return JSON.stringify({ busy: m.getAttribute("aria-busy"), rows }); })()', sessionId);
+    console.log('SKIP 模型菜单：菜单里找不到推理档位按钮；菜单内容 ' + dump);
+  }
   if (cell) {
     await click(cell.x, cell.y, sessionId);
     await sleep(700);
     const options = await evaluate('(() => [...document.querySelectorAll("body > div[role=menu] button[role=menuitemradio]")]'
       + '.map(b => ({ text: b.textContent.trim(), checked: b.getAttribute("aria-checked") === "true" })))()', sessionId);
     const pick = options.find((o) => !o.checked);
+    if (!pick) console.log('SKIP 模型菜单：所有档位都处于选中态，无待切换项');
     if (pick) {
       const box = await evaluate('(() => { const b = [...document.querySelectorAll("body > div[role=menu] button[role=menuitemradio]")]'
         + '.find(x => x.textContent.trim() === ' + JSON.stringify(pick.text) + '); const r = b.getBoundingClientRect();'
         + 'return { x: Math.round(r.left + r.width / 2), y: Math.round(r.top + r.height / 2) }; })()', sessionId);
       await evaluate('window.__t0 = performance.now()', sessionId);
       await click(box.x, box.y, sessionId);
+      pendingSnaps = [];
       for (let i = 0; i < 6; i += 1) {
         await sleep(60);
         const snap = await evaluate('(() => {'
@@ -173,6 +191,7 @@ if (trigger) {
           + '  cursor: row ? getComputedStyle(row).cursor : "-",'
           + '  trigger: b ? b.textContent : "-",'
           + '}; })()', sessionId);
+        pendingSnaps.push(snap);
         console.log('PENDING ' + JSON.stringify(snap));
         if (!snap.menu) break;
       }
@@ -180,8 +199,32 @@ if (trigger) {
   }
 }
 
+/* ── 断言：只对这次真的量到的状态判定 ──────────────────────────────────── */
+let failed = 0;
+const expect = (name, cond, actual) => {
+  if (cond) console.log('PASS ' + name);
+  else { failed += 1; console.error('FAIL ' + name + '  实测 ' + actual); }
+};
+expect('中列 0.5px 发丝线 + 24px 环境影', /\.5px/.test(idle.centerShadow) && /24px/.test(idle.centerShadow), idle.centerShadow);
+expect('中列圆角 16px', idle.centerRadius === '16px', idle.centerRadius);
+expect('侧栏无右边框', String(idle.sidebarBorder).startsWith('0px'), idle.sidebarBorder);
+expect('左分界线无悬停渐变', idle.handleLeft !== null && idle.handleLeft.grad === false, JSON.stringify(idle.handleLeft));
+/* 右栏已开着时（宿主记得上一次状态），IDLE 那一帧就能量到面板，不必等 PANEL 阶段。 */
+const panelState = panel ?? (idle.panelShadow && idle.panelShadow !== 'none' ? idle : null);
+if (panelState) {
+  expect('右栏面板左沿发丝线', /\.5px/.test(String(panelState.panelShadow)), panelState.panelShadow);
+  expect('右栏面板影只往上泄（负 spread）', /-12px 24px -12px/.test(String(panelState.panelShadow)), panelState.panelShadow);
+  expect('右分界线带渐变', panelState.handleRight !== null && panelState.handleRight.grad === true, JSON.stringify(panelState.handleRight));
+}
+if (pendingSnaps.length > 0) {
+  expect('pending 窗口内 aria-busy', pendingSnaps.some((x) => x.busy === 'true'), JSON.stringify(pendingSnaps.map((x) => x.busy)));
+  expect('pending 窗口内整列 disabled', pendingSnaps.some((x) => x.disabled >= 2), JSON.stringify(pendingSnaps.map((x) => x.disabled)));
+  expect('pending 转圈在跑', pendingSnaps.some((x) => /codex-ui-spin/.test(x.spinner)), JSON.stringify(pendingSnaps.map((x) => x.spinner)));
+}
 fs.mkdirSync(dirname(OUT), { recursive: true });
 const shot = await send('Page.captureScreenshot', { format: 'png' }, sessionId);
 fs.writeFileSync(OUT, Buffer.from(shot.data, 'base64'));
 console.log('SHOT ' + OUT);
 ws.close(); child.kill();
+console.log('\n' + (failed === 0 ? 'RESULT PASS' : 'RESULT FAIL ' + failed) + (pendingSnaps.length === 0 ? '（模型菜单阶段未量到，见上面的 SKIP）' : ''));
+process.exit(failed === 0 ? 0 : 1);

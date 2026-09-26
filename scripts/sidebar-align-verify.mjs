@@ -18,6 +18,7 @@ import fs from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { asarPath, chromePath, globalModules, tempDir } from './host-paths.mjs';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const WB = dirname(HERE);
@@ -26,8 +27,8 @@ const EVID = join(WB, 'assets', 'screenshots');
 const FIX = join(tmpdir(), 'codex-ui-fixtures');
 const THEME = fs.readFileSync(join(WB, 'theme.css'), 'utf8');
 
-const ASAR = 'D:/A-part-of-new-software/DeepSeek Harness/resources/app.asar';
-const GLOBAL = 'D:/npm-global/node_modules/@deepseek-ai/dsh/node_modules';
+const ASAR = asarPath();
+const GLOBAL = globalModules();
 const sourceArg = (() => {
   const i = process.argv.indexOf('--source');
   return i >= 0 ? (process.argv[i + 1] ?? 'desktop') : 'desktop';
@@ -238,12 +239,13 @@ fs.writeFileSync(htmlPath, page);
 const probe = fs.readFileSync(join(HERE, 'fixtures', 'sidebar-align.probe.js'), 'utf8');
 
 /* ── 无头 Chromium + CDP ────────────────────────────────────────────────── */
-const CHROME = 'C:/Users/Zs/AppData/Local/ms-playwright/chromium-1234/chrome-win64/chrome.exe';
+const CHROME = chromePath();
 const PORT = 9351;
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
-fs.rmSync('C:/Users/Zs/AppData/Local/Temp/dsh-cdp-sidebar-align', { recursive: true, force: true });
+const PROFILE = tempDir('dsh-cdp-sidebar-align');
+fs.rmSync(PROFILE, { recursive: true, force: true });
 const child = spawn(CHROME, ['--headless=new', '--remote-debugging-port=' + PORT,
-  '--user-data-dir=C:/Users/Zs/AppData/Local/Temp/dsh-cdp-sidebar-align',
+  '--user-data-dir=' + PROFILE,
   '--no-first-run', '--disable-gpu', '--hide-scrollbars', '--window-size=1300,900', 'about:blank'], { stdio: 'ignore' });
 let info;
 for (let i = 0; i < 60 && info === undefined; i += 1) {

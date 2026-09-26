@@ -13,6 +13,7 @@
   [![许可证：MIT](https://img.shields.io/badge/许可证-MIT-blue.svg)](LICENSE)
   [![DSH Web Plugin](https://img.shields.io/badge/DSH%20Web-Plugin-0f766e.svg)](https://github.com/deepseek-ai/deepseek-harness)
   [![Node.js 22 或更高](https://img.shields.io/badge/Node.js-22%20%E6%88%96%E6%9B%B4%E9%AB%98-339933.svg?logo=node.js&logoColor=white)](https://nodejs.org/)
+  [![CI](https://github.com/rinDBeans/codex-ui/actions/workflows/ci.yml/badge.svg)](https://github.com/rinDBeans/codex-ui/actions/workflows/ci.yml)
 
 </div>
 
@@ -56,13 +57,17 @@ DSH Web 的界面元素按 Codex 复刻：窗口边缘的阴影与发丝线、�
 ## 安装
 
 ```powershell
+npm run install:web        # node scripts/install-plugin.mjs --write
+npm run install:desktop    # 桌面壳，改完重启应用
+npm run build              # 由 skins/codex-ink 重新生成 theme.css 与 client.js
+
 node scripts/install-plugin.mjs                              # 只读体检（默认 web profile）
-node scripts/install-plugin.mjs --write                      # 落盘
-node scripts/install-plugin.mjs --profile desktop --write    # 桌面壳，改完重启应用
+node scripts/build.mjs --check                               # 只比对产物是否过期，不落盘
 ```
 
-安装动作：把 `skins/codex-ink/` 的五个 CSS 作用域化到 `html[data-codex-ui]`，与 `src/client.template.js` 合成 `client.js`，
-同步到 `profiles/<name>/vendor/codex-ui`，建 `node_modules/codex-ui` junction，在 profile 的 `cordis.patch.yml` 补 insert 条目。
+安装动作：把 `skins/codex-ink/` 的五个 CSS 作用域化到 `html[data-codex-ui]`，写出 `theme.css`，与 `src/client.template.js`
+合成 `client.js`，同步到 `profiles/<name>/vendor/codex-ui`，建 `node_modules/codex-ui` junction，在 profile 的
+`cordis.patch.yml` 补 insert 条目。作用域化与拼装只有一份实现，在 `src/build.mjs`。
 
 同一份样式正本也可由皮肤加载器收录：
 
@@ -76,26 +81,44 @@ node scripts/install-skin.mjs --write  # 有漂移则覆盖
 | 路径 | 内容 |
 |---|---|
 | `index.js` `cordis.patch.yml` `package.json` | 插件宿主半与清单 |
-| `src/client.template.js` | 浏览器半源码 |
-| `client.js` `theme.css` | 生成物，由 `scripts/install-plugin.mjs` 写出 |
+| `src/client.template.js` | 浏览器半模板 |
+| `src/build.mjs` | 作用域化与产物生成，唯一实现 |
+| `theme.css` `client.js` | 生成物，由 `src/build.mjs` 从 `skins/codex-ink/` 写出 |
 | `skins/codex-ink/` | 样式正本（skin.css / patches.css / sidebar-align.css / window-shadow.css / composer.css） |
-| `scripts/` | 安装器与验收脚本 |
+| `scripts/build.mjs` | 重新生成产物；`--check` 只比对不落盘 |
+| `scripts/check-repo.mjs` | 不依赖宿主的仓库体检，CI 入口 |
+| `scripts/host-paths.mjs` | 解析 `app.asar`、全局 `@deepseek-ai` 包与 Chromium |
+| `scripts/install-plugin.mjs` `scripts/install-skin.mjs` | 安装器 |
+| `scripts/*-verify.mjs` `scripts/live-gui-probe.mjs` | 夹具验收与真 GUI 探针 |
 | `assets/reference/` | Codex 实机参考图 |
 | `assets/screenshots/` | 验收出图 |
+| `.github/workflows/ci.yml` | CI |
 
 ## 验收
 
 | 命令 | 覆盖 | 前置 |
 |---|---|---|
+| `npm run check` | 语法、JSON、清单自洽、产物同源、双语文档成对、机器专属路径 | 无 |
 | `node scripts/audit-codex-ink.mjs` | 皮肤结构、36 组 WCAG、彩色白名单 | 无 |
 | `node scripts/model-picker-verify.mjs` | ⑫ 与 pending 指示器，18 项 | 无 |
 | `node scripts/rightbar-verify.mjs` | 阴影层、右栏三件套、两条分界线，42 项 | 无 |
 | `node scripts/sidebar-align-verify.mjs` | 侧栏列对齐，6 项 | 无 |
 | `node scripts/hero-verify.mjs` | ⑬⑭ 与 ⑰，7 项 | 无 |
-| `node scripts/live-gui-probe.mjs --url <带 token 的 URL>` | 真 GUI：DOM、计算样式、悬停态、pending 时序 | `dsh web` 实例 |
+| `node scripts/live-gui-probe.mjs --url <带 token 的 URL>` | 真 GUI：阴影、两条分界线、模型菜单 pending 窗口共 10 项断言 | `dsh web` 实例 |
 
-前五项是夹具验证：取 `app.asar` 的 shipped CSS 加按渲染代码复刻的 DOM，用 `getComputedStyle` 读值。
-夹具没有标题栏条、真实 AppFrame 网格与真 RPC，阴影层、分界线悬停与 pending 反馈由真 GUI 探针取证。
+`npm run check` 不需要宿主。五支夹具验证在本机跑：取 `app.asar` 的 shipped CSS 加按渲染代码复刻的 DOM，
+用 `getComputedStyle` 读值。夹具没有标题栏条、真实 AppFrame 网格与真 RPC，阴影层、分界线悬停与 pending
+反馈由真 GUI 探针取证。
+
+### 宿主路径
+
+验收脚本读的是它跑在其中的宿主，三个路径按同一优先级解析：
+
+1. 环境变量 `DSH_ASAR`、`DSH_GLOBAL_MODULES`、`DSH_CHROME`；
+2. `scripts/host.local.json`（本机配置，已 gitignore），例：`{ "asar": "D:/.../resources/app.asar" }`；
+3. 扫描常见安装位置、Playwright 的浏览器缓存与 `npm root -g`。
+
+仓库里不含任何一台机器的绝对路径。
 
 真 GUI 探针用法：
 
@@ -104,7 +127,7 @@ dsh --profile web --port 3099 --no-open      # 终端打印带 token 的 URL
 node scripts/live-gui-probe.mjs --url "http://127.0.0.1:3099/?token=..." --dpr 1.5
 ```
 
-token 有存活期，约半小时后返回 401，重起一次取新 token。
+探针在量 pending 窗口前自己先开一个新会话，断言不过时退出码非 0。token 有存活期，约半小时后返回 401，重起一次取新 token。
 
 ## 实测值
 
@@ -158,6 +181,11 @@ token 有存活期，约半小时后返回 401，重起一次取新 token。
 - ⑯ 保留宿主页签条：整条隐藏会连带去掉全屏与收起按钮。
 - 会话行文字列 40px，比工作区行、新会话、插件行短 2px，来自官方 `Rows.module.css` 的 `.sessionRow .title` margin，未改。
 - `composer.css` 与 `patches.css` 使用 21 处哈希类名后缀锚点（`[class$=…]`、`[class*=…]`），宿主没有对应 `data-*` 的位置只能如此。
+
+## CI
+
+`.github/workflows/ci.yml` 在 Ubuntu 与 Windows、Node 22 与 24 上跑 `scripts/check-repo.mjs` 与
+`scripts/build.mjs --check`。夹具验收与真 GUI 探针要桌面壳与 Chromium，留在本机跑。
 
 ## 许可
 

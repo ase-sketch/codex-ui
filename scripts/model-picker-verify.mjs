@@ -17,6 +17,7 @@ import fs from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { asarPath, chromePath, tempDir } from './host-paths.mjs';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const WB = dirname(HERE);
@@ -24,7 +25,7 @@ const EVID = join(WB, 'assets', 'screenshots');
 /** 夹具 HTML 是中间产物，落系统临时目录，不堆进 assets/screenshots/。 */
 const FIX = join(tmpdir(), 'codex-ui-fixtures');
 const THEME = fs.readFileSync(join(WB, 'theme.css'), 'utf8');
-const ASAR = 'D:/A-part-of-new-software/DeepSeek Harness/resources/app.asar';
+const ASAR = asarPath();
 
 /* ── asar 读取 ─────────────────────────────────────────────────────────── */
 const fd = fs.openSync(ASAR, 'r');
@@ -225,10 +226,10 @@ const probePage = async (path, shotName) => {
 
 const args = process.argv.slice(2);
 const noShot = args.includes('--no-shot');
-const CHROME = 'C:/Users/Zs/AppData/Local/ms-playwright/chromium-1234/chrome-win64/chrome.exe';
+const CHROME = chromePath();
 const port = 9337;
 const child = spawn(CHROME, ['--headless=new', '--remote-debugging-port=' + port,
-  '--user-data-dir=C:/Users/Zs/AppData/Local/Temp/dsh-cdp-profile5', '--no-first-run',
+  '--user-data-dir=' + tempDir('dsh-cdp-profile5'), '--no-first-run',
   '--no-default-browser-check', '--disable-gpu', '--window-size=1000,760', '--hide-scrollbars', 'about:blank'], { stdio: 'ignore' });
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 let info;

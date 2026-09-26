@@ -3,10 +3,9 @@
  * install-plugin.mjs — 把 <workbench>/plugin/codex-ui 安装进某个 profile（默认 web）。
  *
  * 做四件事（默认只读体检，--write 才落盘）：
- *   1. 读 skins/codex-ink/{skin.css,patches.css,sidebar-align.css,window-shadow.css,composer.css}，
- *      把每个选择器作用域化到
- *      html[data-codex-ui]（:root → html[data-codex-ui]，其余前缀化；@keyframes/@font-face 原样直通）；
- *   2. 由 client.template.js + 作用域化 CSS 生成 plugin/codex-ui/client.js（CSS 以 JSON 字面量内嵌）；
+ *   1. 调 src/build.mjs，把 skins/codex-ink 的五份样式作用域化到 html[data-codex-ui]，
+ *      写成 plugin/codex-ui/theme.css；
+ *   2. 把同一份 CSS 内嵌进 client.template.js，写成 plugin/codex-ui/client.js；
  *   3. 在 profiles/<name>/node_modules 建立指向插件目录的 junction，使其可按包名解析；
  *   4. 在 profiles/<name>/cordis.patch.yml 里确保存在 insert 条目（按 id 幂等）。
  *
@@ -24,11 +23,11 @@ import { execFileSync } from 'node:child_process';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { homedir } from 'node:os';
+import { build, SKIN_PARTS } from '../src/build.mjs';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const WB = dirname(HERE);
 const PLUGIN_DIR = WB;
-const SKIN_DIR = join(WB, 'skins', 'codex-ink');
 const HOME = process.env.DSH_HOME && process.env.DSH_HOME.trim() !== '' ? process.env.DSH_HOME : join(homedir(), '.dsh');
 /** 目标 profile 名：--profile <name>，缺省 web。 */
 const PROFILE_NAME = (() => {
@@ -43,84 +42,19 @@ const PROFILE_PKG = join(PROFILE, 'package.json');
 /** 装到 profile 的文件（client.template.js 是源码，不装）。 */
 const SHIPPED = ['package.json', 'index.js', 'cordis.patch.yml', 'client.js', 'theme.css'];
 const PATCH = join(PROFILE, 'cordis.patch.yml');
-const ATTR = 'html[data-codex-ui]';
 const write = process.argv.includes('--write');
 
-/* ── CSS 作用域化 ───────────────────────────────────────────────────────── */
-const scopeSelector = (sel) => {
-  const s = sel.trim();
-  if (s === '') return sel;
-  if (s === ':root') return ATTR;
-  if (s.startsWith('html[')) return s;
-  return ATTR + ' ' + s;
-};
-const splitSelectors = (text) => {
-  const out = []; let depth = 0, cur = '';
-  for (const ch of text) {
-    if (ch === '(' || ch === '[') depth += 1;
-    else if (ch === ')' || ch === ']') depth -= 1;
-    if (ch === ',' && depth === 0) { out.push(cur); cur = ''; continue; }
-    cur += ch;
-  }
-  out.push(cur);
-  return out;
-};
-const PASSTHROUGH = new Set(['keyframes', 'font-face', 'property', 'page', 'counter-style']);
-function scopeCss(css) {
-  let i = 0, out = '';
-  while (i < css.length) {
-    const open = css.indexOf('{', i);
-    if (open < 0) { out += css.slice(i); break; }
-    const prelude = css.slice(i, open);
-    let depth = 1, j = open + 1;
-    while (j < css.length && depth > 0) {
-      if (css[j] === '{') depth += 1;
-      else if (css[j] === '}') depth -= 1;
-      j += 1;
-    }
-    const body = css.slice(open + 1, j - 1);
-    const close = prelude.lastIndexOf('*/');
-    const comments = close >= 0 ? prelude.slice(0, close + 2) : '';
-    const selText = close >= 0 ? prelude.slice(close + 2) : prelude;
-    const trimmed = selText.trim();
-    if (trimmed.startsWith('@')) {
-      const name = trimmed.slice(1).split(/[\s({]/)[0].toLowerCase();
-      out += comments + selText + '{' + (PASSTHROUGH.has(name) ? body : scopeCss(body)) + '}';
-    } else if (trimmed === '') {
-      out += comments + '{' + body + '}';
-    } else {
-      out += comments + splitSelectors(selText).map(scopeSelector).join(',') + '{' + body + '}';
-    }
-    i = j;
-  }
-  return out;
-}
-
 /* ── 生成 ──────────────────────────────────────────────────────────────── */
-const skin = fs.readFileSync(join(SKIN_DIR, 'skin.css'), 'utf8');
-const patches = fs.readFileSync(join(SKIN_DIR, 'patches.css'), 'utf8');
-const sidebarAlign = fs.readFileSync(join(SKIN_DIR, 'sidebar-align.css'), 'utf8');
-const windowShadow = fs.readFileSync(join(SKIN_DIR, 'window-shadow.css'), 'utf8');
-const composer = fs.readFileSync(join(SKIN_DIR, 'composer.css'), 'utf8');
-const scoped = scopeCss('/* ==== L1/L2 令牌与排版层（源：skins/codex-ink/skin.css）==== */\n' + skin +
-  '\n\n/* ==== L3 组件层（源：skins/codex-ink/patches.css）==== */\n' + patches +
-  '\n\n/* ==== L3 侧栏对齐层（源：skins/codex-ink/sidebar-align.css）==== */\n' + sidebarAlign +
-  '\n\n/* ==== L3 窗口边缘阴影层（源：skins/codex-ink/window-shadow.css）==== */\n' + windowShadow +
-  '\n\n/* ==== L3 输入区完整层（源：skins/codex-ink/composer.css）==== */\n' + composer);
-const tplSrc = fs.readFileSync(join(PLUGIN_DIR, 'src', 'client.template.js'), 'utf8');
-/* 模板里写成 `= /*__CODEX_UI_CSS__*\/ null;`，占位符连同 null 一起替换，
-   这样未替换的模板本身也是可解析的 JS。 */
-const clientJs = tplSrc.replace('/*__CODEX_UI_CSS__*/ null', JSON.stringify(scoped));
+/* 作用域化与拼装只有一份实现，在 src/build.mjs；安装产物与 CI 校验同源。 */
+const { themeCss, clientJs, sources, scopedBytes, hashAnchors } = build();
+const sourceBytes = Object.values(sources).reduce((a, b) => a + b, 0);
 
 /* ── 报告 ──────────────────────────────────────────────────────────────── */
 console.log('profile  : ' + PROFILE);
 console.log('plugin   : ' + PLUGIN_DIR);
-console.log('css      : 源 ' + (skin.length + patches.length + sidebarAlign.length + windowShadow.length + composer.length) + ' B → 作用域化 ' + scoped.length + ' B');
+console.log('css      : 源 ' + sourceBytes + ' B → 作用域化 ' + scopedBytes + ' B');
 /* 哈希类名计数：patches.css 禁 [class*=…]，本层按上游移植放行——把账摊开，不藏着。 */
-const hashAnchors = (text) => (text.match(/\[class[$*^]?=/g) ?? []).length;
-console.log('hash 锚点: skin=' + hashAnchors(skin) + ' patches=' + hashAnchors(patches) +
-  ' sidebar-align=' + hashAnchors(sidebarAlign) + ' window-shadow=' + hashAnchors(windowShadow) +
-  ' composer=' + hashAnchors(composer));
+console.log('hash 锚点: ' + SKIN_PARTS.map(([f]) => f.replace('.css', '') + '=' + hashAnchors[f]).join(' '));
 console.log('client.js: ' + clientJs.length + ' B');
 console.log('link     : ' + LINK);
 console.log('patch    : ' + PATCH);
@@ -163,7 +97,7 @@ if (!write) {
   process.exit(registered ? 0 : 1);
 }
 
-fs.writeFileSync(join(PLUGIN_DIR, 'theme.css'), scoped);
+fs.writeFileSync(join(PLUGIN_DIR, 'theme.css'), themeCss);
 fs.writeFileSync(join(PLUGIN_DIR, 'client.js'), clientJs);
 console.log('WROTE client.js + theme.css');
 
