@@ -1,38 +1,56 @@
-﻿# codex-ink 路 澧ㄧ櫧缁堢
+# codex-ink · 墨白终端
 
-浠ｇ爜鏂瑰悜涓?Codex / ChatGPT銆傝繖鏄?codex-ui 鎻掍欢鐨勬牱寮忔鏈細`scripts/install-plugin.mjs` 璇绘湰鐩綍鐨勪簲涓?CSS锛?浣滅敤鍩熷寲鍒?`html[data-codex-ui]` 鍚庡啓杩?`client.js`銆傚悓涓€浠界洰褰曚篃婊¤冻 Skin v2 娓呭崟鏍煎紡锛屽彲鐢辩毊鑲ゅ姞杞藉櫒鍗曠嫭鏀跺綍銆?
-## 鏂囦欢
+代码方向为 Codex / ChatGPT。这是 codex-ui 插件的样式正本：`src/build.mjs` 读本目录的五份 CSS，把选择器作用域化到
+`html[data-codex-ui]`，写出 `theme.css` 与 `client.js`；`scripts/install-plugin.mjs` 负责安装。同一份目录也满足
+Skin v2 清单格式，可由皮肤加载器单独收录。
 
-| 鏂囦欢 | 灞?| 鍐呭 |
+## 文件
+
+| 文件 | 层 | 内容 |
 |---|---|---|
-| `skin.json` | 娓呭崟 | id銆乤ccent銆佹槑鏆楅瑙?|
-| `skin.css` | L1 浠ょ墝 + L2 鎺掔増 | `--dsw-alias-*` 閲嶆槧灏勶紱琛?spacing / radius / 瀛楅樁 / motion / elevation 浠ょ墝灞?|
-| `patches.css` | L3 缁勪欢 | 鐒︾偣鐜€侀摼鎺ャ€佸崱鐗囧绾︺€乵ono pill 寰芥爣銆乼ag tone 褰掍竴銆乺educed-motion銆佲懌 妯″瀷閫夋嫨鍣ㄣ€佲懍 杈撳叆鍖洪《鏍忎笌鍗＄墖銆佲懐 鍙虫爮閫夋嫨缁勪欢銆佲懓 composer 鎺т欢鎮仠 |
-| `sidebar-align.css` | L3 渚ф爮瀵归綈 | 鏂颁細璇濊涓庡叏灞€闈㈡澘琛岃惤鍒板伐浣滃尯鍒楄〃琛岀殑涓ゆ潯绔栫嚎锛堝浘鏍囧垪 20px銆佹枃瀛楀垪 42px锛夛紱鍚?rc.1 鎵佸钩涓?rc.2 宓屽涓や唬 DOM 閫夋嫨鍣?|
-| `window-shadow.css` | L3 绐楀彛杈圭紭 | 浼氳瘽绐楀彛 0.5px 鍙戜笣绾垮姞 24px 鐜褰憋紱鍙虫爮闈㈡澘宸︽部鍙暀 0.5px 鍙戜笣绾裤€佸奖鍙線涓婃硠锛涘彸鍒嗙晫绾挎嫋鎷芥焺鎮仠娓愬彉 |
-| `composer.css` | L3 杈撳叆鍖?| 杈撳叆鍗″嚑浣曚笌琛ㄩ潰銆?4px 缂栬緫鍖恒€?8px 搴曟爮鎺т欢甯︺€佸缓璁彍鍗曘€乭ero 甯冨眬銆傛湰灞傚厑璁?`[class*=鈥` 鍚庣紑閿氱偣 |
-| `preview/` | 璧勪骇 | 浜殫棰勮鍥?|
+| `skin.json` | 清单 | id、accent、明暗预览图 |
+| `skin.css` | L1 令牌 + L2 排版 | `--dsw-alias-*` 重映射；spacing / radius / 字阶 / motion / elevation 令牌层 |
+| `patches.css` | L3 组件 | 焦点环、链接、卡片契约、mono pill 徽标、tag tone 归一、reduced-motion、⑫ 模型选择器、⑬ 输入区顶栏与卡片、⑯ 右栏展开选择组件、⑰ composer 控件悬停 |
+| `sidebar-align.css` | L3 侧栏对齐 | 新会话行与插件行落到工作区列表行的两条竖线（图标列 20px、文字列 42px）；选择器同时覆盖 rc.1 扁平 DOM 与 rc.2 嵌套 DOM |
+| `window-shadow.css` | L3 窗口边缘 | 会话窗口 0.5px 发丝线加 24px 环境影；右栏面板左沿只留 0.5px 发丝线、影只往上泄；右分界线拖拽柄悬停渐变 |
+| `composer.css` | L3 输入区 | 卡片几何与表面、编辑区 44px、底部控件行 28px、候选菜单、hero 布局。本层允许使用 `[class*=…]` 后缀锚点 |
+| `preview/` | 资源 | 明暗预览图 |
 
-## 璁捐瑙勭害
+## 设计规则
 
-1. chrome 鏃犲僵鑹诧細鎸夐挳銆侀摼鎺ャ€侀€変腑鎬併€佺劍鐐圭幆涓哄ⅷ鑹层€傛祬鑹蹭富鎸夐挳 `#1A1C1F` 搴曠櫧瀛楋紝娣辫壊鍙嶇浉銆?2. 鐏伴樁鍗冲眰绾с€傛祬鑹?`#FFFFFF 鈫?#F1F1EF 鈫?#E5E5E5`锛涙繁鑹?`#111111 鈫?#171717 鈫?#1f1f1f 鈫?#2a2a2a 鈫?#353535`銆?3. 浜壊渚ф爮 `#EEF4F9`锛岄€変腑琛?`#E2E9ED`锛宧over `#E8EEF3`銆?4. 鍏冧俊鎭紙token 鏁般€佹ā鍨嬪悕銆佹椂闂存埑銆佸窘鏍囥€佽矾寰勩€佸揩鎹烽敭锛夎蛋 `--ds-font-family-code`銆?1px銆乣.04em`/`.08em`锛涗腑鏂囩粡 `:lang(zh)` 璞佸厤瀛楄窛涓庡ぇ鍐欍€?5. 鍦嗚 / 闂磋窛鍙?`--dsw-radius-*` 涓?`--dsw-space-*`锛涘崱鐗囩敤 0.5px 鎻忚竟浠ｆ浛鎶曞奖銆?6. 鍔ㄦ晥 100 / 160 / 240ms锛宍cubic-bezier(.3,.7,.4,1)`锛沗prefers-reduced-motion` 鍙栫灛鏃剁粓鎬併€?7. 褰╄壊鐧藉悕鍗曪細state 涓夎壊銆乨iff 绾㈢豢銆佸窘鏍囧簳鑹诧紙state 鑹?8%~16% 閫忔槑搴曪級銆倀ask-board 鐨勫叚妗?tag tone 鏀舵暃鍒?state 涓夎壊鍔犲ⅷ鐏般€?
-## 浠ょ墝濂戠害锛堜笁鏂规彃浠讹級
+1. chrome 不用彩色：按钮、链接、选中态与焦点环都是墨色。浅色主题主按钮为白底 `#1A1C1F` 字；深色反转。
+2. 灰阶承担层级。浅色 `#FFFFFF → #F1F1EF → #E5E5E5`；深色 `#111111 → #171717 → #1f1f1f → #2a2a2a → #353535`。
+3. 浅色侧栏 `#EEF4F9`，激活行 `#E2E9ED`，悬停 `#E8EEF3`。
+4. 元信息（token 数、模型名、时间戳、徽标、路径、快捷键）用 `--ds-font-family-code`、11px、`.04em`/`.08em` 字距；`:lang(zh)` 下中文免字距与大写。
+5. 圆角与间距取自 `--dsw-radius-*` 与 `--dsw-space-*`。卡片用 0.5px 描边代替投影。
+6. 动效为 100 / 160 / 240ms，缓动 `cubic-bezier(.3,.7,.4,1)`；`prefers-reduced-motion` 下直接跳到终态。
+7. 彩色白名单：state 三色、diff 红绿，以及徽标底色（state 色 8% 到 16% 透明度）。任务板 6 档 tag tone 归到 state 三色加墨色与灰色。
 
-1. 棰滆壊鍙敤 `var(--dsw-alias-*)`锛屼笉鑷甫 hex锛?2. 鍦嗚涓庨棿璺濆彧鐢?`var(--dsw-radius-*)` 涓?`var(--dsw-space-*)`锛?3. hover 鐢ㄨ儗鏅崌涓€妗ｏ紝涓嶈嚜鍒涙姇褰憋紱
-4. 涓嶅紩鍏ョ櫧鍚嶅崟澶栫殑褰╄壊锛?5. 鍏冧俊鎭敤 `var(--dsw-font-meta)` 鍔?`--dsw-meta-size` 鍔?`--dsw-meta-tracking`銆?
-## 楠屾敹
+## 第三方插件的令牌契约
+
+1. 颜色只用 `var(--dsw-alias-*)`，不写十六进制字面量。
+2. 圆角与间距只用 `var(--dsw-radius-*)` 与 `var(--dsw-space-*)`。
+3. 悬停把背景抬高一级；不加自定义投影。
+4. 不使用白名单外的彩色。
+5. 元信息用 `var(--dsw-font-meta)` 与 `--dsw-meta-size`、`--dsw-meta-tracking`。
+
+## 验收
 
 ```bash
 node scripts/audit-codex-ink.mjs
 ```
 
-鑴氭湰鍋氫笁浠朵簨锛歚skin.json` 缁撴瀯鑷銆?6 缁?WCAG 瀵规瘮搴﹀疄娴嬨€乣patches.css` 褰╄壊鐧藉悕鍗曞璁°€?褰撳墠缁撴灉 36/36 閫氳繃锛孉AA 19 缁勶紝鐧藉悕鍗曞褰╄壊 0 涓€?
-## 瀹夎
+脚本校验 `skin.json` 结构、实测 36 组 WCAG 对比度、审计 `patches.css` 的彩色白名单。
+当前结果：36/36 通过，19 组 AAA，白名单外彩色 0 个。
+
+## 安装
 
 ```powershell
-node scripts/install-plugin.mjs --write      # 鎻掍欢璺緞锛屼富鐢ㄦ硶
-node scripts/install-skin.mjs --write        # 鐨偆鍔犺浇鍣ㄨ矾寰勶細鍚屾鍒?$DSH_HOME/skins/codex-ink
+node scripts/install-plugin.mjs --write      # 插件路径，主用法
+node scripts/install-skin.mjs --write        # 皮肤加载器路径：同步到 $DSH_HOME/skins/codex-ink
 ```
 
-## 鏈鐩?
-- shiki 璇硶楂樹寒鐨勪綆楗卞拰鍖栨湭鍦ㄦ湰灞傚己鍒讹紝璇硶鑹茬敱瀹樻柟楂樹寒鍣ㄥ唴鑱旇緭鍑猴紱鏈眰鍙害鏉熶唬鐮佸潡搴曡壊 `--dsw-alias-markdown-code-block` 涓€鏃忋€?- `patches.css` 閫氳繃鍔犺浇鍣ㄥ畨鍏ㄧ绾垮苟琚檺瀹氫綔鐢ㄥ煙锛屾湭鍦?live GUI 涓婂崟鐙簲鐢ㄨ繃锛涘簲鐢ㄤ細鏀瑰啓鐨偆閫夋嫨銆?
+## 未覆盖
+
+- Shiki 语法高亮未在此去饱和：高亮器自己内联发色。本层只通过 `--dsw-alias-markdown-code-block` 一类令牌约束代码块底色。
+- `patches.css` 能通过加载器安全管道并被正确作用域化，但没有单独在真 GUI 上应用过；单独应用会改写皮肤选择。

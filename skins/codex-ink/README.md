@@ -1,8 +1,9 @@
 # codex-ink
 
-Codex / ChatGPT direction. These stylesheets are the sources for the codex-ui plugin: `scripts/install-plugin.mjs`
-reads the five CSS files here, scopes their selectors to `html[data-codex-ui]`, and inlines the result into `client.js`.
-The same directory satisfies the Skin v2 manifest format and can be picked up by a skin loader on its own.
+Codex / ChatGPT direction. These stylesheets are the sources for the codex-ui plugin: `src/build.mjs` reads the five
+CSS files here, scopes their selectors to `html[data-codex-ui]`, and writes `theme.css` and `client.js`;
+`scripts/install-plugin.mjs` installs them. The same directory satisfies the Skin v2 manifest format and can be picked
+up by a skin loader on its own.
 
 ## Files
 

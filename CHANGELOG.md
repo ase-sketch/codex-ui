@@ -9,7 +9,7 @@ Build, checks and CI. No change to what the plugin renders beyond the template h
 - Build: scoping and artifact generation moved to `src/build.mjs`; `scripts/install-plugin.mjs` and the new
   `scripts/build.mjs` both call it, so `theme.css` and `client.js` cannot drift from each other.
 - Check: `scripts/check-repo.mjs` (`npm run check`) verifies syntax, JSON, the manifest, artifact-to-source
-  equality, stylesheet hygiene, bilingual doc pairing and machine-specific paths. It needs no host.
+  equality, stylesheet hygiene, encoding, bilingual doc pairing and machine-specific paths. It needs no host.
 - Host paths: `scripts/host-paths.mjs` resolves `app.asar`, the global `@deepseek-ai` modules and Chromium from
   `DSH_ASAR` / `DSH_GLOBAL_MODULES` / `DSH_CHROME`, a gitignored `scripts/host.local.json`, or a scan of the
   standard locations. The four fixture suites and the live probe no longer hardcode a machine path.

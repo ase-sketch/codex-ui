@@ -98,7 +98,7 @@ node scripts/install-skin.mjs --write  # 有漂移则覆盖
 
 | 命令 | 覆盖 | 前置 |
 |---|---|---|
-| `npm run check` | 语法、JSON、清单自洽、产物同源、双语文档成对、机器专属路径 | 无 |
+| `npm run check` | 语法、JSON、清单自洽、产物同源、编码、双语文档成对、机器专属路径 | 无 |
 | `node scripts/audit-codex-ink.mjs` | 皮肤结构、36 组 WCAG、彩色白名单 | 无 |
 | `node scripts/model-picker-verify.mjs` | ⑫ 与 pending 指示器，18 项 | 无 |
 | `node scripts/rightbar-verify.mjs` | 阴影层、右栏三件套、两条分界线，42 项 | 无 |

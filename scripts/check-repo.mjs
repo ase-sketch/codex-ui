@@ -5,7 +5,7 @@
  *   node scripts/check-repo.mjs
  *
  * 覆盖：语法、JSON、包清单自洽、产物与源样式是否同源、样式表卫生、双语文档成对、
- *      源码里是否残留某台机器的绝对路径。
+ *      文本编码（UTF-8 无 BOM）、源码里是否残留某台机器的绝对路径。
  * 需要宿主的东西（计算样式断言、真 GUI 取证）在 *-verify.mjs / live-gui-probe.mjs 里，
  * 它们读 DSH_ASAR / DSH_GLOBAL_MODULES / DSH_CHROME，本文件不碰。
  */
@@ -127,7 +127,19 @@ check('双语文档成对', () => {
   }
 });
 
-/* ── 8. 不留机器专属绝对路径 ──────────────────────────────────────────── */
+/* ── 8. 文本编码 ──────────────────────────────────────────────────────── */
+check('文本为无 BOM 的 UTF-8', () => {
+  const files = [...jsFiles, ...listFiles(PLUGIN_DIR, ['.md', '.css', '.json', '.yml'])];
+  for (const file of files) {
+    const buf = fs.readFileSync(file);
+    assert(!(buf[0] === 0xef && buf[1] === 0xbb && buf[2] === 0xbf), '带 UTF-8 BOM：' + rel(file));
+    try { new TextDecoder('utf-8', { fatal: true }).decode(buf); }
+    catch { throw new Error('不是合法 UTF-8：' + rel(file)); }
+  }
+  return files.length + ' 个文件';
+});
+
+/* ── 9. 不留机器专属绝对路径 ──────────────────────────────────────────── */
 check('源码无机器专属绝对路径', () => {
   const bad = /(?:[A-Za-z]:[\\/](?:Users|A-part-of-new-software|npm-global))|(?:\/home\/[^\s'"]+\/)/g;
   const hits = [];

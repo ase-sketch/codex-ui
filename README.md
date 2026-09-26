@@ -101,7 +101,7 @@ node scripts/install-skin.mjs --write  # overwrite on drift
 
 | Command | Coverage | Requirement |
 |---|---|---|
-| `npm run check` | Syntax, JSON, manifest, artifact sync, docs pairing, machine-specific paths | none |
+| `npm run check` | Syntax, JSON, manifest, artifact sync, encoding, docs pairing, machine-specific paths | none |
 | `node scripts/audit-codex-ink.mjs` | Skin structure, 36 WCAG pairs, color whitelist | none |
 | `node scripts/model-picker-verify.mjs` | ⑫ and the pending indicator, 18 assertions | none |
 | `node scripts/rightbar-verify.mjs` | Shadow layer, right panel, both dividers, 42 assertions | none |
