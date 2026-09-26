@@ -103,7 +103,7 @@ node scripts/install-skin.mjs --write  # 有漂移则覆盖
 | `node scripts/model-picker-verify.mjs` | ⑫ 与 pending 指示器，18 项 | 无 |
 | `node scripts/rightbar-verify.mjs` | 阴影层、右栏三件套、两条分界线，42 项 | 无 |
 | `node scripts/sidebar-align-verify.mjs` | 侧栏列对齐，6 项 | 无 |
-| `node scripts/hero-verify.mjs` | ⑬⑭ 与 ⑰，7 项 | 无 |
+| `node scripts/hero-verify.mjs` | ⑬⑭⑰ 与焦点环，8 项 | 无 |
 | `node scripts/live-gui-probe.mjs --url <带 token 的 URL>` | 真 GUI：阴影、两条分界线、模型菜单 pending 窗口共 10 项断言 | `dsh web` 实例 |
 
 `npm run check` 不需要宿主。五支夹具验证在本机跑：取 `app.asar` 的 shipped CSS 加按渲染代码复刻的 DOM，
@@ -181,6 +181,32 @@ node scripts/live-gui-probe.mjs --url "http://127.0.0.1:3099/?token=..." --dpr 1
 - ⑯ 保留宿主页签条：整条隐藏会连带去掉全屏与收起按钮。
 - 会话行文字列 40px，比工作区行、新会话、插件行短 2px，来自官方 `Rows.module.css` 的 `.sessionRow .title` margin，未改。
 - `composer.css` 与 `patches.css` 使用 21 处哈希类名后缀锚点（`[class$=…]`、`[class*=…]`），宿主没有对应 `data-*` 的位置只能如此。
+
+## 与 Codex 源码对账
+
+Codex 桌面应用的 webview CSS 在 `resources/app.asar` 的 `webview/assets/app-*.css` 里；公开的 `openai/codex`
+仓库是 CLI 与 TUI，不含这套界面。下表取值来自应用 `26.727.4816.0`。
+
+| 值 | Codex | 本皮肤 |
+|---|---|---|
+| 动效时长 | `--transition-duration-basic: .15s`、`--transition-duration-relaxed: .3s` | `--dsw-motion-fast: 150ms`、`--dsw-motion-slow: 300ms` |
+| 缓动 | `--ease-in-out` 与 `--default-transition-timing-function`，同为 `cubic-bezier(.4, 0, .2, 1)` | `--dsw-ease` |
+| 焦点环 | `--color-border-focus` = `--blue-300` `#339cff`；深色同色 70% | `--dsw-codex-focus` |
+| pending 转圈 | `--animate-spin: spin 1s linear infinite` | `codex-ui-spin 1s linear infinite` |
+| 发丝线 | `--shadow-hairline: 0 0 0 .5px #0000001a` | 会话窗口与面板发丝线同为 0.5px 环 |
+| 亮色前景 | `--color-text-foreground: #1a1c1f` | `--dsw-alias-label-primary` |
+| 控件填充 | `--background-button-secondary-hover`，前景色 8% | 浅色 `#f2f2f3`（实测），深色 `rgba(255,255,255,.08)` |
+
+刻意保留的差异：
+
+- 深色底仍是取色面板给的 `#111111`。应用 CSS 把深色 surface 解析为 `--gray-900` `#181818`；两者不一致，此处以取色面板为准。
+- 深色层级 `#171717 / #1f1f1f / #2a2a2a / #353535` 是推导值，不是 Codex 的灰阶。Codex 的灰阶是
+  `#0d0d0d / #181818 / #212121 / #282828 / #303030 / #414141 / #4f4f4f / #5d5d5d / #afafaf / #ededed / #f3f3f3 / #f9f9f9 / #fff`。
+- 输入卡圆角 25px 是 `assets/reference/codex-composer-reference.png` 上的实测值。应用 CSS 给多行输入卡 `--radius-3xl`（20px）、
+  单行 22px；差额来自截图缩放比，而该比例没有记录。
+- 侧栏 280px 由宿主布局决定。Codex 自己的侧栏是 `clamp(240px, 275px, min(520px, calc(100vw - 320px)))`。
+- 深色链接保留 `#0169cc`，即应用 `--color-token-text-link-foreground` 的取值；应用自身的 `--color-text-accent`
+  在深色下是 `#99ceff`（`--blue-100`）。
 
 ## CI
 

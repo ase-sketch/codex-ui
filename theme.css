@@ -14,7 +14,8 @@
      · 亮色令牌同时落在 :root 与 body —— 官方亮色令牌声明在 body 上，
        只写 :root 会被 body 自身声明盖掉（加载器会把本文件强制限定在
        html[data-dsh-skin="codex-ink"] 之下，从而取得高于官方的特异性）；
-     · 彩色白名单：仅 state 三色 + diff 红绿 + 徽标 10% 底色，其余一律墨/灰。
+     · 彩色白名单：state 三色 + diff 红绿 + 徽标底色 + 焦点环（Codex --color-border-focus 蓝 #339CFF），
+      其余一律墨/灰。
    ========================================================================== */
 
 /* ── 亮色主题 ────────────────────────────────────────────────────────────── */html[data-codex-ui],html[data-codex-ui] body{
@@ -79,6 +80,8 @@
   --dsw-alias-interactive-bg-hover: rgba(13, 13, 13, 0.04);
   /* composer 控件悬停底：Codex 实测 #F2F2F3（冷中性，不是本层灰阶的暖 #F1F1EF）。 */
   --dsw-codex-hover-fill: #f2f2f3;
+  /* 焦点环：Codex --color-border-focus = --blue-300 = #339cff（亮色直接取色） */
+  --dsw-codex-focus: #339cff;
   --dsw-alias-interactive-bg-active: rgba(13, 13, 13, 0.08);
   --dsw-alias-interactive-bg-hover-solid: #f1f1ef;
   --dsw-alias-interactive-bg-hover-accent: rgba(13, 13, 13, 0.06);
@@ -209,9 +212,10 @@
   --dsw-alias-button-tool-bar-hover: rgba(252, 252, 252, 0.28);
 
   --dsw-alias-interactive-bg-hover: rgba(252, 252, 252, 0.06);
-  /* 深色悬停底：浅色 #F2F2F3 on #FFFFFF ≈ 5.1% 黑，换算成 #FCFCFC 的 6% 覆盖
-     —— 推导值，取色面板没给。 */
-  --dsw-codex-hover-fill: rgba(252, 252, 252, 0.06);
+  /* 深色悬停底：Codex --color-background-button-secondary-hover = --gray-0 8% = #ffffff14。 */
+  --dsw-codex-hover-fill: rgba(255, 255, 255, 0.08);
+  /* 焦点环：Codex 深色 --color-border-focus = --blue-300 70%，即 #339cffb3。 */
+  --dsw-codex-focus: rgba(51, 156, 255, 0.7);
   --dsw-alias-interactive-bg-active: rgba(252, 252, 252, 0.1);
   --dsw-alias-interactive-bg-hover-solid: #2a2a2a;
   --dsw-alias-interactive-bg-hover-accent: rgba(252, 252, 252, 0.08);
@@ -331,11 +335,15 @@
   --dsw-meta-tracking: 0.08em;
   --dsw-meta-tracking-pill: 0.04em;
 
-  /* 动效：干脆利落，比官方还快 */
-  --dsw-motion-fast: 100ms;
-  --dsw-motion-base: 160ms;
-  --dsw-motion-slow: 240ms;
-  --dsw-ease: cubic-bezier(0.3, 0.7, 0.4, 1);
+  /* 动效：取 Codex 应用自身的时长与曲线（26.727.4816.0 的 app-*.css）
+     fast  ← --transition-duration-basic: .15s
+     base  ← DSH 自带 --ds-transition-duration: .2s（Codex 用 duration-200 工具类）
+     slow  ← --transition-duration-relaxed: .3s
+     ease  ← --ease-in-out 与 --default-transition-timing-function，两者同值 */
+  --dsw-motion-fast: 150ms;
+  --dsw-motion-base: 200ms;
+  --dsw-motion-slow: 300ms;
+  --dsw-ease: cubic-bezier(0.4, 0, 0.2, 1);
 
   /* 输入区配件（skin-center 共享适配器消费的变量） */
   --dsh-composer-accessory-radius: var(--dsw-radius-l);
@@ -399,8 +407,8 @@
    "reliance on CSS-Modules hash class names" 警告。
    ========================================================================== */
 
-/* ── ① 焦点环：2px 墨色 + 2px offset（亮黑暗白反相） ─────────────────────── */html[data-codex-ui] :focus-visible{
-  outline: 2px solid var(--dsw-alias-brand-primary);
+/* ── ① 焦点环：2px Codex 强调蓝 + 2px offset（-—color-border-focus，亮 #339cff / 暗 70%） ─ */html[data-codex-ui] :focus-visible{
+  outline: 2px solid var(--dsw-codex-focus);
   outline-offset: 2px;
 }
 
@@ -528,7 +536,7 @@
    ═══════════════════════════════════════════════════════════════════════════ */
 
 /* ── ⑫·1 触发器：只归一焦点环（官方 box-shadow 环 + 全局 2px outline → 1px 细线） ── */html[data-codex-ui] [data-slot="conversation.input.model"] button:focus-visible{
-  outline: 1px solid var(--dsw-alias-brand-primary);
+  outline: 1px solid var(--dsw-codex-focus);
   outline-offset: 1px;
   box-shadow: none;
 }
@@ -565,7 +573,7 @@
 }
 
 /* 键盘焦点：全局 2px 环在菜单内不贴行盒，改 1px 内描线 */html[data-codex-ui] body > div[role="menu"][aria-busy] button[role="menuitem"]:focus-visible,html[data-codex-ui] body > div[role="menu"][aria-busy] button[role="menuitemradio"]:focus-visible{
-  outline: 1px solid var(--dsw-alias-brand-primary);
+  outline: 1px solid var(--dsw-codex-focus);
   outline-offset: -1px;
   background: var(--dsw-alias-interactive-bg-active);
 }
@@ -596,7 +604,8 @@
   border: 1.5px solid var(--dsw-alias-border-l3);
   border-top-color: var(--dsw-alias-label-primary);
   border-radius: 50%;
-  animation: codex-ui-spin 620ms linear infinite;
+  /* Codex --animate-spin = spin 1s linear infinite（本插件保留自己的 keyframe 名）。 */
+  animation: codex-ui-spin 1s linear infinite;
 }html[data-codex-ui] body > div[role="menu"][aria-busy="true"] button[role="menuitemradio"]:disabled{
   cursor: progress;
 }
@@ -972,7 +981,7 @@
 }html[data-codex-ui] div:has([data-slot="sidebar.workspaces"]):not(:has([data-slot="sidebar.toggle.badge"])) > button:hover{
   background: var(--dsw-alias-interactive-bg-hover);
 }html[data-codex-ui] div:has([data-slot="sidebar.workspaces"]):not(:has([data-slot="sidebar.toggle.badge"])) > button:focus-visible{
-  outline: 2px solid var(--dsw-alias-label-primary);
+  outline: 2px solid var(--dsw-codex-focus);
   outline-offset: -2px;
 }
 
@@ -1232,7 +1241,7 @@
 }html[data-codex-ui] [data-conversation-scroll] [data-composer-card] > [data-input-scroll] + div button[class$=_primary]:hover:not(:disabled){
   background: var(--dsw-alias-label-secondary);
 }html[data-codex-ui] [data-conversation-scroll] [data-composer-card] > [data-input-scroll] + div :is(button, select):focus-visible{
-  outline: 2px solid var(--dsw-alias-label-secondary);
+  outline: 2px solid var(--dsw-codex-focus);
   outline-offset: 2px;
 }
 

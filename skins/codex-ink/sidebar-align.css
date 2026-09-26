@@ -101,7 +101,7 @@ div:has([data-slot="sidebar.workspaces"]):not(:has([data-slot="sidebar.toggle.ba
 }
 
 div:has([data-slot="sidebar.workspaces"]):not(:has([data-slot="sidebar.toggle.badge"])) > button:focus-visible {
-  outline: 2px solid var(--dsw-alias-label-primary);
+  outline: 2px solid var(--dsw-codex-focus);
   outline-offset: -2px;
 }
 

@@ -2,6 +2,18 @@
 
 [English](CHANGELOG.md)
 
+## 0.1.2 - 2026-09-26
+
+按 Codex 桌面应用自身的令牌对齐（应用 `26.727.4816.0`，`resources/app.asar` → `webview/assets/app-*.css`）。
+
+- 动效：`--dsw-motion-fast/base/slow` 100/160/240ms → 150/200/300ms；`--dsw-ease` → `cubic-bezier(.4, 0, .2, 1)`，
+  取自 Codex `--transition-duration-basic`、`--transition-duration-relaxed` 与 `--default-transition-timing-function`。
+- 焦点环：墨色 → Codex `--color-border-focus`（`#339cff`，深色 `rgba(51,156,255,.7)`），涉及四份样式表。
+- pending 转圈：620ms → 1s linear，取自 Codex `--animate-spin`。
+- 深色 composer 悬停底：推导的 6% → 8%，取自 `--color-background-button-secondary-hover`。
+- `hero-verify`：悬停断言改为等过渡落定；新增焦点环断言（共 8 项）。
+- `README` 新增「与 Codex 源码对账」一节，列出各项取值来源与刻意保留的差异。
+
 ## 0.1.1 - 2026-09-26
 
 构建、体检与 CI。除模板头注释外，插件渲染结果不变。

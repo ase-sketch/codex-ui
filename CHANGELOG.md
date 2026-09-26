@@ -2,6 +2,18 @@
 
 [简体中文](CHANGELOG.zh-CN.md)
 
+## 0.1.2 - 2026-09-26
+
+Aligned to the Codex desktop app's own tokens (app `26.727.4816.0`, `resources/app.asar` → `webview/assets/app-*.css`).
+
+- Motion: `--dsw-motion-fast/base/slow` 100/160/240ms → 150/200/300ms; `--dsw-ease` → `cubic-bezier(.4, 0, .2, 1)`,
+  from Codex `--transition-duration-basic`, `--transition-duration-relaxed` and `--default-transition-timing-function`.
+- Focus ring: ink → Codex `--color-border-focus` (`#339cff`; dark `rgba(51,156,255,.7)`), in all four stylesheets.
+- Pending spinner: 620ms → 1s linear, from Codex `--animate-spin`.
+- Dark composer chip hover: derived 6% → 8%, from `--color-background-button-secondary-hover`.
+- `hero-verify`: hover assertions wait for the transition to settle; added a focus-ring assertion (8 total).
+- `README`: new "Codex source alignment" section listing token sources and the deliberate differences.
+
 ## 0.1.1 - 2026-09-26
 
 Build, checks and CI. No change to what the plugin renders beyond the template header comment.

@@ -106,7 +106,7 @@ node scripts/install-skin.mjs --write  # overwrite on drift
 | `node scripts/model-picker-verify.mjs` | ⑫ and the pending indicator, 18 assertions | none |
 | `node scripts/rightbar-verify.mjs` | Shadow layer, right panel, both dividers, 42 assertions | none |
 | `node scripts/sidebar-align-verify.mjs` | Sidebar column alignment, 6 assertions | none |
-| `node scripts/hero-verify.mjs` | ⑬ ⑭ and ⑰, 7 assertions | none |
+| `node scripts/hero-verify.mjs` | ⑬ ⑭ ⑰ and the focus ring, 8 assertions | none |
 | `node scripts/live-gui-probe.mjs --url <token URL>` | Real GUI: 10 assertions on shadows, both dividers, the model menu pending window | a running `dsh web` |
 
 `npm run check` needs no host. The five fixture suites run locally: they need shipped CSS from `app.asar` plus a DOM
@@ -186,6 +186,35 @@ Source: point samples from `assets/reference/codex-sidebar-reference.png`.
 - The session row text column is 40px, 2px shorter than the workspace, new session and plugin rows, because the shipped
   `Rows.module.css` gives `.sessionRow .title` its own margin. Left as is.
 - `composer.css` and `patches.css` use 21 hash-class suffix anchors (`[class$=…]`, `[class*=…]`) where the host exposes no `data-*`.
+
+## Codex source alignment
+
+The Codex desktop app carries its webview CSS inside `resources/app.asar` (`webview/assets/app-*.css`); the public
+`openai/codex` repository holds the CLI and the TUI, not this interface. Values below come from app `26.727.4816.0`.
+
+| Value | Codex | This skin |
+|---|---|---|
+| Motion | `--transition-duration-basic: .15s`, `--transition-duration-relaxed: .3s` | `--dsw-motion-fast: 150ms`, `--dsw-motion-slow: 300ms` |
+| Easing | `--ease-in-out` and `--default-transition-timing-function`, both `cubic-bezier(.4, 0, .2, 1)` | `--dsw-ease` |
+| Focus ring | `--color-border-focus` = `--blue-300` `#339cff`; dark the same at 70% | `--dsw-codex-focus` |
+| Pending spinner | `--animate-spin: spin 1s linear infinite` | `codex-ui-spin 1s linear infinite` |
+| Hairline | `--shadow-hairline: 0 0 0 .5px #0000001a` | the window and panel hairlines use the same 0.5px ring |
+| Light foreground | `--color-text-foreground: #1a1c1f` | `--dsw-alias-label-primary` |
+| Chip fill | `--background-button-secondary-hover`, 8% of the foreground | light `#f2f2f3` (measured), dark `rgba(255,255,255,.08)` |
+
+Deliberate differences:
+
+- The dark base stays `#111111` from the Codex color picker. The app CSS resolves the dark surface to `--gray-900`
+  `#181818`; picker and CSS disagree, and the picker wins here.
+- The dark layer ramp (`#171717 / #1f1f1f / #2a2a2a / #353535`) is a derivation, not Codex's ramp. Codex's grays are
+  `#0d0d0d / #181818 / #212121 / #282828 / #303030 / #414141 / #4f4f4f / #5d5d5d / #afafaf / #ededed / #f3f3f3 / #f9f9f9 / #fff`.
+- The composer card radius is 25px as measured on `assets/reference/codex-composer-reference.png`. The app CSS gives
+  `--radius-3xl` (20px) for the multi-line composer and 22px for the single-line one; the gap is the screenshot's
+  device scale factor, which is not recorded.
+- The sidebar is 280px wide, set by the host layout. Codex clamps its own sidebar with
+  `clamp(240px, 275px, min(520px, calc(100vw - 320px)))`.
+- Dark link text keeps `#0169cc`, which the app uses for `--color-token-text-link-foreground`; the app's own
+  `--color-text-accent` is `#99ceff` (`--blue-100`) in dark.
 
 ## CI
 

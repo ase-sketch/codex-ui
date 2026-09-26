@@ -14,9 +14,9 @@
    "reliance on CSS-Modules hash class names" 警告。
    ========================================================================== */
 
-/* ── ① 焦点环：2px 墨色 + 2px offset（亮黑暗白反相） ─────────────────────── */
+/* ── ① 焦点环：2px Codex 强调蓝 + 2px offset（-—color-border-focus，亮 #339cff / 暗 70%） ─ */
 :focus-visible {
-  outline: 2px solid var(--dsw-alias-brand-primary);
+  outline: 2px solid var(--dsw-codex-focus);
   outline-offset: 2px;
 }
 
@@ -223,7 +223,7 @@ button[aria-disabled="true"],
 
 /* ── ⑫·1 触发器：只归一焦点环（官方 box-shadow 环 + 全局 2px outline → 1px 细线） ── */
 [data-slot="conversation.input.model"] button:focus-visible {
-  outline: 1px solid var(--dsw-alias-brand-primary);
+  outline: 1px solid var(--dsw-codex-focus);
   outline-offset: 1px;
   box-shadow: none;
 }
@@ -271,7 +271,7 @@ body > div[role="menu"][aria-busy] button[role="menuitemradio"][aria-checked="tr
 /* 键盘焦点：全局 2px 环在菜单内不贴行盒，改 1px 内描线 */
 body > div[role="menu"][aria-busy] button[role="menuitem"]:focus-visible,
 body > div[role="menu"][aria-busy] button[role="menuitemradio"]:focus-visible {
-  outline: 1px solid var(--dsw-alias-brand-primary);
+  outline: 1px solid var(--dsw-codex-focus);
   outline-offset: -1px;
   background: var(--dsw-alias-interactive-bg-active);
 }
@@ -308,7 +308,8 @@ body > div[role="menu"][aria-busy="true"] button[role="menuitemradio"][aria-chec
   border: 1.5px solid var(--dsw-alias-border-l3);
   border-top-color: var(--dsw-alias-label-primary);
   border-radius: 50%;
-  animation: codex-ui-spin 620ms linear infinite;
+  /* Codex --animate-spin = spin 1s linear infinite（本插件保留自己的 keyframe 名）。 */
+  animation: codex-ui-spin 1s linear infinite;
 }
 
 body > div[role="menu"][aria-busy="true"] button[role="menuitemradio"]:disabled {

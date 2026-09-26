@@ -158,18 +158,34 @@ const readControls = async () => {
   return JSON.parse(res.value);
 };
 const boxOf = async (sel) => (await send('Runtime.evaluate', { expression: '(() => { const b = document.querySelector(' + JSON.stringify(sel) + '); const r = b.getBoundingClientRect(); return { x: Math.round(r.left + r.width / 2), y: Math.round(r.top + r.height / 2) }; })()', returnByValue: true }, sessionId)).result.value;
-/* 悬停是要等浏览器把 :hover 算完的 —— 单次 mouseMoved + 固定 sleep 会偶发读不到，
-   改成「移到目标上 → 轮询到落点 bg 变化为止」。 */
+/* 悬停要等两件事：浏览器把 :hover 算完，以及过渡跑完。
+   过渡期间 backgroundColor 的 alpha 是小数（实测 0.92 / 0.992），
+   只判断「非透明」会读到中途值，所以改成「非透明且连续两次取样相同」才算落定。 */
 const hoverUntil = async (sel, pick) => {
   const box = await boxOf(sel);
   await send('Input.dispatchMouseEvent', { type: 'mouseMoved', x: box.x, y: box.y }, sessionId);
-  for (let i = 0; i < 12; i += 1) {
-    await sleep(120);
+  let prev = null;
+  for (let i = 0; i < 24; i += 1) {
+    await sleep(100);
     const snap = await readControls();
-    if (pick(snap) !== 'rgba(0, 0, 0, 0)') return snap;
+    const now = pick(snap);
+    if (now !== 'rgba(0, 0, 0, 0)' && now === prev) return snap;
+    prev = now;
   }
   return readControls();
 };
+/* 焦点环 = Codex --color-border-focus（亮色 #339cff）。
+   先发一次 Tab 让浏览器进入键盘模态，再 focus()，按钮才会命中 :focus-visible。 */
+await send('Input.dispatchKeyEvent', { type: 'rawKeyDown', windowsVirtualKeyCode: 9, key: 'Tab' }, sessionId);
+await send('Input.dispatchKeyEvent', { type: 'keyUp', windowsVirtualKeyCode: 9, key: 'Tab' }, sessionId);
+await sleep(120);
+const focusRing = (await send('Runtime.evaluate', {
+  expression: '(() => { const el = [...document.querySelectorAll("[data-composer-card] button")].find((b) => String(b.className).endsWith("_add"));'
+    + 'el.focus(); const cs = getComputedStyle(el); return cs.outlineColor + " " + cs.outlineWidth + " " + cs.outlineStyle; })()',
+  returnByValue: true,
+}, sessionId)).result.value;
+console.log('FOCUS  outline ' + focusRing);
+
 const idle = await readControls();
 const addHover = await hoverUntil('[data-composer-card] button[class$="_add"]', (s) => s.add.bg);
 const trigHover = await hoverUntil('[data-composer-card] button[class$="_trigger"]', (s) => s.trig.bg);
@@ -184,6 +200,7 @@ const checks = [
   ['触发器悬停才出现淡底', trigHover.trig.bg === 'rgb(242, 242, 243)'],
   ['触发器全圆角（24px）', idle.trig.radius === '24px'],
   ['悬停色标 = Codex 实测 #F2F2F3', idle.hoverFill === '#f2f2f3'],
+  ['焦点环 = Codex --color-border-focus', focusRing === 'rgb(51, 156, 255) 2px solid'],
 ];
 let fail = 0;
 for (const [name, ok] of checks) { if (!ok) fail += 1; console.log((ok ? 'PASS ' : 'FAIL ') + name); }
