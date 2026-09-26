@@ -7,7 +7,7 @@
   "version": "1.0.0",
   "author": "Agent-Evo RSI",
   "tagline": "零彩色 chrome · 墨白灰阶即层级 · 等宽元信息 · 终端状态色",
-  "description": "《墨白终端》—— Codex / ChatGPT 系方向的 dsh web GUI 皮肤：无彩色 chrome，亮色纯白、暗色暖灰 #212121/#171717，主行动色即墨（亮=#0D0D0D 黑底白字、暗=白墨反相）；白→#F9F9F9→#F1F1EF→#E5E5E5 四档灰阶承担底/侧栏/嵌套/描边层级；等宽字体承担一切元信息（token 数、模型名、时间戳、徽标、路径、快捷键）；圆角 6/10/14px 锐利档、近零阴影（描边即层级）、动效 100/160/240ms 干脆直出；彩色只允许出现在 state 三色、diff 红绿与语法高亮。不改 shell 源码，纯 Skin v2 资产目录，可随时停用回滚。",
+  "description": "Codex / ChatGPT 方向的 dsh web GUI 皮肤。chrome 无彩色；浅色底 #FFFFFF、前景 #1A1C1F，深色底 #111111、前景 #FCFCFC；强调色浅 #339CFF、深 #0169CC 只用于链接。灰阶层级：浅 #FFFFFF → #F1F1EF → #E5E5E5，深 #111111 → #171717 → #1f1f1f → #2a2a2a → #353535。等宽字体承担元信息。卡片用 0.5px 描边代替投影，动效 100/160/240ms。彩色限于 state 三色、diff 红绿与语法高亮。不改 shell 源码，纯 Skin v2 资产目录。",
   "tags": [
     "codex",
     "ink",
@@ -17,7 +17,7 @@
     "grayscale",
     "sharp"
   ],
-  "accent": "#0D0D0D",
+  "accent": "#339CFF",
   "order": 4,
   "preview": {
     "light": "preview/light.png",
