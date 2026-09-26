@@ -6,12 +6,12 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/<owner>/codex-ui.git"
+    "url": "git+https://github.com/rinDBeans/codex-ui.git"
   },
   "bugs": {
-    "url": "https://github.com/<owner>/codex-ui/issues"
+    "url": "https://github.com/rinDBeans/codex-ui/issues"
   },
-  "homepage": "https://github.com/<owner>/codex-ui#readme",
+  "homepage": "https://github.com/rinDBeans/codex-ui#readme",
   "type": "module",
   "engines": {
     "node": ">=22"
