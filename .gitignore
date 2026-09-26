@@ -1,0 +1,4 @@
+node_modules/
+*.bak-pre-codex-ui-*
+.DS_Store
+Thumbs.db

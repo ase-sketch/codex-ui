@@ -1,0 +1,1320 @@
+/* ==== L1/L2 令牌与排版层（源：skins/codex-ink/skin.css）==== */
+/* ============================================================================
+   codex-ink（墨白终端）· L1 令牌层 + L2 排版层
+   ----------------------------------------------------------------------------
+   设计母题：OpenAI Codex / ChatGPT 系 —— 界面消失，只剩内容与光标。
+   黑白灰是 chrome，彩色只配给状态。
+
+   本文件只做两件事：
+     1) 把官方 --dsw-alias-* / --dsw-specific-* 语义令牌重映射到墨白灰阶；
+     2) 补齐官方缺失的 spacing / radius / typography-scale / motion / elevation 令牌层。
+
+   纪律：
+     · 不出现任何 url()、@import、远程地址、内联 JS（skin-center 安全管线白名单）；
+     · 亮色令牌同时落在 :root 与 body —— 官方亮色令牌声明在 body 上，
+       只写 :root 会被 body 自身声明盖掉（加载器会把本文件强制限定在
+       html[data-dsh-skin="codex-ink"] 之下，从而取得高于官方的特异性）；
+     · 彩色白名单：仅 state 三色 + diff 红绿 + 徽标 10% 底色，其余一律墨/灰。
+   ========================================================================== */
+
+/* ── 亮色主题 ────────────────────────────────────────────────────────────── */html[data-codex-ui],html[data-codex-ui] body{
+  color-scheme: light;
+
+  /* 底色：白 → #F9F9F9 → #F1F1EF → #E5E5E5 四档灰阶即层级 */
+  --dsw-alias-bg-base: #ffffff;
+  --dsw-alias-bg-sidebar: #eef4f9; /* Codex 亮色侧栏实测取样（350×1377 截图点采样 = #EEF4F9） */
+  --dsw-alias-bg-layer-1: #ffffff;
+  --dsw-alias-bg-layer-2: #f1f1ef;
+  --dsw-alias-bg-layer-3: #e5e5e5;
+  --dsw-alias-bg-overlay: rgba(255, 255, 255, 0.88);
+  --dsw-alias-bg-module-platform: #f9f9f9;
+  --dsw-alias-bg-multi-select: #e5e5e5;
+  --dsw-alias-bg-skeleton: rgba(13, 13, 13, 0.05);
+
+  /* 描边：发丝即层级 */
+  --dsw-alias-border-l1: rgba(13, 13, 13, 0.07);
+  --dsw-alias-border-l2: rgba(13, 13, 13, 0.12);
+  --dsw-alias-border-l3: rgba(13, 13, 13, 0.18);
+  --dsw-alias-border-l4: rgba(13, 13, 13, 0.24);
+  --dsw-alias-border-l2-darkmode-thin: rgba(13, 13, 13, 0.09);
+
+  /* 文字：墨 / 次墨 / 辅墨。前景取 Codex 浅色主题的「前景」实测值 #1A1C1F
+     （冷调，不是纯黑；取色面板截图 evidence/codex-theme-light.png）。 */
+  --dsw-alias-label-primary: #1a1c1f;
+  --dsw-alias-label-primary-dimmed: #5d5d5d;
+  --dsw-alias-label-primary-inverted: #ffffff;
+  --dsw-alias-label-primary-foreground: #ffffff;
+  --dsw-alias-label-primary-bluish: #0d0d0d;
+  --dsw-alias-label-secondary: #5d5d5d;
+  --dsw-alias-label-tertiary: #767676;
+  --dsw-alias-label-caption: #767676;
+  --dsw-alias-label-dimmed: #c9c9c9;
+
+  /* 主行动 = 墨块（全界面视觉重量最高的元素，无需任何品牌色） */
+  --dsw-alias-brand-primary: #0d0d0d;
+  --dsw-alias-brand-primary-invert: #ffffff;
+  --dsw-alias-brand-text: #ffffff;
+  --dsw-alias-brand-primary-new-colorprimary-new-color: #0d0d0d;
+  /* 强调色 = Codex 浅色主题「强调色」实测值 #339CFF，只上链接；
+     主行动按钮在 Codex 里仍是墨色胶囊，故 brand-primary 不动。 */
+  --dsw-alias-link: #339cff;
+
+  --dsw-alias-button-primary-fill: #0d0d0d;
+  --dsw-alias-button-primary-hover: #2a2a2a;
+  --dsw-alias-button-primary-dimmed: #e5e5e5;
+  --dsw-alias-button-contrast-fill: #0d0d0d;
+  --dsw-alias-button-elevated-fill: #ffffff;
+  --dsw-alias-button-floating-fill: #ffffff;
+  --dsw-alias-button-floating-hover: #f1f1ef;
+  --dsw-alias-button-ghost-active-fill: #e5e5e5;
+  --dsw-alias-button-ghost-active-hover: #dcdcdc;
+  --dsw-alias-button-ghost-active-border: #8f8f8f;
+  --dsw-alias-button-info-fill: #0d0d0d;
+  --dsw-alias-button-info-hover: #2a2a2a;
+  --dsw-alias-button-tool-bar-fill: rgba(13, 13, 13, 0.28);
+  --dsw-alias-button-tool-bar-fill-invisible: rgba(13, 13, 13, 0.18);
+  --dsw-alias-button-tool-bar-hover: rgba(13, 13, 13, 0.36);
+
+  /* 交互底色：背景升一档，无位移无阴影 */
+  --dsw-alias-interactive-bg-hover: rgba(13, 13, 13, 0.04);
+  /* composer 控件悬停底：Codex 实测 #F2F2F3（冷中性，不是本层灰阶的暖 #F1F1EF）。 */
+  --dsw-codex-hover-fill: #f2f2f3;
+  --dsw-alias-interactive-bg-active: rgba(13, 13, 13, 0.08);
+  --dsw-alias-interactive-bg-hover-solid: #f1f1ef;
+  --dsw-alias-interactive-bg-hover-accent: rgba(13, 13, 13, 0.06);
+  --dsw-alias-interactive-bg-hover-danger: rgba(209, 36, 47, 0.08);
+
+  /* Markdown / 代码 */
+  --dsw-alias-markdown-code-block: #f1f1ef;
+  --dsw-alias-markdown-code-block-banner: #e5e5e5;
+  --dsw-alias-markdown-inline-code: #f1f1ef;
+  --dsw-alias-markdown-code-segment-selected: #ffffff;
+  --dsw-alias-markdown-code-segment-unselected: #f1f1ef;
+  --dsw-alias-markdown-citation: #f1f1ef;
+  --dsw-alias-markdown-placeholder: #e5e5e5;
+  --dsw-alias-markdown-tag: #f1f1ef;
+
+  /* 状态：彩色白名单的唯一合法来源 */
+  --dsw-alias-state-success-primary: #1a7f37;
+  --dsw-alias-state-success-secondary: #2e9e4c;
+  --dsw-alias-state-success-tertiary: rgba(26, 127, 55, 0.08);
+  --dsw-alias-state-error-primary: #d1242f;
+  --dsw-alias-state-error-secondary: #e5484d;
+  --dsw-alias-state-error-tertiary: rgba(209, 36, 47, 0.08);
+  --dsw-alias-state-warn-primary: #8f5f00;
+  --dsw-alias-state-warn-secondary: #bb8009;
+  --dsw-alias-state-warn-tertiary: rgba(143, 95, 0, 0.08);
+  --dsw-alias-state-warn-label: #8f5f00;
+  --dsw-alias-state-business-primary: #0d0d0d;
+  --dsw-alias-state-business-tertiary: rgba(13, 13, 13, 0.08);
+  --dsw-alias-state-idle-primary: #767676;
+
+  /* diff：白名单内的红绿 */
+  --dsw-alias-code-diff-added: rgba(26, 127, 55, 0.1);
+  --dsw-alias-code-diff-deleted: rgba(209, 36, 47, 0.1);
+  --dsw-alias-file-diff-added-bg: #e6f4e7;
+  --dsw-alias-file-diff-added-gutter: #edf7ed;
+  --dsw-alias-file-diff-added-marker: #1a7f37;
+  --dsw-alias-file-diff-deleted-bg: #fce6e2;
+  --dsw-alias-file-diff-deleted-gutter: #fdece9;
+  --dsw-alias-file-diff-deleted-marker: #d1242f;
+
+  /* 浮层 / 提示 */
+  --dsw-alias-bg-mask-drop: rgba(255, 255, 255, 0.7);
+  --dsw-alias-toast-bg: #1e1e1e;
+  --dsw-alias-tooltip-bg: #1e1e1e;
+  --dsw-alias-tooltip-fg: #ffffff;
+  --dsw-alias-hovercard-bg: #ffffff;
+
+  /* 滚动条：thumb = label-tertiary 30% / 50% */
+  --dsw-alias-scrollbar-bg-l1: rgba(118, 118, 118, 0.3);
+  --dsw-alias-scrollbar-bg-l2: rgba(118, 118, 118, 0.5);
+  --dsw-alias-scrollbar-hover-l1: rgba(13, 13, 13, 0.35);
+  --dsw-alias-scrollbar-hover-l2: rgba(13, 13, 13, 0.5);
+
+  /* 具体面 */
+  --dsw-specific-sidebar-fill: #eef4f9; /* 与 --dsw-alias-bg-sidebar 同源：Codex 亮色侧栏实测 */
+  --dsw-specific-sidebar-nav-item-hover: #e8eef3; /* 侧栏底 ↔ 选中行的中点（推导值，非取样） */
+  --dsw-specific-sidebar-nav-item-active: #e2e9ed; /* Codex 选中行（PROJIECT）实测取样 */
+  --dsw-specific-sidebar-nav-item-active-accent: rgba(13, 13, 13, 0.1);
+  --dsw-specific-input-major: #ffffff;
+  --dsw-specific-login-input: #f9f9f9;
+  --dsw-specific-menu: rgba(255, 255, 255, 0.88);
+  --dsw-specific-selector: #f1f1ef;
+  --dsw-specific-bubble: #f1f1ef;
+  --dsw-specific-bubble-highlight: #e5e5e5;
+  --dsw-specific-tip: #f1f1ef;
+
+  --dsw-shadow-lv1: 0 1px 2px rgba(13, 13, 13, 0.06);
+  --dsw-shadow-lv2: 0 2px 8px rgba(13, 13, 13, 0.08);
+  --dsw-shadow-lv3: 0 8px 24px rgba(13, 13, 13, 0.1);
+  --dsw-linear-gradient-think: linear-gradient(180deg, #ffffff 20.19%, rgba(255, 255, 255, 0) 100%);
+  --dsw-linear-think-select: linear-gradient(180deg, #f1f1ef 20.19%, rgba(241, 241, 239, 0) 100%);
+}
+
+/* ── 暗色主题 ─────────────────────────────────────────────────────────────
+   基准 = Codex 深色取色面板：背景 #111111 / 前景 #FCFCFC / 强调 #0169CC。
+   层级自基准向上抬：侧栏 #171717 → 层1 #1f1f1f → 层2 #2a2a2a → 层3 #353535。
+   侧栏高于内容（浅色下侧栏低于内容），黑底压不到 #111111 以下，故取镜像关系。 */html[data-codex-ui] body[data-ds-dark-theme]{
+  color-scheme: dark;
+
+  /* 背景取 Codex 深色主题的「背景」实测值 #111111。侧栏 #171717 未动 —— 取色面板
+     只给了背景/前景/强调三值，侧栏是推导值。 */
+  --dsw-alias-bg-base: #111111;
+  --dsw-alias-bg-sidebar: #171717;
+  --dsw-alias-bg-layer-1: #1f1f1f;
+  --dsw-alias-bg-layer-2: #2a2a2a;
+  --dsw-alias-bg-layer-3: #353535;
+  --dsw-alias-bg-overlay: rgba(17, 17, 17, 0.88);
+  --dsw-alias-bg-module-platform: #1a1a1a;
+  --dsw-alias-bg-multi-select: #353535;
+  --dsw-alias-bg-skeleton: rgba(252, 252, 252, 0.07);
+
+  --dsw-alias-border-l1: rgba(252, 252, 252, 0.08);
+  --dsw-alias-border-l2: rgba(252, 252, 252, 0.14);
+  --dsw-alias-border-l3: rgba(252, 252, 252, 0.2);
+  --dsw-alias-border-l4: rgba(252, 252, 252, 0.26);
+  --dsw-alias-border-l2-darkmode-thin: rgba(252, 252, 252, 0.1);
+
+  --dsw-alias-label-primary: #fcfcfc;
+  --dsw-alias-label-primary-dimmed: #b4b4b4;
+  --dsw-alias-label-primary-inverted: #0d0d0d;
+  --dsw-alias-label-primary-foreground: #0d0d0d;
+  --dsw-alias-label-primary-bluish: #ececec;
+  --dsw-alias-label-secondary: #b4b4b4;
+  --dsw-alias-label-tertiary: #949494;
+  --dsw-alias-label-caption: #949494;
+  --dsw-alias-label-dimmed: #4a4a4a;
+
+  --dsw-alias-brand-primary: #ffffff;
+  --dsw-alias-brand-primary-invert: #0d0d0d;
+  --dsw-alias-brand-text: #0d0d0d;
+  --dsw-alias-brand-primary-new-colorprimary-new-color: #ffffff;
+  --dsw-alias-link: #0169cc; /* Codex 深色主题「强调色」实测值 */
+
+  --dsw-alias-button-primary-fill: #ffffff;
+  --dsw-alias-button-primary-hover: #d9d9d9;
+  --dsw-alias-button-primary-dimmed: #2a2a2a;
+  --dsw-alias-button-contrast-fill: #ececec;
+  --dsw-alias-button-elevated-fill: #1f1f1f;
+  --dsw-alias-button-floating-fill: #1a1a1a;
+  --dsw-alias-button-floating-hover: #2a2a2a;
+  --dsw-alias-button-ghost-active-fill: #353535;
+  --dsw-alias-button-ghost-active-hover: #3f3f3f;
+  --dsw-alias-button-ghost-active-border: #7e7e7e;
+  --dsw-alias-button-info-fill: #ffffff;
+  --dsw-alias-button-info-hover: #d9d9d9;
+  --dsw-alias-button-tool-bar-fill: rgba(252, 252, 252, 0.22);
+  --dsw-alias-button-tool-bar-fill-invisible: rgba(252, 252, 252, 0.16);
+  --dsw-alias-button-tool-bar-hover: rgba(252, 252, 252, 0.28);
+
+  --dsw-alias-interactive-bg-hover: rgba(252, 252, 252, 0.06);
+  /* 深色悬停底：浅色 #F2F2F3 on #FFFFFF ≈ 5.1% 黑，换算成 #FCFCFC 的 6% 覆盖
+     —— 推导值，取色面板没给。 */
+  --dsw-codex-hover-fill: rgba(252, 252, 252, 0.06);
+  --dsw-alias-interactive-bg-active: rgba(252, 252, 252, 0.1);
+  --dsw-alias-interactive-bg-hover-solid: #2a2a2a;
+  --dsw-alias-interactive-bg-hover-accent: rgba(252, 252, 252, 0.08);
+  --dsw-alias-interactive-bg-hover-danger: rgba(248, 81, 73, 0.12);
+
+  --dsw-alias-markdown-code-block: #1a1a1a;
+  --dsw-alias-markdown-code-block-banner: #141414;
+  --dsw-alias-markdown-inline-code: #2a2a2a;
+  --dsw-alias-markdown-code-segment-selected: #353535;
+  --dsw-alias-markdown-code-segment-unselected: #1a1a1a;
+  --dsw-alias-markdown-citation: #1f1f1f;
+  --dsw-alias-markdown-placeholder: #2a2a2a;
+  --dsw-alias-markdown-tag: #2a2a2a;
+
+  --dsw-alias-state-success-primary: #3fb950;
+  --dsw-alias-state-success-secondary: #56d364;
+  --dsw-alias-state-success-tertiary: rgba(63, 185, 80, 0.16);
+  --dsw-alias-state-error-primary: #ff7b72;
+  --dsw-alias-state-error-secondary: #ff9492;
+  --dsw-alias-state-error-tertiary: rgba(255, 123, 114, 0.16);
+  --dsw-alias-state-warn-primary: #d29922;
+  --dsw-alias-state-warn-secondary: #e3b341;
+  --dsw-alias-state-warn-tertiary: rgba(210, 153, 34, 0.16);
+  --dsw-alias-state-warn-label: #d29922;
+  --dsw-alias-state-business-primary: #ececec;
+  --dsw-alias-state-business-tertiary: rgba(252, 252, 252, 0.12);
+  --dsw-alias-state-idle-primary: #7e7e7e;
+
+  --dsw-alias-code-diff-added: rgba(63, 185, 80, 0.14);
+  --dsw-alias-code-diff-deleted: rgba(248, 81, 73, 0.14);
+  --dsw-alias-file-diff-added-bg: #1f3124;
+  --dsw-alias-file-diff-added-gutter: #132016;
+  --dsw-alias-file-diff-added-marker: #41c977;
+  --dsw-alias-file-diff-deleted-bg: #3c1f1b;
+  --dsw-alias-file-diff-deleted-gutter: #28130e;
+  --dsw-alias-file-diff-deleted-marker: #fa423e;
+
+  --dsw-alias-bg-mask-drop: rgba(39, 39, 48, 0.7);
+  --dsw-alias-toast-bg: #2a2a2a;
+  --dsw-alias-tooltip-bg: #1f1f1f;
+  --dsw-alias-tooltip-fg: #ececec;
+  --dsw-alias-hovercard-bg: #1f1f1f;
+
+  --dsw-alias-scrollbar-bg-l1: rgba(160, 160, 160, 0.3);
+  --dsw-alias-scrollbar-bg-l2: rgba(160, 160, 160, 0.5);
+  --dsw-alias-scrollbar-hover-l1: rgba(252, 252, 252, 0.35);
+  --dsw-alias-scrollbar-hover-l2: rgba(252, 252, 252, 0.5);
+
+  --dsw-specific-sidebar-fill: #171717;
+  --dsw-specific-sidebar-nav-item-hover: #1f1f1f;
+  --dsw-specific-sidebar-nav-item-active: #2a2a2a;
+  --dsw-specific-sidebar-nav-item-active-accent: rgba(252, 252, 252, 0.14);
+  --dsw-specific-input-major: #1f1f1f;
+  --dsw-specific-login-input: #1a1a1a;
+  --dsw-specific-menu: rgba(17, 17, 17, 0.88);
+  --dsw-specific-selector: #2a2a2a;
+  --dsw-specific-bubble: #1f1f1f;
+  --dsw-specific-bubble-highlight: #2a2a2a;
+  --dsw-specific-tip: #1a1a1a;
+
+  --dsw-shadow-lv1: 0 1px 2px rgba(0, 0, 0, 0.4);
+  --dsw-shadow-lv2: 0 2px 8px rgba(0, 0, 0, 0.5);
+  --dsw-shadow-lv3: 0 8px 24px rgba(0, 0, 0, 0.6);
+  --dsw-linear-gradient-think: linear-gradient(180deg, #212121 20.19%, rgba(33, 33, 33, 0) 100%);
+  --dsw-linear-think-select: linear-gradient(180deg, #1a1a1a 20.19%, rgba(42, 42, 42, 0) 100%);
+}
+
+/* ── 官方缺失的令牌层：空间 / 圆角 / 字阶 / 动效 ─────────────────────────── */html[data-codex-ui],html[data-codex-ui] body{
+  /* 4px 网格（新增 12/20 密档，比 Claude 方向紧一档） */
+  --dsw-space-1: 4px;
+  --dsw-space-2: 8px;
+  --dsw-space-3: 12px;
+  --dsw-space-4: 16px;
+  --dsw-space-5: 20px;
+  --dsw-space-6: 24px;
+  --dsw-space-8: 32px;
+
+  /* 圆角刻度（唯一真源）：所有可见边框的圆角都从这里取，各层只准引用、不准再写 px。
+     角色 → 刻度：
+       xs   行内小片 / 菜单项
+       s    控件（按钮 / 列表行 / 页签）
+       m    卡片 / 浮层（菜单、下拉、tooltip）
+       l    面板 / 模态（取 16px，与宿主窗口内容块同值 —— dsh-client-ui-layout 的
+            --dsh-windows-content-radius: 16px）
+       xl   输入卡（无 corner-shape 时的回退值）
+       2xl  输入卡（corner-shape: superellipse 版；超椭圆要更大数值才视觉等圆）
+       pill 徽标 / 圆形按钮 */
+  --dsw-radius-xs: 4px;
+  --dsw-radius-s: 8px;
+  --dsw-radius-m: 12px;
+  --dsw-radius-l: 16px;
+  --dsw-radius-xl: 20px;
+  --dsw-radius-2xl: 25px;
+  --dsw-radius-pill: 999px;
+
+  --dsw-content-max-width: 768px;
+
+  /* 字阶（§3.2）：11 / 12.5 / 14 / 16 / 20 / 28 */
+  --dsw-text-2xs: 11px;
+  --dsw-text-xs: 12.5px;
+  --dsw-text-sm: 13px;
+  --dsw-text-base: 14px;
+  --dsw-text-lg: 16px;
+  --dsw-text-xl: 20px;
+  --dsw-text-2xl: 28px;
+  --dsw-leading-2xs: 1.3;
+  --dsw-leading-xs: 1.4;
+  --dsw-leading-base: 1.65;
+  --dsw-leading-lg: 1.4;
+  --dsw-leading-xl: 1.35;
+  --dsw-leading-2xl: 1.25;
+
+  /* 元信息 mono 规约：等宽 + 大写 + 加宽字距（Codex TUI 血统） */
+  --dsw-font-meta: var(--ds-font-family-code);
+  --dsw-meta-size: 11px;
+  --dsw-meta-weight: 500;
+  --dsw-meta-tracking: 0.08em;
+  --dsw-meta-tracking-pill: 0.04em;
+
+  /* 动效：干脆利落，比官方还快 */
+  --dsw-motion-fast: 100ms;
+  --dsw-motion-base: 160ms;
+  --dsw-motion-slow: 240ms;
+  --dsw-ease: cubic-bezier(0.3, 0.7, 0.4, 1);
+
+  /* 输入区配件（skin-center 共享适配器消费的变量） */
+  --dsh-composer-accessory-radius: var(--dsw-radius-l);
+  --dsh-composer-accessory-bg: var(--dsw-alias-bg-layer-2);
+  --dsh-composer-accessory-color: var(--dsw-alias-label-secondary);
+  --dsh-composer-accessory-border: 0.5px solid var(--dsw-alias-border-l1);
+  --dsh-composer-accessory-shadow: none;
+  --dsh-composer-accessory-blur: 0px;
+}
+
+/* ── elevation：描边即层级，阴影近零 ─────────────────────────────────────── */
+/* 官方把 --dsw-elevation-* 声明在 body, body * 上，因此必须同样覆盖到 body *，
+   否则每个后代元素都会用自身声明盖掉从 body 继承下来的值。 */html[data-codex-ui] body,html[data-codex-ui] body *{
+  --dsw-elevation-stroke-color: rgba(13, 13, 13, 0.08);
+  --dsw-elevation-stroke: 0 0 0 0.5px rgba(13, 13, 13, 0.08);
+  --dsw-elevation-panel: var(--dsw-elevation-stroke);
+  --dsw-elevation-prominent: var(--dsw-elevation-stroke), 0 4px 16px rgba(13, 13, 13, 0.08);
+  --dsw-elevation-soft: var(--dsw-elevation-stroke), 0 8px 28px rgba(13, 13, 13, 0.1);
+}html[data-codex-ui] body[data-ds-dark-theme],html[data-codex-ui] body[data-ds-dark-theme] *{
+  --dsw-elevation-stroke-color: rgba(252, 252, 252, 0.09);
+  --dsw-elevation-stroke: 0 0 0 0.5px rgba(252, 252, 252, 0.09);
+  --dsw-elevation-panel: var(--dsw-elevation-stroke);
+  --dsw-elevation-prominent: var(--dsw-elevation-stroke), 0 4px 16px rgba(0, 0, 0, 0.5);
+  --dsw-elevation-soft: var(--dsw-elevation-stroke), 0 8px 28px rgba(0, 0, 0, 0.55);
+}
+
+/* ── 排版层：标题字重 600 封顶 ───────────────────────────────────────────── */
+/* 官方 markdown 标题是 700；Codex 无衬线无重标题，层级靠灰阶 + 字号。
+   官方把字排令牌声明在 body 上，故同样写在 body 上（字号仍挂
+   --dsh-content-font-delta，用户调字号不破比例）。 */html[data-codex-ui],html[data-codex-ui] body{
+  --dsw-font-markdown-h1: 600 calc(21px + var(--dsh-content-font-delta)) / calc(30px + var(--dsh-content-font-delta)) var(--dsw-font-family);
+  --dsw-font-markdown-h1-font-weight: 600;
+  --dsw-font-markdown-h2: 600 calc(19px + var(--dsh-content-font-delta)) / calc(28px + var(--dsh-content-font-delta)) var(--dsw-font-family);
+  --dsw-font-markdown-h2-font-weight: 600;
+  --dsw-font-markdown-h3: 600 calc(18px + var(--dsh-content-font-delta)) / calc(26px + var(--dsh-content-font-delta)) var(--dsw-font-family);
+  --dsw-font-markdown-h3-font-weight: 600;
+}html[data-codex-ui] body[data-ds-dark-theme]{
+  --dsw-font-markdown-h1: 600 calc(21px + var(--dsh-content-font-delta)) / calc(30px + var(--dsh-content-font-delta)) var(--dsw-font-family);
+  --dsw-font-markdown-h1-font-weight: 600;
+  --dsw-font-markdown-h2: 600 calc(19px + var(--dsh-content-font-delta)) / calc(28px + var(--dsh-content-font-delta)) var(--dsw-font-family);
+  --dsw-font-markdown-h2-font-weight: 600;
+  --dsw-font-markdown-h3: 600 calc(18px + var(--dsh-content-font-delta)) / calc(26px + var(--dsh-content-font-delta)) var(--dsw-font-family);
+  --dsw-font-markdown-h3-font-weight: 600;
+}
+
+
+/* ==== L3 组件层（源：skins/codex-ink/patches.css）==== */
+/* ============================================================================
+   codex-ink（墨白终端）· L3 组件层契约
+   ----------------------------------------------------------------------------
+   治理目标（对应方案 §7）：
+     ① 卡片统一契约：纯描边 + 10px 圆角 + 近零阴影 + 16px padding；
+     ② 徽标/chip 统一 mono pill；
+     ③ 彩色白名单归一：插件自带调色板收敛到 state 三色 + 墨灰；
+     ④ hover = 背景升一档，禁自创投影；
+     ⑤ 焦点环、cursor、动效时长三条 a11y/交互底线。
+
+   锚点纪律：只使用 skin-center 语义属性契约
+   （data-dsh-surface / data-dsh-part / data-dsh-plugin / data-slot），
+   不使用 CSS-Modules 哈希类名（[class*=…]），以免触发加载器的
+   "reliance on CSS-Modules hash class names" 警告。
+   ========================================================================== */
+
+/* ── ① 焦点环：2px 墨色 + 2px offset（亮黑暗白反相） ─────────────────────── */html[data-codex-ui] :focus-visible{
+  outline: 2px solid var(--dsw-alias-brand-primary);
+  outline-offset: 2px;
+}
+
+/* ── ② 链接 = 墨 + hover 下划线，不着色 ─────────────────────────────────── */html[data-codex-ui] a{
+  color: var(--dsw-alias-link);
+  text-decoration: none;
+  text-underline-offset: 2px;
+  text-decoration-thickness: 1px;
+}html[data-codex-ui] a:hover,html[data-codex-ui] a:focus-visible{
+  text-decoration: underline;
+}
+
+/* ── ③ 可点击元素：cursor + 100ms 干脆过渡 ──────────────────────────────── */html[data-codex-ui] button,html[data-codex-ui] a,html[data-codex-ui] summary,html[data-codex-ui] [role="button"],html[data-codex-ui] [role="tab"],html[data-codex-ui] [role="menuitem"],html[data-codex-ui] [role="option"]{
+  cursor: pointer;
+}html[data-codex-ui] button,html[data-codex-ui] a,html[data-codex-ui] summary,html[data-codex-ui] [role="button"],html[data-codex-ui] [role="tab"],html[data-codex-ui] [role="menuitem"]{
+  transition:
+    background-color var(--dsw-motion-fast) var(--dsw-ease),
+    border-color var(--dsw-motion-fast) var(--dsw-ease),
+    color var(--dsw-motion-fast) var(--dsw-ease),
+    opacity var(--dsw-motion-fast) var(--dsw-ease),
+    box-shadow var(--dsw-motion-fast) var(--dsw-ease);
+}html[data-codex-ui] button:disabled,html[data-codex-ui] button[aria-disabled="true"],html[data-codex-ui] [aria-disabled="true"]{
+  cursor: not-allowed;
+  opacity: 0.45;
+}
+
+/* ── ④ 卡片统一契约：描边即层级 ─────────────────────────────────────────── */html[data-codex-ui] [data-slot="web-ui.plugin.item"] > *,html[data-codex-ui] [data-dsh-part="card"],html[data-codex-ui] [data-dsh-part="column"],html[data-codex-ui] [data-dsh-part="status"],html[data-codex-ui] [data-dsh-part="today-card"],html[data-codex-ui] [data-dsh-part="balance-card"],html[data-codex-ui] [data-dsh-part="trend-card"],html[data-codex-ui] [data-dsh-part="plan-card"],html[data-codex-ui] [data-dsh-part="bank-card"]{
+  background: var(--dsw-alias-bg-layer-1);
+  border: 0.5px solid var(--dsw-alias-border-l1);
+  border-radius: var(--dsw-radius-m);
+  box-shadow: var(--dsw-elevation-panel);
+  padding: var(--dsw-space-4);
+}
+
+/* 弹层 / 模态：大圆角 + 一点点软影 */html[data-codex-ui] [role="dialog"],html[data-codex-ui] [data-dsh-surface="overlay"] [data-dsh-part="panel"]{
+  border-radius: var(--dsw-radius-l);
+}
+
+/* ── ⑤ 徽标 / chip：统一 mono pill ──────────────────────────────────────── */html[data-codex-ui] [data-dsh-part="composer-chip"],html[data-codex-ui] [data-dsh-part="chip"],html[data-codex-ui] [data-dsh-part="ref"],html[data-codex-ui] [data-dsh-part="tag-chip"],html[data-codex-ui] [data-dsh-part="tag-badge"]{
+  font-family: var(--dsw-font-meta);
+  font-size: var(--dsw-meta-size);
+  font-weight: var(--dsw-meta-weight);
+  letter-spacing: var(--dsw-meta-tracking-pill);
+  border-radius: var(--dsw-radius-pill);
+}
+
+/* ── ⑥ 彩色白名单归一：task-board 六档 tag tone 收敛到 state 三色 + 墨灰 ── */html[data-codex-ui] [data-dsh-part="tag-chip"][data-tag-tone="0"],html[data-codex-ui] [data-dsh-part="tag-badge"][data-tag-tone="0"]{
+  background: var(--dsw-alias-bg-layer-2);
+  color: var(--dsw-alias-label-secondary);
+}html[data-codex-ui] [data-dsh-part="tag-chip"][data-tag-tone="1"],html[data-codex-ui] [data-dsh-part="tag-badge"][data-tag-tone="1"]{
+  background: var(--dsw-alias-state-success-tertiary);
+  color: var(--dsw-alias-state-success-primary);
+}html[data-codex-ui] [data-dsh-part="tag-chip"][data-tag-tone="2"],html[data-codex-ui] [data-dsh-part="tag-badge"][data-tag-tone="2"]{
+  background: var(--dsw-alias-state-warn-tertiary);
+  color: var(--dsw-alias-state-warn-primary);
+}html[data-codex-ui] [data-dsh-part="tag-chip"][data-tag-tone="3"],html[data-codex-ui] [data-dsh-part="tag-badge"][data-tag-tone="3"]{
+  background: var(--dsw-alias-state-error-tertiary);
+  color: var(--dsw-alias-state-error-primary);
+}html[data-codex-ui] [data-dsh-part="tag-chip"][data-tag-tone="4"],html[data-codex-ui] [data-dsh-part="tag-badge"][data-tag-tone="4"]{
+  background: var(--dsw-alias-state-business-tertiary);
+  color: var(--dsw-alias-label-primary);
+}html[data-codex-ui] [data-dsh-part="tag-chip"][data-tag-tone="5"],html[data-codex-ui] [data-dsh-part="tag-badge"][data-tag-tone="5"]{
+  background: var(--dsw-alias-bg-layer-3);
+  color: var(--dsw-alias-label-tertiary);
+}
+
+/* ── ⑦ 侧栏：比主区深/浅一档的整面 ─────────────────────────────────────── */html[data-codex-ui] [data-dsh-surface="sidebar"],html[data-codex-ui] [data-slot="sidebar.workspaces"]{
+  background-color: var(--dsw-alias-bg-sidebar);
+}
+
+/* 侧栏行 hover = 背景升一档，无位移无阴影 */html[data-codex-ui] [data-dsh-part="sidebar-entry"],html[data-codex-ui] [data-dsh-surface="sidebar"] [role="button"]{
+  border-radius: var(--dsw-radius-s);
+}
+
+/* ── ⑧ 输入区：工具不是主角，14px 圆角 + 纯描边 ────────────────────────── */html[data-codex-ui] [data-composer-card],html[data-codex-ui] [data-dsh-surface="composer"] [data-dsh-part="composer-input"]{
+  border-radius: var(--dsw-radius-l);
+}html[data-codex-ui] [data-composer-card]{
+  box-shadow: var(--dsw-elevation-panel);
+}html[data-codex-ui] [data-dsh-part="composer-input"]{
+  font-family: var(--dsw-font-family);
+  line-height: var(--dsw-leading-base);
+}
+
+/* ── ⑨ 元信息 mono 化：token 数 / 模型名 / 时间戳 / 路径 / 快捷键 ───────── */html[data-codex-ui] [data-dsh-part="turn-tail"],html[data-codex-ui] [data-dsh-part="queue-dock"],html[data-codex-ui] [data-dsh-part="usage-chart"],html[data-codex-ui] [data-dsh-part="voucher-preview"]{
+  font-family: var(--dsw-font-meta);
+}
+
+/* 微标签：11px / 大写 / .08em —— 仅作用于纯拉丁元信息锚点 */html[data-codex-ui] [data-dsh-part="composer-chip"]{
+  text-transform: uppercase;
+  letter-spacing: var(--dsw-meta-tracking);
+}
+
+/* ── ⑩ CJK 豁免：中文不做字距加宽、不做大写（:lang(zh) 选择器） ────────── */html[data-codex-ui] :lang(zh) [data-dsh-part="composer-chip"],html[data-codex-ui] :lang(zh) [data-dsh-part="chip"],html[data-codex-ui] :lang(zh) [data-dsh-part="ref"],html[data-codex-ui] :lang(zh) [data-dsh-part="tag-chip"],html[data-codex-ui] :lang(zh) [data-dsh-part="tag-badge"]{
+  letter-spacing: 0;
+  text-transform: none;
+}
+
+/* ── ⑪ reduced-motion：瞬时终态 ─────────────────────────────────────────── */
+@media (prefers-reduced-motion: reduce) {html[data-codex-ui] *,html[data-codex-ui] *::before,html[data-codex-ui] *::after{
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   ⑫ Codex 模型选择器（composer 模型位 conversation.input.model）
+   ---------------------------------------------------------------------------
+   形态对齐 MichengAI/dsh-codex-ui：
+     · 触发器 = 宿主原生形态（模型名 + 强度 + chevron），本层不重绘，
+       只把焦点环归一成一条细线。旧版藏 chevron、改 mono 字体、压 24px 高，
+       实测与仓库截图 conversation-light.png 的触发器不符，全部撤掉。
+     · 菜单面板 = 仓库 composer-tool-menus 的皮肤契约：不透明白 + 大圆角 +
+       软影 0 8px 32px + 1px 描边环；行 28px、内衬 4px 9px、圆角 8px、
+       hover 淡填充。旧版 TUI 编号行、页脚提示行、隐藏勾选列一并废弃。
+     · 选中行 = 淡填充 + 勾选图标；pending 行 = 行尾 StateDot 转圈。
+       旧版把行尾整列 display:none，点强度后转圈被藏、全列表又被全局
+       disabled 规则压到 45% 透明度 —— 点了像没反应，这就是「选择推理
+       强度时出现延迟」的全部成因。宿主 selectModel 的往返时长 CSS 改不了，
+       但反馈必须即时可见。
+   锚点纪律：触发器 data-slot；菜单 body > div[role=menu][aria-busy]
+   （菜单经 createPortal 挂 document.body；aria-busy 恒在，用于排除
+   primitives 的通用菜单）。不用 CSS-Modules 哈希类名。
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+/* ── ⑫·1 触发器：只归一焦点环（官方 box-shadow 环 + 全局 2px outline → 1px 细线） ── */html[data-codex-ui] [data-slot="conversation.input.model"] button:focus-visible{
+  outline: 1px solid var(--dsw-alias-brand-primary);
+  outline-offset: 1px;
+  box-shadow: none;
+}
+
+/* ── ·2 菜单面板：不透明白 + 圆角 + 软影（仓库值 18px 圆角落到本层刻度 l=16；
+      影 0 8px 32px #0002 + 环 1px #0000000a）────────────────────────────── */html[data-codex-ui] body > div[role="menu"][aria-busy]{
+  --dsw-menu-surface-fill: var(--dsw-alias-bg-layer-1);
+  --dsw-menu-backdrop-filter: none;
+  /* rc.1 的填充挂在菜单元素自身（specific-menu 半透明），rc.2 挂在
+     MenuSurface 的 material 子层 —— 两边都压成不透明白。 */
+  background: var(--dsw-alias-bg-layer-1);
+  padding: 5px;
+  border-radius: var(--dsw-radius-l);
+  box-shadow: 0 8px 32px rgba(13, 13, 13, 0.13), 0 0 0 1px rgba(13, 13, 13, 0.04);
+  color: var(--dsw-alias-label-primary);
+}html[data-codex-ui] body[data-ds-dark-theme] > div[role="menu"][aria-busy]{
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(236, 236, 236, 0.05);
+}
+
+/* ── ⑫·3 行契约：根面板两 cell（模型 / 推理强度）与选项行共用 ────────────── */html[data-codex-ui] body > div[role="menu"][aria-busy] button[role="menuitem"],html[data-codex-ui] body > div[role="menu"][aria-busy] button[role="menuitemradio"]{
+  box-sizing: border-box;
+  min-height: 28px;
+  padding: 4px 9px;
+  gap: 8px;
+  border: 0;
+  border-radius: var(--dsw-radius-s);
+  background: none;
+  color: inherit;
+  font-size: 13px;
+  line-height: 20px;
+  text-align: left;
+}html[data-codex-ui] body > div[role="menu"][aria-busy] button[role="menuitem"]:hover,html[data-codex-ui] body > div[role="menu"][aria-busy] button[role="menuitemradio"]:hover:not(:disabled),html[data-codex-ui] body > div[role="menu"][aria-busy] button[role="menuitemradio"][aria-checked="true"]{
+  background: var(--dsw-alias-interactive-bg-active);
+}
+
+/* 键盘焦点：全局 2px 环在菜单内不贴行盒，改 1px 内描线 */html[data-codex-ui] body > div[role="menu"][aria-busy] button[role="menuitem"]:focus-visible,html[data-codex-ui] body > div[role="menu"][aria-busy] button[role="menuitemradio"]:focus-visible{
+  outline: 1px solid var(--dsw-alias-brand-primary);
+  outline-offset: -1px;
+  background: var(--dsw-alias-interactive-bg-active);
+}
+
+/* pending：全局 button:disabled 的 45% 透明度会把整列洗灰（看起来像卡住），
+   还原为 1，反馈交给行尾转圈 + 勾选；非当前行靠官方 dimmed 色区分 */html[data-codex-ui] body > div[role="menu"][aria-busy] button[role="menuitemradio"]:disabled{
+  opacity: 1;
+}
+
+/* pending 指示器：宿主在 aria-busy 窗口内把整列 disabled，但**不渲染任何转圈**。
+   2026-09-26 在真实 GUI（0.1.7-rc.x，headless Chromium 打 127.0.0.1:3099）实测：
+   点「推理等级」后第 60ms 菜单 aria-busy=true、6 行全 disabled、checked 已乐观
+   移到新值，而 document.getAnimations() 在菜单内为 0 —— 面板冻着不动约 1.1s 才关闭。
+   宿主 selectModel 的往返时长 CSS 改不了，能改的是这 1.1s 里必须看得见「在写」。
+   做法：pending 行行尾的勾选换成转圈（勾选已乐观前移，此处正好空出来），
+   并把 disabled 的 not-allowed 光标换成 progress。 */html[data-codex-ui] body > div[role="menu"][aria-busy="true"] button[role="menuitemradio"][aria-checked="true"] > span:last-child{
+  position: relative;
+}html[data-codex-ui] body > div[role="menu"][aria-busy="true"] button[role="menuitemradio"][aria-checked="true"] > span:last-child > svg{
+  visibility: hidden;
+}html[data-codex-ui] body > div[role="menu"][aria-busy="true"] button[role="menuitemradio"][aria-checked="true"] > span:last-child::after{
+  content: "";
+  position: absolute;
+  inset: 0;
+  box-sizing: border-box;
+  width: 12px;
+  height: 12px;
+  margin: auto;
+  border: 1.5px solid var(--dsw-alias-border-l3);
+  border-top-color: var(--dsw-alias-label-primary);
+  border-radius: 50%;
+  animation: codex-ui-spin 620ms linear infinite;
+}html[data-codex-ui] body > div[role="menu"][aria-busy="true"] button[role="menuitemradio"]:disabled{
+  cursor: progress;
+}
+
+@keyframes codex-ui-spin {
+  to {
+    transform: rotate(1turn);
+  }
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   ⑬ Codex 式输入区（圆角 / 阴影 / 顶栏消隐 / 面板按钮图标）
+   ---------------------------------------------------------------------------
+   参考图 evidence/codex-composer-reference.png（1208×263）实测：
+     · 页面底 #ffffff；卡片填充 #ffffff
+     · 卡片下沿阴影 ≈ #fbfbfb（极淡、宽而散）；卡片左描边 ≈ #e1e1e1 发丝线
+     · 卡片上栏（PROJECT 条）填充 #f5f5f5，顶圆角、左右各内缩 ≈24px
+     · 卡片圆角：白底白卡无法逐像素定值，按角弧轮廓落在 24–28px，取下沿 24px
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+/* ⑬·1 输入卡：几何与表面已移交 ⑭ 层（skins/codex-ink/composer.css）。
+   那一层从 MichengAI/dsh-codex-ui 原样移植：20px 圆角（corner-shape 可用时 25px 超椭圆）、
+   无边框、三层极淡投影；选择器优先级与层序都在本条之上，故此处不再重复声明，避免双真源。
+   旧值留档：24px 圆角 / 1px border-l1 / 0 1px 2px + 0 14px 36px。 */
+
+/* ⑬·2 输入卡上方的 Codex 条（文件/工作区选择栏）形态契约
+   seat: conversation.input.dock（「Full-width entries above the composer card」）。
+   内容由客户端插件填入并打 [data-codex-filebar] 标记——只按标记上形，
+   避免把既有 QueueDock / TodoDock / GoalDock 也画成灰条。 */html[data-codex-ui] [data-codex-filebar]{
+  box-sizing: border-box;
+  width: calc(100% - 48px);
+  margin: 0 auto -12px;
+  padding: 8px 16px 22px;
+  border-radius: var(--dsw-radius-l) var(--dsw-radius-l) 0 0;
+  background: #f5f5f5;
+  color: var(--dsw-alias-label-secondary);
+  font-family: var(--dsw-font-meta);
+  font-size: 12px;
+  line-height: 20px;
+}html[data-codex-ui] body[data-ds-dark-theme] [data-codex-filebar]{
+  background: #262626;
+}
+
+/* ⑬·3 顶栏瘦身：分割线上只留会话名 + 右上角按钮
+   官方 ConversationSessionHeader 的真实结构（rc1，读 dsh-client-ui-conversation 的 JSX）：
+     div.titleRow
+       ├ div.titleCluster
+       │   ├ nav.crumbs          ← 会话名（crumbSeg / crumbCurrent），保留
+       │   └ div.headerActions   ← renderSlot("conversation.session.header.actions")：预设徽标 / 任务列表，隐去
+       ├ div.headerUtilities     ← renderSlot("...utilities")，隐去
+       └ div.headerCorner[data-conversation-header-corner] ← 右栏展开按钮 / 会话日志，保留
+     div.tabs[role=tablist][data-conversation-tabs]   ← 视图页签，隐去
+   titleRow 的官方布局是 titleCluster（flex:1）+ utilities + corner，
+   故去掉旧版的 justify-content:flex-end —— 标题要留在左边。
+
+   ⚠ 本注释块里**不能出现花括号**（左右都不行）：tools/install-plugin.mjs 的
+   scopeCss 是按「下一个左花括号」做括号配对的，注释里混进一个花括号就会把
+   后面的规则整段错位 —— 实测表现为紧随其后的规则被重复加 html[data-codex-ui]
+   前缀而失效、整份 theme.css 花括号数不平衡。所以注释里只写行式记法。 */
+/* 隐去「标题旁动作」与「右侧工具」两格 —— 关掉它们的**槽出口里的内容**。
+   renderSlot 的出口恒为 <div data-slot="<槽名>" style="display:contents">，槽名是官方
+   稳定契约，比 [class$="_headerActions"] 这类哈希类名抗升级。
+   注意：出口自带**内联** style="display:contents"，外链规则赢不了它，所以这里
+   不关出口本身，改关它渲染出来的每一项（出口留空即无视觉）。 */html[data-codex-ui] [data-slot="conversation.session.header.actions"] > *{
+  display: none;
+}html[data-codex-ui] [data-slot="conversation.session.header.utilities"] > *{
+  display: none;
+}html[data-codex-ui] [data-slot="conversation.session.header"] > [data-conversation-tabs]{
+  display: none;
+}
+
+/* ⑬·3b 顶栏**真正**瘦身：把被隐藏页签仍占着的那条 min-height 收掉。
+   官方规则 .wSkVaW_header:where(:not(:has(.wSkVaW_tabs))) 用 :has() 判断有没有页签，
+   但 :has() 只看元素树、**不看 display** —— 上面那条 display:none 之后 .tabs 还在树里，
+   于是 min-height:76px 与 padding-bottom:0 一直生效：页签没了，76px 空带还在，
+   分割线被顶到空带下方，看起来就是"上方空了一大块 / 分割线太高"。
+   这里按同一语义手动补上。header 元素本身没有 data-*，用它内部稳定的子锚点 :has 定位
+   （data-conversation-header-leading，见 dsh-client-ui-conversation/lib/client.js:16223）。
+   必须再带 :has([data-conversation-tabs])：hero/空白态下 showTabs=false，页签根本不渲染，
+   官方 .wSkVaW_headerBlank 给的 min-height:0 与 padding-bottom:0 才是对的；
+   不带这个条件会反过来给空白顶栏塞 10px 下内边距（实测踩到过）。 */html[data-codex-ui] header:has([data-conversation-header-leading]):has([data-conversation-tabs]){
+  min-height: 0;
+  padding-bottom: 10px;
+}
+
+/* ⑬·6 「新会话」：参考图里 New chat 是**无边框行**（图标 + 文字，hover 浅填充），
+   DSH 默认是带描边的整宽按钮 → 去掉描边与底色，改成行。
+   锚点 data-dsh-part="new-session" 由 skin-center 兼容适配器补打（不依赖本地化文案）。 */html[data-codex-ui] [data-dsh-part="new-session"]{
+  border: 0;
+  background: transparent;
+  box-shadow: none;
+  border-radius: var(--dsw-radius-s);
+  justify-content: flex-start;
+  color: var(--dsw-alias-label-primary);
+}html[data-codex-ui] [data-dsh-part="new-session"]:hover{
+  background: var(--dsw-alias-interactive-bg-hover);
+}
+
+/* ⑬·5 卡下方统计行（DSH 独有：轮数/步数 · tok/s · 缓存命中）——参考图没有这一行。
+   要恢复：把下面这条注释掉即可。 */html[data-codex-ui] [data-slot="conversation.composer.dock"]{
+  display: none;
+}
+
+/* ⑬·4 右上角面板按钮：**用官方图标**，不再手绘。
+   旧版把官方 svg display:none 掉、用纯 CSS 画了个「圆角方框 + 竖分割线」——
+   1.2px 描边配 16px 图标的视觉重量对不上，比官方图标糙。
+   查了 MichengAI/dsh-codex-ui：**它也没换这个图标**。它只做两件事
+   （src/client/conversation-header.ts:26）：
+     ① 归零角落插槽的边距补偿 —— 官方 .headerCorner 是 margin-left:8px + margin-right:-16px，
+        配合 header 的 padding-right:28px 把按钮顶到距右 12px；归零后回到 28px 内缩。
+     ② 用 order 重排，绝不物理搬移 React 节点（搬了会 NotFoundError 白屏）。
+   所以这里：撤掉手绘方框、恢复官方 svg，只补两点 —— 位置归零 + 展开态也镜像成 panel-right。
+
+   为什么镜像：官方展开按钮用**未镜像**的 IconPanelLeftOutlineRegular，收起按钮用
+   collapseGlyph 的 scaleX(-1) 镜像版 —— 同一块面板的两个状态图标朝向不一致。
+   参考图 evidence/codex-app-reference.png 右上角是 panel-right，故把展开态也镜像过来。
+   锚点 data-sidebar-right-expand 见 dsh-client-ui-sidebar-right 的 ExpandButton。 */html[data-codex-ui] [data-conversation-header-corner]{
+  margin-left: 0;
+  margin-right: 0;
+}html[data-codex-ui] [data-sidebar-right-expand] svg{
+  transform: scaleX(-1);
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   ⑮ 侧栏开合动效参数（对齐 Codex 手感）
+   ---------------------------------------------------------------------------
+   宿主本来就animate：AppFrame 是 grid-template-columns: 侧栏 / 1fr / 右栏，
+   开合时给 frame 打 [data-animating]，grid-template-columns 的 transitionend 到了
+   才摘掉（dsh-client-ui-layout/lib/client.js:270-298）。
+   默认参数 --ds-transition-duration-slow = .3s、--ds-ease-in-out = cubic-bezier(.4,0,.2,1)。
+   Codex 实测手感是 500ms + expo-out（MichengAI/dsh-codex-ui 用同值），这里换掉。
+   锚点全用稳定 data 属性：data-animating / data-dragging / data-side。
+   ⚠ 不要用 [class*=…]：frame 的类名是 CSS-Modules 哈希，随构建变。
+   ═══════════════════════════════════════════════════════════════════════════ */
+/* 只改**参数**，不改宿主"关掉动画"的开关。宿主有四个状态要求 transition:none：
+   data-dragging（拖拽中，逐帧跟随指针）、data-rightbar-instant（右栏退出全屏，瞬时）、
+   data-rightbar-fullscreen、以及 reduced-motion。
+   注意本层被作用域化成 html[data-codex-ui] [data-animating] = (0,2,1)，
+   会**盖过**宿主的 .pI_x6G_frame[data-rightbar-instant] = (0,2,0) —— 所以必须显式还回去，
+   否则右栏退出全屏会被强行加上动画（实测踩到过）。 */html[data-codex-ui] [data-animating]{
+  transition: grid-template-columns 500ms cubic-bezier(.16, 1, .3, 1);
+}
+
+/* 两侧拖拽柄都要覆盖：只写 [data-side="sidebar"] 会让右栏柄停在宿主的 .3s，
+   与 frame 的 500ms 脱同步（柄和面板各走各的）。 */html[data-codex-ui] [data-animating] [data-side]{
+  transition: left 500ms cubic-bezier(.16, 1, .3, 1);
+}html[data-codex-ui] [data-dragging],html[data-codex-ui] [data-rightbar-instant],html[data-codex-ui] [data-rightbar-fullscreen],html[data-codex-ui] [data-dragging] [data-side],html[data-codex-ui] [data-rightbar-instant] [data-side],html[data-codex-ui] [data-rightbar-fullscreen] [data-side]{
+  transition: none;
+}
+
+@media (prefers-reduced-motion: reduce) {html[data-codex-ui] [data-animating],html[data-codex-ui] [data-animating] [data-side]{
+    transition: none;
+  }
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   ⑯ 右栏「展开时选择组件」= 空栏 guide（对齐 Codex 右栏展开参考图实测）
+   ---------------------------------------------------------------------------
+   参考图实测（488×1120，DPR=1，侧栏面板宽 474）：
+     · 条目行：宽 380 居中、行高 52、行距 14（pitch 66）、无描边无底色、圆角 12
+     · 图标列 20×20（条目左沿内缩 20），图标 ↔ 文字 gap 14
+     · 标题 14px 单行；参考图没有描述行
+     · 快捷键：右侧灰底 pill，68×24、圆角 12、底 ≈ #f3f3f4、字 12px 辅墨
+     · 无罗盘 hero；内容块真·垂直居中（宿主底部 10% 占位要去掉）
+   锚点：data-sidebar-right-guide / data-sidebar-right-guide-entry（官方稳定
+   属性），行内结构用位置伪类 + :has(kbd)，不用哈希类名。
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+/* 罗盘 hero：参考图无 */html[data-codex-ui] [data-sidebar-right-guide] > span[aria-hidden="true"]{
+  display: none;
+}
+
+/* 底部 10% 占位 → 真居中 */html[data-codex-ui] [data-sidebar-right-guide]::after{
+  display: none;
+}
+
+/* 条目：胶囊 → 平行 */html[data-codex-ui] [data-sidebar-right-guide-entry]{
+  box-sizing: border-box;
+  width: 380px;
+  max-width: 100%;
+  min-height: 52px;
+  gap: 14px;
+  padding: 0 20px;
+  border: 0;
+  border-radius: var(--dsw-radius-m);
+  background: transparent;
+  color: var(--dsw-alias-label-primary);
+  font-size: 14px;
+}html[data-codex-ui] [data-sidebar-right-guide-entry]:hover{
+  background: var(--dsw-alias-interactive-bg-hover);
+}
+
+/* 图标列 20×20（宿主按有无描述画 22/26，拉回参考值） */html[data-codex-ui] [data-sidebar-right-guide-entry] > span:first-child{
+  width: 20px;
+  height: 20px;
+}html[data-codex-ui] [data-sidebar-right-guide-entry] > span:first-child svg{
+  width: 20px;
+  height: 20px;
+}html[data-codex-ui] [data-sidebar-right-guide-entry] > span:nth-child(2){
+  gap: 0;
+}
+
+/* 描述行：仅当它存在时隐藏（nth-child(2) 不存在即标题独占） */html[data-codex-ui] [data-sidebar-right-guide-entry] > span:nth-child(2) > span:nth-child(2){
+  display: none;
+}
+
+/* 终端行是 terminal 插件注册的自定义卡（TerminalGuide），不是标准卡：
+   子序为 button.main（absolute 点击层）→ span.icon → span.text → keys，
+   上面按标准卡子序写的图标/描述规则对它全部落空，按 kind 属性另点。
+   标题旁的 chevron 是选 Shell 菜单入口，功能件保留。 */html[data-codex-ui] [data-sidebar-right-guide-entry="terminal"] > span:nth-child(2){
+  width: 20px;
+  height: 20px;
+}html[data-codex-ui] [data-sidebar-right-guide-entry="terminal"] > span:nth-child(2) svg{
+  width: 20px;
+  height: 20px;
+}html[data-codex-ui] [data-sidebar-right-guide-entry="terminal"] > span:nth-child(3) > span:nth-child(2){
+  display: none;
+}
+
+/* 快捷键 → 灰底 pill（宿主 plain 变体是无底文字键） */html[data-codex-ui] [data-sidebar-right-guide-entry] > span:has(kbd){
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  gap: 3px;
+  height: 24px;
+  padding: 0 10px;
+  border-radius: var(--dsw-radius-m);
+  background: var(--dsw-alias-bg-layer-2);
+  color: var(--dsw-alias-label-tertiary);
+  font-size: 12px;
+  line-height: 16px;
+  white-space: nowrap;
+}html[data-codex-ui] [data-sidebar-right-guide-entry] kbd{
+  display: inline;
+  min-width: 0;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+}
+
+/* 收起按钮（▢）：参考图常驻灰底圆方（参考 42px，受页签条行高限制取 28，
+   形态对齐、尺寸如实记录） */html[data-codex-ui] [data-sidebar-right-toggle]{
+  background: var(--dsw-alias-bg-layer-2);
+  border-radius: var(--dsw-radius-m);
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   ⑰ composer 底部控件：默认无框，悬停整块淡底
+   ---------------------------------------------------------------------------
+   需求：Codex 的加号控件默认**没有**背景框，只有鼠标悬停才出现；
+   模型选择器与权限控件照它的悬停形态复刻。
+   参考图 evidence/codex-composer-plus.png（65×84）与 codex-composer-chip-hover.png（144×58）：
+
+     · 加号：40px 直径圆形，悬停时才填 --dsw-codex-hover-fill（实测 #F2F2F3）。
+     · 悬停胶囊：整块填充 242,242,243，**没有描边**（逐像素量了外沿：白 255 → 243 → 242，
+       没有更深的环）；左右弧顶到弧顶 41px，全圆角。
+
+   锚点：加号按钮没有 data-* 只有哈希类名，按 composer.css 已备案的「后缀锚点」写法取
+   button[class$="_add"]；两个触发器（模型 _7KE1Ra_trigger / 权限 iWlSmW_trigger）
+   同样按后缀取 button[class$="_trigger"]，整条规则限定在 [data-composer-card] 内。
+   实测（真 GUI，2026-09-26）：加号 idle 与 hover 同为 rgb(241,241,239) —— 常驻灰底，
+   就是「多了个背景框」；两个触发器 idle 透明、hover rgba(13,13,13,.04)，与参考图同形。
+   ═══════════════════════════════════════════════════════════════════════════ */html[data-codex-ui] [data-composer-card] button[class$="_add"],html[data-codex-ui] [data-composer-card] button[class$="_trigger"]{
+  transition: background-color var(--dsw-motion-fast) var(--dsw-ease);
+}
+
+/* 加号：撤掉宿主常驻的 --dsw-alias-bg-layer-2 灰底 */html[data-codex-ui] [data-composer-card] button[class$="_add"]{
+  background: transparent;
+}html[data-codex-ui] [data-composer-card] button[class$="_add"]:hover,html[data-codex-ui] [data-composer-card] button[class$="_add"][aria-expanded="true"],html[data-codex-ui] [data-composer-card] button[class$="_trigger"]:hover,html[data-codex-ui] [data-composer-card] button[class$="_trigger"][aria-expanded="true"]{
+  background: var(--dsw-codex-hover-fill);
+}
+
+
+
+/* ==== L3 侧栏对齐层（源：skins/codex-ink/sidebar-align.css）==== */
+/* ============================================================================
+   codex-ink（墨白终端）· L3 侧栏对齐层
+   ----------------------------------------------------------------------------
+   源文件：skins/codex-ink/sidebar-align.css
+   由 tools/install-plugin.mjs 与 skin.css / patches.css 一起拼接，并作用域化到
+   html[data-codex-ui]。因此本文件写「裸选择器」——不要自己再加 html[...] 前缀，
+   那会被 scopeCss 判为已作用域而直通，永不命中。
+
+   目标（三条，不多做）：
+     ① 品牌行 —— 完全不动。保留官方 fish 标与名称，不注册 sidebar.brand.* 洞。
+     ② New Session 行 —— 压成列表行，图标/文字落到「工作区」下方列表行的两条竖线上。
+     ③ 全局面板行（插件…）—— 同一组竖线。
+
+   目标列（相对侧栏根 div 左边缘，实测值见 tools/sidebar-align-verify.mjs）：
+     图标列 20px = 列表行左边缘 12px + padding-inline-start 8px
+     文字列 42px = 20px + 图标 16px + gap 6px
+   对照：工作区行（projectRow）实测 20 / 42，会话行（sessionRow）实测 20 / 40。
+
+   锚点纪律（遵守 patches.css 头部的约定）：
+     本层只用 skin-center 语义契约 data-slot + 结构伪类，
+     不使用 CSS-Modules 哈希类名，不触发
+     "reliance on CSS-Modules hash class names" 警告。
+
+     官方侧栏的 New Session 按钮不是 slot 内容，没有 data-slot 可挂；
+     但 Tooltip 只克隆锚点、不加包装元素，故它仍是侧栏根 div 唯一的直接
+     button 子元素，用
+         div:has([data-slot="sidebar.workspaces"]) > button
+     定位。折叠态用 sidebar.toggle.badge 出口的存在与否排除 ——
+     官方只在 !wide（折叠）时才 renderSlot 该出口。
+
+   官方真实值（rc1 0.1.7-rc.1，取自 dsh-client-ui-sidebar 内联 css）。
+   为免触发 scopeCss 的括号解析，这里用行式记法，不写花括号：
+
+     _newSession        高度 height:38px
+                        边框 .5px solid var(--dsw-alias-border-l3)
+                        底色 var(--dsw-alias-button-elevated-fill)
+                        对齐 justify-content:center
+                        gap 6px ／ margin 0 2px 12px ／ padding 8px 16px
+                        字体 14px / 500 ／ line-height 22px
+     _newSession:hover  底色 var(--dsw-alias-button-floating-hover)
+     _newSessionLabel   white-space:nowrap ／ max-width:200px ／ overflow:hidden
+
+     _panelRow          box-sizing:border-box ／ min-height:36px
+                        底色 0 0 ／ 边框 none ／ 圆角 12px
+                        对齐 justify-content 未设（即 flex-start）
+                        gap 8px ／ margin 0 2px ／ padding 7px 8px
+                        字体 font:inherit ／ line-height:22px ／ text-align:left
+     _panelRow:hover    底色 var(--dsw-alias-interactive-bg-hover)
+     _panelRow:focus-visible  2px solid var(--dsw-alias-label-primary)，offset -2px
+     _panelTitle        text-overflow:ellipsis ／ white-space:nowrap
+                        min-width:0 ／ overflow:hidden
+     _panelList         flex-direction:column ／ gap:4px ／ margin-bottom:8px
+   ============================================================================ */
+
+
+/* ── ① 品牌行：刻意留空 ──────────────────────────────────────────────────
+   官方 logoRow / brandIdentity / brandMark / brandName / fallbackBrandName
+   全部原样生效。本层不写任何相关规则。 */
+
+
+/* ── ② New Session → 压成列表行，落到「工作区」下方列表行的两条竖线 ────────
+   展开态判定：侧栏根 div 含 sidebar.workspaces 出口，
+   且不含 sidebar.toggle.badge 出口。
+
+   官方 New Session 是 38px 居中主按钮：margin 0 2px 12px / padding 8px 12px /
+   justify-content:center，图标停在中线（实测 108px），与列表行差 88px。 */html[data-codex-ui] div:has([data-slot="sidebar.workspaces"]):not(:has([data-slot="sidebar.toggle.badge"])) > button{
+  box-sizing: border-box;
+
+  /* 高度：38px → min-height:36px */
+  height: auto;
+  min-height: 36px;
+  flex: none;
+
+  /* 外观：主按钮 → 列表行 */
+  background: 0 0;
+  border: none;
+  border-radius: var(--dsw-radius-s);
+
+  /* 排版：居中主按钮 → 左对齐列表行 */
+  justify-content: flex-start;
+  align-items: center;
+  gap: 6px;
+  /* 左边距归零：行左边缘与列表行同为 12px，图标才落到 20px。
+     桌面壳（html[data-windows-titlebar]）官方自己也写 margin-left:0，那条
+     (0,4,0) 比本层 (0,3,3) 更高 —— 桌面端本来就吃到 0。这里显式写 0，
+     让 web profile（无 titlebar）与桌面端落到同一条竖线上。 */
+  margin: 0 2px 4px 0;
+  padding: 7px 8px;
+  font: inherit;
+  line-height: 22px;
+  text-align: left;
+  color: var(--dsw-alias-label-primary);
+  cursor: pointer;
+  overflow: hidden;
+}html[data-codex-ui] div:has([data-slot="sidebar.workspaces"]):not(:has([data-slot="sidebar.toggle.badge"])) > button:hover{
+  background: var(--dsw-alias-interactive-bg-hover);
+}html[data-codex-ui] div:has([data-slot="sidebar.workspaces"]):not(:has([data-slot="sidebar.toggle.badge"])) > button:focus-visible{
+  outline: 2px solid var(--dsw-alias-label-primary);
+  outline-offset: -2px;
+}
+
+/* 图标：官方 newSession 用 14px，panelGlyph 用 16px → 统一 16px（rc.1 扁平结构） */html[data-codex-ui] div:has([data-slot="sidebar.workspaces"]):not(:has([data-slot="sidebar.toggle.badge"])) > button > svg{
+  width: 16px;
+  height: 16px;
+  flex: none;
+}
+
+/* 标签：官方只设了 max-width:200px → 补齐 panelTitle 的省略行为（rc.1 扁平结构） */html[data-codex-ui] div:has([data-slot="sidebar.workspaces"]):not(:has([data-slot="sidebar.toggle.badge"])) > button > span{
+  max-width: none;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+
+/* ── ②·b New Session · rc.2 嵌套结构 ─────────────────────────────────────
+   0.1.7-rc.2（桌面壳在跑的那一代）在按钮里又套了两层：
+     button > span(newSessionLabelMask) > span(newSessionContent) > svg + span(newSessionLabel)
+   官方在 newSessionContent 上写死 width:100cqw + justify-content:center，
+   并把按钮设成 container-type:inline-size —— 于是只把 button 改成 flex-start
+   压不住它，图标仍旧停在按钮中线。这里把这一层拉回左对齐。 */html[data-codex-ui] div:has([data-slot="sidebar.workspaces"]):not(:has([data-slot="sidebar.toggle.badge"])) > button > span > span:has(> svg){
+  justify-content: flex-start;
+  width: auto;
+}
+
+/* 图标（rc.2 嵌在内容容器里，与 rc.1 同一条 16px 契约） */html[data-codex-ui] div:has([data-slot="sidebar.workspaces"]):not(:has([data-slot="sidebar.toggle.badge"])) > button > span > span > svg{
+  width: 16px;
+  height: 16px;
+  flex: none;
+}
+
+/* 标签（rc.2 又深一层；span.keys 的键帽是 kbd，不会命中这条） */html[data-codex-ui] div:has([data-slot="sidebar.workspaces"]):not(:has([data-slot="sidebar.toggle.badge"])) > button > span > span > span{
+  max-width: none;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+
+/* ── ③ 全局面板行（插件…）→ 同两条竖线 ───────────────────────────────────
+   侧栏根 div 的直接 nav 子元素就是 panelList；它的每个直接 button 是一行面板。
+   官方 panelRow 是 margin:0 2px / padding:7px 8px / gap:8px
+   → 图标 22px、文字 46px，比列表行右移 2px / 4px。 */html[data-codex-ui] div:has([data-slot="sidebar.workspaces"]):not(:has([data-slot="sidebar.toggle.badge"])) > nav > button{
+  gap: 6px;
+  margin-left: 0;
+}
+
+
+/* ==== L3 窗口边缘阴影层（源：skins/codex-ink/window-shadow.css）==== */
+/* ============================================================================
+   codex-ink · L3 窗口边缘阴影层
+   ----------------------------------------------------------------------------
+   源文件：skins/codex-ink/window-shadow.css。install-plugin.mjs 把本文件的选择器
+   作用域化到 html[data-codex-ui] 后拼进 client.js 的内嵌样式表，所以这里写裸选择器：
+   自己再加 html[...] 前缀会被 scopeCss 判为已作用域而直通，永远不命中。
+   注释里禁止出现花括号 —— scopeCss 按「下一个左花括号」做括号配对。
+
+   目标（三条，不多做）：
+     1. 会话窗口（AppFrame 中列）：1px 发丝线 + 24px 全向环境影（左沿糊到侧栏、上沿糊进标题栏条）；
+     2. 右栏面板：同样的顶沿，但**左边框只留发丝线、不带影**；
+     3. 右栏分界线拖拽柄悬停时的中段渐变聚焦。
+
+   取值依据（Codex 应用截图逐像素实测，非估计）：
+     evidence/codex-app-reference.png（1901x1107，DPR 1）
+      · 会话窗口左沿  y=600：侧栏侧 x=340..355 由 238,241,247 渐变到 231,233,239（约 15px 渐变），
+                    x=356 单像素发丝线 212,215,221，x=357 起纯白。
+      · 会话窗口上沿  x=800：y=30..45 由 237,242,247 渐变到 232,237,242，y=46 发丝线 214,218,224。
+      · 右栏面板左沿  y=600：x=1437 单像素 237,237,237，两侧都是纯白 —— **没有影**。
+      · 右栏面板上沿  x=1700：与中列同一套渐变 + 发丝线（y=46 处 213,218,224）。
+    结论：发丝线是 1 个设备像素，中列取 12% 墨（l2）、面板取 7% 墨（l1）；
+          软影只出现在中列的左/上沿与面板的上沿，面板左沿不糊影。
+          本层按 DPR 折算成 0.5 CSS px 的发丝线：1.5 倍缩放下落到约 1 个设备像素，
+          与参考图同档；写成 1px 会在 1.5 倍缩放下被栅格化成 2 个像素（偏粗）。
+
+   锚点（只用宿主语义属性，不用 CSS-Modules 哈希类名）：
+     中列     div:has(> [data-slot="main"])；main 面板未注册时退回
+              div:has(> [data-slot="sidebar"]) + div（侧栏列的下一个兄弟）。
+     右栏面板 [data-sidebar-right-panel="push"][data-sidebar-right-open]。
+     拖拽柄   [data-side="rightbar"]，宽 8px、骑跨分界线。
+
+   层序：标题栏拖拽条是 .frame 的绝对定位伪元素，静态定位的中列会被它盖住。
+   本层给中列补 position: relative 抬进定位层，靠 DOM 顺序压过它 —— 上沿的影因此
+   才画得到标题栏条上。右栏面板是宿主 absolute 拉伸的元素（top:0 / bottom:0），
+   切勿再叠 position: relative：会覆盖 absolute、面板塌成内容高度（已出过一次事故）。
+   ============================================================================ */
+
+/* ── ① 会话窗口（中列）：0.5px 发丝线 + 24px 全向环境影 ─────────────────────
+   范围：Windows 桌面壳（html[data-windows-titlebar]）与 win32 的浏览器形态。
+   macOS 是 vibrancy 透底，加外投影会脏，不生效。 */html[data-codex-ui][data-windows-titlebar] div:has(> [data-slot="main"]),html[data-codex-ui][data-windows-titlebar] div:has(> [data-slot="sidebar"]) + div,html[data-codex-ui][data-platform="win32"]:not([data-windows-titlebar]) div:has(> [data-slot="main"]),html[data-codex-ui][data-platform="win32"]:not([data-windows-titlebar]) div:has(> [data-slot="sidebar"]) + div{
+  position: relative;
+  box-shadow:
+    0 0 0 0.5px var(--dsw-alias-border-l2),
+    0 0 24px rgba(13, 13, 13, 0.05);
+}html[data-codex-ui][data-windows-titlebar] body[data-ds-dark-theme] div:has(> [data-slot="main"]),html[data-codex-ui][data-windows-titlebar] body[data-ds-dark-theme] div:has(> [data-slot="sidebar"]) + div,html[data-codex-ui][data-platform="win32"]:not([data-windows-titlebar]) body[data-ds-dark-theme] div:has(> [data-slot="main"]),html[data-codex-ui][data-platform="win32"]:not([data-windows-titlebar]) body[data-ds-dark-theme] div:has(> [data-slot="sidebar"]) + div{
+  box-shadow:
+    0 0 0 0.5px var(--dsw-alias-border-l2),
+    0 0 24px rgba(0, 0, 0, 0.5);
+}
+
+/* ── ② 右栏（push 模式）：左边框只留发丝线，影只往上泄 ─────────────────────
+   参考图实测：面板左沿 x=1437 是单像素 237,237,237、两侧纯白 —— 左沿不糊影，
+   所以这里不给全向影；顶沿仍与中列同套，用负 spread 把水平方向与下方收掉，
+   只在面板上沿留一段约 12px 的渐变（影盒左沿被收进面板 12px 内，左沿残余覆盖约
+   0.008，肉眼为零）。栏内 dockkit 叠的那条 .5px l4 深边框一并压成 0。 */html[data-codex-ui][data-windows-titlebar] [data-sidebar-right-panel="push"][data-sidebar-right-open],html[data-codex-ui][data-platform="win32"]:not([data-windows-titlebar]) [data-sidebar-right-panel="push"][data-sidebar-right-open]{
+  box-shadow:
+    0 0 0 0.5px var(--dsw-alias-border-l1),
+    0 -12px 24px -12px rgba(13, 13, 13, 0.05);
+}html[data-codex-ui][data-windows-titlebar] body[data-ds-dark-theme] [data-sidebar-right-panel="push"][data-sidebar-right-open],html[data-codex-ui][data-platform="win32"]:not([data-windows-titlebar]) body[data-ds-dark-theme] [data-sidebar-right-panel="push"][data-sidebar-right-open]{
+  box-shadow:
+    0 0 0 0.5px var(--dsw-alias-border-l1),
+    0 -12px 24px -12px rgba(0, 0, 0, 0.5);
+}
+
+/* 宿主 dockkit 给右栏的 pane 画了一条 1px l4（24% 墨，实测合成值 197 —— 比参考图的
+   单像素 237 深两档），它落在面板左沿外侧，就是「边框又粗又重」的来源之一。
+   真实锚点是 pane 自身：SECTION[data-dockkit-pane][data-dockkit-column="0"]，
+   插在 [data-dockkit-host="dock"] 的 tabCell 里 —— 旧版按 host 的 div 直选子元素，
+   选择器从来没命中过。压成 0，左沿只留面板自己的 0.5px l1 发丝线。 */html[data-codex-ui] [data-sidebar-right-panel="push"][data-sidebar-right-open] [data-dockkit-pane][data-dockkit-column="0"]{
+  border-left: 0;
+}
+
+/* ── ③ 右栏分界线拖拽柄：悬停时的中段渐变聚焦 ─────────────────────────────
+   静态：边界只有那 0.5px 发丝线，淡且细。
+   悬停：柄内居中画 2px 竖向线，中段最深、两端淡出，入场自中间向两端展开。
+   实测 evidence/codex-rightbar-edge-hover.png（111x842，DPR 1）：
+     柄心列 y=560 处 x=65/66 = 213,214,214 / 198,198,199（中段最深）
+     同一列 y=20 处 x=65/66 = 239,239,240 / 222,222,222（向两端淡出）
+   左分界线（侧栏 ↔ 中列）没有这条悬停线：参考图里它始终是一条静态发丝线。 */html[data-codex-ui] [data-side="rightbar"]::before{
+  content: "";
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 50%;
+  width: 2px;
+  translate: -50% 0;
+  border-radius: 1px;
+  background: linear-gradient(to bottom, rgba(13, 13, 13, 0.09), rgba(13, 13, 13, 0.27) 50%, rgba(13, 13, 13, 0.09));
+  opacity: 0;
+  scale: 1 0.35;
+  transform-origin: center;
+  transition: opacity var(--dsw-motion-base) var(--dsw-ease), scale var(--dsw-motion-slow) var(--dsw-ease);
+  pointer-events: none;
+}html[data-codex-ui] [data-side="rightbar"]:hover::before{
+  opacity: 1;
+  scale: 1 1;
+}html[data-codex-ui] body[data-ds-dark-theme] [data-side="rightbar"]::before{
+  background: linear-gradient(to bottom, rgba(236, 236, 236, 0.08), rgba(236, 236, 236, 0.24) 50%, rgba(236, 236, 236, 0.08));
+}
+
+/* ── ④ 浏览器形态（win32，无标题栏条）────────────────────────────────────
+   宿主给侧栏列画的是 .5px l3（18% 墨），比桌面壳（border-right: none）深一档，
+   与中列的 0.5px l2 发丝线叠在一起会变成双层深线，压到 l1。 */html[data-codex-ui][data-platform="win32"]:not([data-windows-titlebar]) div:has(> [data-slot="sidebar"]){
+  border-right-color: var(--dsw-alias-border-l1);
+}
+
+
+/* ==== L3 输入区完整层（源：skins/codex-ink/composer.css）==== */
+/* ============================================================================
+   codex-ink（墨白终端）· L3 输入区完整层
+   ----------------------------------------------------------------------------
+   源文件：skins/codex-ink/composer.css
+   由 tools/install-plugin.mjs 与其余各层一起拼接，并作用域化到 html[data-codex-ui]。
+   本文件写「裸选择器」——不要自己再加 html[...] 前缀，那会被 scopeCss 直通。
+
+   来源（本地克隆：D:\A-part-of-new-software\PROJIECT\dsh-codex-ui）：
+     · src/client/CodexSidebar.tsx          L119-L137  → ⑭·1 ⑭·2 ⑭·3
+     · src/client/composer-tool-menus.ts    L6-L30     → ⑭·4（仅官方锚点部分）
+     · src/client/new-conversation-style.ts L3-L14     → ⑭·5
+
+   兼容性核对（对 rc1 0.1.7-rc.1 的 shipped 包逐条 grep，不是照抄）：
+     上游 README 只声明兼容到 0.1.6-alpha.2。逐条核对后，以下锚点在本机 rc1 上
+     不存在，一律**不移植**，免得留死规则：
+       ✗ [data-input-mirror]                      rc1 无此属性（conversation 包 0 命中）
+       ✗ [class*="_rail"]（附件轨道补偿）           rc1 无此类名段
+       ✗ [class*="_selected"] / [class*="_footer"] rc1 无此类名段
+       ✗ [data-dcu-tool-menu] / [data-gitgraph-popover]  由上游 JS 观察器打标，
+         本插件不含该半，规则永远不会命中 → 弹窗换肤留在「待移植 JS 半」清单
+       ✗ .dcu-home-*                            上游自有组件的类名，本皮肤没有这些节点
+     实测存在的锚点（本条全部基于它们）：
+       ✓ [data-composer-card] [data-input-scroll] [data-composer-placeholder]
+         [data-lexical-editor=true] [data-conversation-scroll] [data-composer-seat]
+         [data-trigger-menu] [data-phase]（取值 settling / hero / active）
+
+   锚点纪律例外（必须说清）：
+     ⑭·4 ⑭·5 用到 [class*="_heroWorkspaceRow"] / [class*="_composerHero"] /
+     [class$="_workspace"] / [class$="_primary"]。这类 CSS-Modules 哈希类名在
+     patches.css 头部是被禁止的——那条禁令针对 **skin-center 加载器**的
+     "reliance on CSS-Modules hash class names" 告警。本层走**插件路径**
+     （client.js 直接注入 style 标签），不经加载器，故放行。
+     已尽量取「后缀锚点」写法（[class$=_primary]），只依赖语义后缀、不依赖哈希前缀；
+     语义名若被上游改掉，由 tools/composer-verify.mjs 的实测值暴露。
+     hero 区没有 data-* 可用：jYtg_G_heroWorkspaceRow / jYtg_G_composerHero 只有类名。
+   ============================================================================ */
+
+/* ── ⑭·1 卡片几何与表面 ───────────────────────────────────────────────────
+   上游把输入区放宽到 chat 内容宽 + 32px，左右留白 24px；卡片 20px 圆角（浏览器
+   支持 corner-shape 时升到 25px 超椭圆），亮色三层极淡投影、暗色改用内描边。 */html[data-codex-ui] [data-conversation-scroll]{
+  --dsh-composer-card-max-width: calc(var(--dsh-chat-content-width) + 32px);
+  --dsh-composer-side-clearance: 24px;
+  --dcu-composer-bg: var(--dsw-specific-input-major, #fff);
+  --dcu-composer-shadow: 0 0 0 1px #0000000a, 0 2px 8px #0000000a, 0 4px 80px 8px #00000006;
+}html[data-codex-ui] body[data-ds-dark-theme] [data-conversation-scroll]{
+  --dcu-composer-bg: var(--dsw-alias-bg-layer-2, #242424);
+  --dcu-composer-shadow: inset 0 0 1px #fff3;
+}html[data-codex-ui] [data-conversation-scroll] [data-composer-card]{
+  padding-top: 8px;
+  gap: 4px;
+  border: 0;
+  border-radius: var(--dsw-radius-xl);
+  background: var(--dcu-composer-bg);
+  box-shadow: var(--dcu-composer-shadow);
+}
+
+@supports (corner-shape: superellipse(1.5)) {html[data-codex-ui] [data-conversation-scroll] [data-composer-card]{
+    border-radius: var(--dsw-radius-2xl);
+    corner-shape: superellipse(1.5);
+  }
+}
+
+@media (max-width: 639px) {html[data-codex-ui] [data-conversation-scroll]{
+    --dcu-composer-shadow: 0 0 0 1px #0000000a, 0 2px 8px #0000000a, 0 4px 40px 8px #00000006;
+  }
+}
+
+@media (forced-colors: active) {html[data-codex-ui] [data-conversation-scroll] [data-composer-card]{
+    outline: 1px solid CanvasText;
+  }
+}
+
+/* ── ⑭·2 输入区几何：44px 编辑区 + 12px 内缩，占位元素与正文同轴 ────────── */html[data-codex-ui] [data-conversation-scroll] [data-composer-card] [data-input-scroll]{
+  margin-right: 0;
+}html[data-codex-ui] [data-conversation-scroll] [data-input-scroll] [data-lexical-editor=true]{
+  min-height: 44px;
+  padding: 0 12px;
+}html[data-codex-ui] [data-conversation-scroll] [data-composer-placeholder]{
+  inset: 0 12px auto;
+}
+
+/* ── ⑭·3 底栏行与发送键：28px 控件带，发送键改墨色圆点、无位移 ────────────
+   卡内结构是 card > [data-input-scroll] + row，故用相邻兄弟定位底栏。 */html[data-codex-ui] [data-conversation-scroll] [data-composer-card] > [data-input-scroll] + div{
+  padding: 0 8px 8px;
+  gap: 5px;
+}html[data-codex-ui] [data-conversation-scroll] [data-composer-card] > [data-input-scroll] + div > div{
+  gap: 4px;
+}html[data-codex-ui] [data-conversation-scroll] [data-composer-card] > [data-input-scroll] + div > div > div{
+  gap: 4px;
+}html[data-codex-ui] [data-conversation-scroll] [data-composer-card] > [data-input-scroll] + div :is(button, select):not([role]){
+  min-height: 28px;
+  height: 28px;
+}html[data-codex-ui] [data-conversation-scroll] [data-composer-card] > [data-input-scroll] + div button[class$=_primary]{
+  width: 28px;
+  transform: none;
+  background: var(--dsw-alias-label-primary);
+  color: var(--dsw-alias-bg-base);
+}html[data-codex-ui] [data-conversation-scroll] [data-composer-card] > [data-input-scroll] + div button[class$=_primary]:hover:not(:disabled){
+  background: var(--dsw-alias-label-secondary);
+}html[data-codex-ui] [data-conversation-scroll] [data-composer-card] > [data-input-scroll] + div :is(button, select):focus-visible{
+  outline: 2px solid var(--dsw-alias-label-secondary);
+  outline-offset: 2px;
+}
+
+/* ── ⑭·4 工具条与建议菜单（只保留官方锚点能命中的部分） ────────────────────
+   hero 的工作区行按钮 → Codex 胶囊；@ / 指令建议菜单 → 与输入区同宽同圆角。 */html[data-codex-ui] [class*="_heroWorkspaceRow"] button{
+  min-height: 28px;
+  border-radius: var(--dsw-radius-pill);
+  font-size: 13px;
+  line-height: 20px;
+}html[data-codex-ui] [class*="_heroWorkspaceRow"] button:hover,html[data-codex-ui] [class*="_heroWorkspaceRow"] button[aria-expanded=true]{
+  background: color-mix(in srgb, var(--dsw-alias-label-primary) 8%, transparent);
+}html[data-codex-ui] [data-conversation-scroll] [data-trigger-menu]{
+  box-sizing: border-box;
+  left: 0;
+  right: 0;
+  width: auto;
+  min-width: 0;
+  max-width: none;
+  padding: 5px;
+  border-radius: var(--dsw-radius-m);
+  background: #fff;
+  box-shadow: 0 8px 32px #0002, 0 0 0 1px #0000000a;
+}html[data-codex-ui] body[data-ds-dark-theme] [data-conversation-scroll] [data-trigger-menu]{
+  background: #292929;
+  box-shadow: 0 8px 32px #0003, 0 0 0 1px #ffffff08;
+}html[data-codex-ui] [data-conversation-scroll] [data-trigger-menu] > [role=listbox]{
+  box-sizing: border-box;
+  width: 100%;
+  min-width: 0;
+  align-self: stretch;
+  scrollbar-width: thin;
+}html[data-codex-ui] [data-conversation-scroll] [data-trigger-menu] [role=option]{
+  box-sizing: border-box;
+  width: 100%;
+  min-width: 0;
+  min-height: 28px;
+  padding: 4px 9px;
+  gap: 8px;
+  border-radius: var(--dsw-radius-s);
+  font-size: 13px;
+  line-height: 20px;
+}html[data-codex-ui] [data-conversation-scroll] [data-trigger-menu] [role=option][aria-selected=true]{
+  background: color-mix(in srgb, var(--dsw-alias-label-primary) 10%, transparent);
+}
+
+/* ── ⑭·5 新建页（hero）：输入区占满、工作区行贴在卡片上沿 ─────────────────
+   上游的 .dcu-home-* 建议卡属于它自己的组件，本皮肤没有这些节点，不移植；
+   container 声明只为那些卡片服务，一并省掉。 */html[data-codex-ui] [data-phase=hero] [data-conversation-scroll][class]{
+  --dsh-composer-side-clearance: 16px;
+  justify-content: flex-start;
+  scrollbar-gutter: stable both-edges;
+}html[data-codex-ui] [data-phase=hero] [data-composer-seat]{
+  flex: 1 0 auto;
+  min-height: 100%;
+}html[data-codex-ui] [data-phase=hero] [data-composer-seat] > :has([class*="_composerHero"]){
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+}html[data-codex-ui] [data-phase=hero] [class*="_composerHero"]{
+  box-sizing: border-box;
+  flex: 1;
+  width: 100%;
+  max-width: none;
+  min-width: 0;
+  margin-inline: auto;
+  gap: 0;
+  padding-bottom: 32px;
+}html[data-codex-ui] [data-phase=hero] [class*="_heroWorkspaceRow"]{
+  box-sizing: border-box;
+  flex: none;
+  width: min(calc(var(--dsh-composer-card-max-width) + 2 * var(--dsh-composer-side-clearance) - 56px), calc(100% - 56px));
+  align-self: center;
+  justify-content: flex-start;
+  flex-wrap: wrap;
+  gap: 8px;
+  min-height: 48px;
+  margin: 0 28px -10px;
+  padding: 6px 12px 16px;
+  border-radius: var(--dsw-radius-l) var(--dsw-radius-l) 0 0;
+  background: color-mix(in srgb, var(--dsw-alias-label-primary) 4%, var(--dsw-alias-bg-base));
+}html[data-codex-ui] [data-phase=hero] [class*="_heroWorkspaceRow"] > [class$="_workspace"]{
+  min-width: 0;
+  max-width: 100%;
+  font-weight: 400;
+}

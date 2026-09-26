@@ -1,0 +1,160 @@
+/* ============================================================================
+   codex-ink（墨白终端）· L3 侧栏对齐层
+   ----------------------------------------------------------------------------
+   源文件：skins/codex-ink/sidebar-align.css
+   由 tools/install-plugin.mjs 与 skin.css / patches.css 一起拼接，并作用域化到
+   html[data-codex-ui]。因此本文件写「裸选择器」——不要自己再加 html[...] 前缀，
+   那会被 scopeCss 判为已作用域而直通，永不命中。
+
+   目标（三条，不多做）：
+     ① 品牌行 —— 完全不动。保留官方 fish 标与名称，不注册 sidebar.brand.* 洞。
+     ② New Session 行 —— 压成列表行，图标/文字落到「工作区」下方列表行的两条竖线上。
+     ③ 全局面板行（插件…）—— 同一组竖线。
+
+   目标列（相对侧栏根 div 左边缘，实测值见 tools/sidebar-align-verify.mjs）：
+     图标列 20px = 列表行左边缘 12px + padding-inline-start 8px
+     文字列 42px = 20px + 图标 16px + gap 6px
+   对照：工作区行（projectRow）实测 20 / 42，会话行（sessionRow）实测 20 / 40。
+
+   锚点纪律（遵守 patches.css 头部的约定）：
+     本层只用 skin-center 语义契约 data-slot + 结构伪类，
+     不使用 CSS-Modules 哈希类名，不触发
+     "reliance on CSS-Modules hash class names" 警告。
+
+     官方侧栏的 New Session 按钮不是 slot 内容，没有 data-slot 可挂；
+     但 Tooltip 只克隆锚点、不加包装元素，故它仍是侧栏根 div 唯一的直接
+     button 子元素，用
+         div:has([data-slot="sidebar.workspaces"]) > button
+     定位。折叠态用 sidebar.toggle.badge 出口的存在与否排除 ——
+     官方只在 !wide（折叠）时才 renderSlot 该出口。
+
+   官方真实值（rc1 0.1.7-rc.1，取自 dsh-client-ui-sidebar 内联 css）。
+   为免触发 scopeCss 的括号解析，这里用行式记法，不写花括号：
+
+     _newSession        高度 height:38px
+                        边框 .5px solid var(--dsw-alias-border-l3)
+                        底色 var(--dsw-alias-button-elevated-fill)
+                        对齐 justify-content:center
+                        gap 6px ／ margin 0 2px 12px ／ padding 8px 16px
+                        字体 14px / 500 ／ line-height 22px
+     _newSession:hover  底色 var(--dsw-alias-button-floating-hover)
+     _newSessionLabel   white-space:nowrap ／ max-width:200px ／ overflow:hidden
+
+     _panelRow          box-sizing:border-box ／ min-height:36px
+                        底色 0 0 ／ 边框 none ／ 圆角 12px
+                        对齐 justify-content 未设（即 flex-start）
+                        gap 8px ／ margin 0 2px ／ padding 7px 8px
+                        字体 font:inherit ／ line-height:22px ／ text-align:left
+     _panelRow:hover    底色 var(--dsw-alias-interactive-bg-hover)
+     _panelRow:focus-visible  2px solid var(--dsw-alias-label-primary)，offset -2px
+     _panelTitle        text-overflow:ellipsis ／ white-space:nowrap
+                        min-width:0 ／ overflow:hidden
+     _panelList         flex-direction:column ／ gap:4px ／ margin-bottom:8px
+   ============================================================================ */
+
+
+/* ── ① 品牌行：刻意留空 ──────────────────────────────────────────────────
+   官方 logoRow / brandIdentity / brandMark / brandName / fallbackBrandName
+   全部原样生效。本层不写任何相关规则。 */
+
+
+/* ── ② New Session → 压成列表行，落到「工作区」下方列表行的两条竖线 ────────
+   展开态判定：侧栏根 div 含 sidebar.workspaces 出口，
+   且不含 sidebar.toggle.badge 出口。
+
+   官方 New Session 是 38px 居中主按钮：margin 0 2px 12px / padding 8px 12px /
+   justify-content:center，图标停在中线（实测 108px），与列表行差 88px。 */
+
+div:has([data-slot="sidebar.workspaces"]):not(:has([data-slot="sidebar.toggle.badge"])) > button {
+  box-sizing: border-box;
+
+  /* 高度：38px → min-height:36px */
+  height: auto;
+  min-height: 36px;
+  flex: none;
+
+  /* 外观：主按钮 → 列表行 */
+  background: 0 0;
+  border: none;
+  border-radius: var(--dsw-radius-s);
+
+  /* 排版：居中主按钮 → 左对齐列表行 */
+  justify-content: flex-start;
+  align-items: center;
+  gap: 6px;
+  /* 左边距归零：行左边缘与列表行同为 12px，图标才落到 20px。
+     桌面壳（html[data-windows-titlebar]）官方自己也写 margin-left:0，那条
+     (0,4,0) 比本层 (0,3,3) 更高 —— 桌面端本来就吃到 0。这里显式写 0，
+     让 web profile（无 titlebar）与桌面端落到同一条竖线上。 */
+  margin: 0 2px 4px 0;
+  padding: 7px 8px;
+  font: inherit;
+  line-height: 22px;
+  text-align: left;
+  color: var(--dsw-alias-label-primary);
+  cursor: pointer;
+  overflow: hidden;
+}
+
+div:has([data-slot="sidebar.workspaces"]):not(:has([data-slot="sidebar.toggle.badge"])) > button:hover {
+  background: var(--dsw-alias-interactive-bg-hover);
+}
+
+div:has([data-slot="sidebar.workspaces"]):not(:has([data-slot="sidebar.toggle.badge"])) > button:focus-visible {
+  outline: 2px solid var(--dsw-alias-label-primary);
+  outline-offset: -2px;
+}
+
+/* 图标：官方 newSession 用 14px，panelGlyph 用 16px → 统一 16px（rc.1 扁平结构） */
+div:has([data-slot="sidebar.workspaces"]):not(:has([data-slot="sidebar.toggle.badge"])) > button > svg {
+  width: 16px;
+  height: 16px;
+  flex: none;
+}
+
+/* 标签：官方只设了 max-width:200px → 补齐 panelTitle 的省略行为（rc.1 扁平结构） */
+div:has([data-slot="sidebar.workspaces"]):not(:has([data-slot="sidebar.toggle.badge"])) > button > span {
+  max-width: none;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+
+/* ── ②·b New Session · rc.2 嵌套结构 ─────────────────────────────────────
+   0.1.7-rc.2（桌面壳在跑的那一代）在按钮里又套了两层：
+     button > span(newSessionLabelMask) > span(newSessionContent) > svg + span(newSessionLabel)
+   官方在 newSessionContent 上写死 width:100cqw + justify-content:center，
+   并把按钮设成 container-type:inline-size —— 于是只把 button 改成 flex-start
+   压不住它，图标仍旧停在按钮中线。这里把这一层拉回左对齐。 */
+
+div:has([data-slot="sidebar.workspaces"]):not(:has([data-slot="sidebar.toggle.badge"])) > button > span > span:has(> svg) {
+  justify-content: flex-start;
+  width: auto;
+}
+
+/* 图标（rc.2 嵌在内容容器里，与 rc.1 同一条 16px 契约） */
+div:has([data-slot="sidebar.workspaces"]):not(:has([data-slot="sidebar.toggle.badge"])) > button > span > span > svg {
+  width: 16px;
+  height: 16px;
+  flex: none;
+}
+
+/* 标签（rc.2 又深一层；span.keys 的键帽是 kbd，不会命中这条） */
+div:has([data-slot="sidebar.workspaces"]):not(:has([data-slot="sidebar.toggle.badge"])) > button > span > span > span {
+  max-width: none;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+
+/* ── ③ 全局面板行（插件…）→ 同两条竖线 ───────────────────────────────────
+   侧栏根 div 的直接 nav 子元素就是 panelList；它的每个直接 button 是一行面板。
+   官方 panelRow 是 margin:0 2px / padding:7px 8px / gap:8px
+   → 图标 22px、文字 46px，比列表行右移 2px / 4px。 */
+
+div:has([data-slot="sidebar.workspaces"]):not(:has([data-slot="sidebar.toggle.badge"])) > nav > button {
+  gap: 6px;
+  margin-left: 0;
+}

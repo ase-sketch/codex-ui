@@ -1,0 +1,227 @@
+<!doctype html>
+<html lang="en" data-dsh-skin="codex-ink">
+<head>
+<meta charset="utf-8">
+<title>codex-ink preview</title>
+<style>/*{{SKIN_CSS}}*/</style>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { height: 100%; }
+  body {
+    display: flex;
+    font-family: -apple-system, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+    font-size: 14px; line-height: 1.65;
+    color: var(--dsw-alias-label-primary);
+    background: var(--dsw-alias-bg-base);
+    overflow: hidden;
+  }
+  .sidebar {
+    width: 248px; flex: none; height: 100vh;
+    background: var(--dsw-alias-bg-sidebar);
+    border-right: 0.5px solid var(--dsw-alias-border-l1);
+    padding: var(--dsw-space-4) var(--dsw-space-3);
+    display: flex; flex-direction: column; gap: var(--dsw-space-3);
+  }
+  .brand {
+    font-family: var(--ds-font-family-code); font-size: 11px; font-weight: 500;
+    letter-spacing: .08em; text-transform: uppercase;
+    color: var(--dsw-alias-label-primary);
+    display: flex; align-items: center; gap: var(--dsw-space-2);
+  }
+  .brand i { width: 8px; height: 8px; border-radius: 2px; background: var(--dsw-alias-brand-primary); display: block; }
+  .nav, .sess { display: flex; flex-direction: column; gap: 2px; }
+  .nav div {
+    height: 32px; display: flex; align-items: center; padding: 0 var(--dsw-space-3);
+    border-radius: var(--dsw-radius-s); color: var(--dsw-alias-label-secondary); font-size: 13px;
+  }
+  .nav div.on { background: var(--dsw-specific-sidebar-nav-item-active); color: var(--dsw-alias-label-primary); }
+  .nav div .k { margin-left: auto; font-family: var(--ds-font-family-code); font-size: 11px; color: var(--dsw-alias-label-tertiary); }
+  .sess { margin-top: var(--dsw-space-2); }
+  .sess div {
+    padding: 6px var(--dsw-space-3); border-radius: var(--dsw-radius-s);
+    font-size: 12.5px; color: var(--dsw-alias-label-secondary);
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+  .sess div.on { background: var(--dsw-alias-bg-layer-2); color: var(--dsw-alias-label-primary); }
+  .side-foot {
+    margin-top: auto; display: flex; justify-content: space-between;
+    font-family: var(--ds-font-family-code); font-size: 11px; letter-spacing: .04em;
+    color: var(--dsw-alias-label-tertiary);
+  }
+  .main { flex: 1; display: flex; flex-direction: column; height: 100vh; min-width: 0; }
+  .head {
+    height: 48px; flex: none; display: flex; align-items: center; gap: var(--dsw-space-3);
+    padding: 0 var(--dsw-space-5); border-bottom: 0.5px solid var(--dsw-alias-border-l1);
+  }
+  .head h1 { font-size: 16px; font-weight: 600; line-height: 1.4; }
+  .head .meta {
+    margin-left: auto; font-family: var(--ds-font-family-code); font-size: 11px;
+    letter-spacing: .04em; color: var(--dsw-alias-label-tertiary);
+  }
+  .pill {
+    font-family: var(--ds-font-family-code); font-size: 11px; font-weight: 500; letter-spacing: .04em;
+    border-radius: var(--dsw-radius-pill); padding: 2px 8px;
+    background: var(--dsw-alias-bg-layer-2); color: var(--dsw-alias-label-secondary);
+  }
+  .pill.ok { background: var(--dsw-alias-state-success-tertiary); color: var(--dsw-alias-state-success-primary); }
+  .pill.warn { background: var(--dsw-alias-state-warn-tertiary); color: var(--dsw-alias-state-warn-primary); }
+  .pill.err { background: var(--dsw-alias-state-error-tertiary); color: var(--dsw-alias-state-error-primary); }
+  .stream { flex: 1; overflow: hidden; padding: var(--dsw-space-5) 0; }
+  .col { width: 720px; margin: 0 auto; display: flex; flex-direction: column; gap: 12px; }
+  .row { display: flex; gap: var(--dsw-space-3); }
+  .who {
+    flex: none; width: 56px; padding-top: 3px;
+    font-family: var(--ds-font-family-code); font-size: 11px; letter-spacing: .08em;
+    text-transform: uppercase; color: var(--dsw-alias-label-tertiary);
+  }
+  .body { flex: 1; min-width: 0; }
+  .bubble {
+    background: var(--dsw-alias-bg-layer-2); border-radius: var(--dsw-radius-m);
+    padding: 10px var(--dsw-space-4); color: var(--dsw-alias-label-primary);
+  }
+  .md h2 { font-size: 16px; font-weight: 600; line-height: 1.4; margin-bottom: 6px; }
+  .md p.dim { color: var(--dsw-alias-label-secondary); }
+  code.inline {
+    font-family: var(--ds-font-family-code); font-size: 12px;
+    background: var(--dsw-alias-markdown-inline-code); border-radius: 4px; padding: 1px 5px;
+  }
+  .code {
+    margin-top: var(--dsw-space-3);
+    background: var(--dsw-alias-markdown-code-block);
+    border: 0.5px solid var(--dsw-alias-border-l1);
+    border-radius: var(--dsw-radius-m); overflow: hidden;
+  }
+  .code .bar {
+    height: 26px; display: flex; align-items: center; gap: 8px; padding: 0 var(--dsw-space-3);
+    background: var(--dsw-alias-markdown-code-block-banner);
+    font-family: var(--ds-font-family-code); font-size: 11px; letter-spacing: .04em;
+    color: var(--dsw-alias-label-tertiary);
+  }
+  .code .bar .grow { flex: 1; }
+  .code pre {
+    padding: var(--dsw-space-3); font-family: var(--ds-font-family-code);
+    font-size: 12px; line-height: 1.6; color: var(--dsw-alias-label-primary);
+  }
+  .add { background: var(--dsw-alias-code-diff-added); display: block; }
+  .del { background: var(--dsw-alias-code-diff-deleted); display: block; }
+  .card {
+    margin-top: var(--dsw-space-3);
+    background: var(--dsw-alias-bg-layer-1);
+    border: 0.5px solid var(--dsw-alias-border-l1);
+    border-radius: var(--dsw-radius-m);
+    box-shadow: var(--dsw-elevation-panel);
+    padding: var(--dsw-space-4);
+    display: flex; align-items: center; gap: var(--dsw-space-3);
+  }
+  .card .t { font-size: 14px; font-weight: 600; }
+  .card .s { font-size: 12.5px; color: var(--dsw-alias-label-secondary); }
+  .grow { flex: 1; }
+  .btn {
+    font-family: inherit; font-size: 13px; font-weight: 600;
+    background: var(--dsw-alias-button-primary-fill);
+    color: var(--dsw-alias-label-primary-foreground);
+    border: 0; border-radius: var(--dsw-radius-s); padding: 7px 14px;
+  }
+  .btn.ghost {
+    background: transparent; color: var(--dsw-alias-label-primary);
+    border: 0.5px solid var(--dsw-alias-border-l3);
+  }
+  .composer { flex: none; padding: 0 var(--dsw-space-5) var(--dsw-space-5); }
+  .composer .inner { width: 720px; margin: 0 auto; }
+  .composer .box {
+    background: var(--dsw-specific-input-major);
+    border: 0.5px solid var(--dsw-alias-border-l2);
+    border-radius: var(--dsw-radius-l);
+    box-shadow: var(--dsw-elevation-panel);
+    padding: var(--dsw-space-3) var(--dsw-space-4);
+    display: flex; flex-direction: column; gap: var(--dsw-space-3);
+  }
+  .composer .ph { color: var(--dsw-alias-label-tertiary); }
+  .composer .bar { display: flex; align-items: center; gap: var(--dsw-space-2); }
+  .kbd {
+    font-family: var(--ds-font-family-code); font-size: 11px; letter-spacing: .04em;
+    color: var(--dsw-alias-label-tertiary);
+    border: 0.5px solid var(--dsw-alias-border-l2); border-radius: 4px; padding: 1px 5px;
+  }
+</style>
+</head>
+<body{{DARK_ATTR}}>
+  <aside class="sidebar">
+    <div class="brand"><i></i>DSH WORKBENCH</div>
+    <div class="nav">
+      <div class="on">会话<span class="k">⌘1</span></div>
+      <div>工作区<span class="k">⌘2</span></div>
+      <div>设置<span class="k">⌘,</span></div>
+    </div>
+    <div class="sess">
+      <div class="on">墨白终端 · 令牌重映射</div>
+      <div>skin-center 契约勘察</div>
+      <div>对比度实测 36 组</div>
+      <div>补丁层彩色白名单归一</div>
+    </div>
+    <div class="side-foot"><span>deepseek-v4.1-flash</span><span>12.4k tok</span></div>
+  </aside>
+  <main class="main">
+    <header class="head">
+      <h1>墨白终端 · 令牌重映射</h1>
+      <span class="pill">CODEX-INK</span>
+      <span class="pill">V1.0.0</span>
+      <span class="meta">2026-09-24 08:52 · 768px 列宽</span>
+    </header>
+    <section class="stream">
+      <div class="col">
+        <div class="row">
+          <div class="who">You</div>
+          <div class="body"><div class="bubble">把 Codex 方向的墨白终端皮肤落到 skin 包：零彩色 chrome，主按钮即墨块。</div></div>
+        </div>
+        <div class="row">
+          <div class="who">Dsh</div>
+          <div class="body">
+            <div class="md">
+              <h2>墨白终端 · 令牌重映射完成</h2>
+              <p>亮色底 <code class="inline">#FFFFFF</code>，暗色底 <code class="inline">#212121</code>；灰阶承担层级，彩色只留给状态。</p>
+              <div class="code">
+                <div class="bar"><span>skin.css</span><span class="grow"></span><span>+12 −3</span></div>
+                <pre><span class="add">+  --dsw-alias-brand-primary: var(--dsw-alias-label-primary);</span><span class="del">-  --dsw-alias-brand-primary: var(--dsw-static-deepseek-500);</span>   --dsw-alias-bg-layer-2: var(--dsw-alias-bg-layer-2);</pre>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="row">
+          <div class="who">Dsh</div>
+          <div class="body">
+            <div class="md">
+              <p class="dim">36 组对比度全部本机实测通过，15 组 AAA；全界面彩色审计无白名单外色值。</p>
+              <div class="card">
+                <div>
+                  <div class="t">codex-ink</div>
+                  <div class="s">墨白终端 · 36 组实测 · 无背景画</div>
+                </div>
+                <div class="grow"></div>
+                <span class="pill ok">PASS 36/36</span>
+                <span class="pill warn">AAA 15</span>
+                <span class="pill err">0 违规</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+    <div class="composer">
+      <div class="inner">
+        <div class="box">
+          <div class="ph">给 DSH 发消息…</div>
+          <div class="bar">
+            <span class="pill">SKIN v2</span>
+            <span class="pill">#0D0D0D</span>
+            <span class="grow"></span>
+            <span class="kbd">⌘↵</span>
+            <button class="btn ghost">试穿</button>
+            <button class="btn">应用</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </main>
+</body>
+</html>

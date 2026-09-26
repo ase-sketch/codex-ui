@@ -1,0 +1,5 @@
+# codex-ui bundle patch —— 让把这个包列进 dsh.profile.bundles 的 profile 自动挂上本插件。
+# 本机 web profile 选择在自己的 cordis.patch.yml 里 insert（可热加载，免 pnpm install）。
+- insert:
+    - id: codex-ui
+      name: 'codex-ui'

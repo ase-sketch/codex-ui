@@ -1,0 +1,126 @@
+/* ============================================================================
+   codex-ink · L3 窗口边缘阴影层
+   ----------------------------------------------------------------------------
+   源文件：skins/codex-ink/window-shadow.css。install-plugin.mjs 把本文件的选择器
+   作用域化到 html[data-codex-ui] 后拼进 client.js 的内嵌样式表，所以这里写裸选择器：
+   自己再加 html[...] 前缀会被 scopeCss 判为已作用域而直通，永远不命中。
+   注释里禁止出现花括号 —— scopeCss 按「下一个左花括号」做括号配对。
+
+   目标（三条，不多做）：
+     1. 会话窗口（AppFrame 中列）：1px 发丝线 + 24px 全向环境影（左沿糊到侧栏、上沿糊进标题栏条）；
+     2. 右栏面板：同样的顶沿，但**左边框只留发丝线、不带影**；
+     3. 右栏分界线拖拽柄悬停时的中段渐变聚焦。
+
+   取值依据（Codex 应用截图逐像素实测，非估计）：
+     evidence/codex-app-reference.png（1901x1107，DPR 1）
+      · 会话窗口左沿  y=600：侧栏侧 x=340..355 由 238,241,247 渐变到 231,233,239（约 15px 渐变），
+                    x=356 单像素发丝线 212,215,221，x=357 起纯白。
+      · 会话窗口上沿  x=800：y=30..45 由 237,242,247 渐变到 232,237,242，y=46 发丝线 214,218,224。
+      · 右栏面板左沿  y=600：x=1437 单像素 237,237,237，两侧都是纯白 —— **没有影**。
+      · 右栏面板上沿  x=1700：与中列同一套渐变 + 发丝线（y=46 处 213,218,224）。
+    结论：发丝线是 1 个设备像素，中列取 12% 墨（l2）、面板取 7% 墨（l1）；
+          软影只出现在中列的左/上沿与面板的上沿，面板左沿不糊影。
+          本层按 DPR 折算成 0.5 CSS px 的发丝线：1.5 倍缩放下落到约 1 个设备像素，
+          与参考图同档；写成 1px 会在 1.5 倍缩放下被栅格化成 2 个像素（偏粗）。
+
+   锚点（只用宿主语义属性，不用 CSS-Modules 哈希类名）：
+     中列     div:has(> [data-slot="main"])；main 面板未注册时退回
+              div:has(> [data-slot="sidebar"]) + div（侧栏列的下一个兄弟）。
+     右栏面板 [data-sidebar-right-panel="push"][data-sidebar-right-open]。
+     拖拽柄   [data-side="rightbar"]，宽 8px、骑跨分界线。
+
+   层序：标题栏拖拽条是 .frame 的绝对定位伪元素，静态定位的中列会被它盖住。
+   本层给中列补 position: relative 抬进定位层，靠 DOM 顺序压过它 —— 上沿的影因此
+   才画得到标题栏条上。右栏面板是宿主 absolute 拉伸的元素（top:0 / bottom:0），
+   切勿再叠 position: relative：会覆盖 absolute、面板塌成内容高度（已出过一次事故）。
+   ============================================================================ */
+
+/* ── ① 会话窗口（中列）：0.5px 发丝线 + 24px 全向环境影 ─────────────────────
+   范围：Windows 桌面壳（html[data-windows-titlebar]）与 win32 的浏览器形态。
+   macOS 是 vibrancy 透底，加外投影会脏，不生效。 */
+html[data-codex-ui][data-windows-titlebar] div:has(> [data-slot="main"]),
+html[data-codex-ui][data-windows-titlebar] div:has(> [data-slot="sidebar"]) + div,
+html[data-codex-ui][data-platform="win32"]:not([data-windows-titlebar]) div:has(> [data-slot="main"]),
+html[data-codex-ui][data-platform="win32"]:not([data-windows-titlebar]) div:has(> [data-slot="sidebar"]) + div {
+  position: relative;
+  box-shadow:
+    0 0 0 0.5px var(--dsw-alias-border-l2),
+    0 0 24px rgba(13, 13, 13, 0.05);
+}
+
+html[data-codex-ui][data-windows-titlebar] body[data-ds-dark-theme] div:has(> [data-slot="main"]),
+html[data-codex-ui][data-windows-titlebar] body[data-ds-dark-theme] div:has(> [data-slot="sidebar"]) + div,
+html[data-codex-ui][data-platform="win32"]:not([data-windows-titlebar]) body[data-ds-dark-theme] div:has(> [data-slot="main"]),
+html[data-codex-ui][data-platform="win32"]:not([data-windows-titlebar]) body[data-ds-dark-theme] div:has(> [data-slot="sidebar"]) + div {
+  box-shadow:
+    0 0 0 0.5px var(--dsw-alias-border-l2),
+    0 0 24px rgba(0, 0, 0, 0.5);
+}
+
+/* ── ② 右栏（push 模式）：左边框只留发丝线，影只往上泄 ─────────────────────
+   参考图实测：面板左沿 x=1437 是单像素 237,237,237、两侧纯白 —— 左沿不糊影，
+   所以这里不给全向影；顶沿仍与中列同套，用负 spread 把水平方向与下方收掉，
+   只在面板上沿留一段约 12px 的渐变（影盒左沿被收进面板 12px 内，左沿残余覆盖约
+   0.008，肉眼为零）。栏内 dockkit 叠的那条 .5px l4 深边框一并压成 0。 */
+html[data-codex-ui][data-windows-titlebar] [data-sidebar-right-panel="push"][data-sidebar-right-open],
+html[data-codex-ui][data-platform="win32"]:not([data-windows-titlebar]) [data-sidebar-right-panel="push"][data-sidebar-right-open] {
+  box-shadow:
+    0 0 0 0.5px var(--dsw-alias-border-l1),
+    0 -12px 24px -12px rgba(13, 13, 13, 0.05);
+}
+
+html[data-codex-ui][data-windows-titlebar] body[data-ds-dark-theme] [data-sidebar-right-panel="push"][data-sidebar-right-open],
+html[data-codex-ui][data-platform="win32"]:not([data-windows-titlebar]) body[data-ds-dark-theme] [data-sidebar-right-panel="push"][data-sidebar-right-open] {
+  box-shadow:
+    0 0 0 0.5px var(--dsw-alias-border-l1),
+    0 -12px 24px -12px rgba(0, 0, 0, 0.5);
+}
+
+/* 宿主 dockkit 给右栏的 pane 画了一条 1px l4（24% 墨，实测合成值 197 —— 比参考图的
+   单像素 237 深两档），它落在面板左沿外侧，就是「边框又粗又重」的来源之一。
+   真实锚点是 pane 自身：SECTION[data-dockkit-pane][data-dockkit-column="0"]，
+   插在 [data-dockkit-host="dock"] 的 tabCell 里 —— 旧版按 host 的 div 直选子元素，
+   选择器从来没命中过。压成 0，左沿只留面板自己的 0.5px l1 发丝线。 */
+html[data-codex-ui] [data-sidebar-right-panel="push"][data-sidebar-right-open] [data-dockkit-pane][data-dockkit-column="0"] {
+  border-left: 0;
+}
+
+/* ── ③ 右栏分界线拖拽柄：悬停时的中段渐变聚焦 ─────────────────────────────
+   静态：边界只有那 0.5px 发丝线，淡且细。
+   悬停：柄内居中画 2px 竖向线，中段最深、两端淡出，入场自中间向两端展开。
+   实测 evidence/codex-rightbar-edge-hover.png（111x842，DPR 1）：
+     柄心列 y=560 处 x=65/66 = 213,214,214 / 198,198,199（中段最深）
+     同一列 y=20 处 x=65/66 = 239,239,240 / 222,222,222（向两端淡出）
+   左分界线（侧栏 ↔ 中列）没有这条悬停线：参考图里它始终是一条静态发丝线。 */
+html[data-codex-ui] [data-side="rightbar"]::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 50%;
+  width: 2px;
+  translate: -50% 0;
+  border-radius: 1px;
+  background: linear-gradient(to bottom, rgba(13, 13, 13, 0.09), rgba(13, 13, 13, 0.27) 50%, rgba(13, 13, 13, 0.09));
+  opacity: 0;
+  scale: 1 0.35;
+  transform-origin: center;
+  transition: opacity var(--dsw-motion-base) var(--dsw-ease), scale var(--dsw-motion-slow) var(--dsw-ease);
+  pointer-events: none;
+}
+
+html[data-codex-ui] [data-side="rightbar"]:hover::before {
+  opacity: 1;
+  scale: 1 1;
+}
+
+html[data-codex-ui] body[data-ds-dark-theme] [data-side="rightbar"]::before {
+  background: linear-gradient(to bottom, rgba(236, 236, 236, 0.08), rgba(236, 236, 236, 0.24) 50%, rgba(236, 236, 236, 0.08));
+}
+
+/* ── ④ 浏览器形态（win32，无标题栏条）────────────────────────────────────
+   宿主给侧栏列画的是 .5px l3（18% 墨），比桌面壳（border-right: none）深一档，
+   与中列的 0.5px l2 发丝线叠在一起会变成双层深线，压到 l1。 */
+html[data-codex-ui][data-platform="win32"]:not([data-windows-titlebar]) div:has(> [data-slot="sidebar"]) {
+  border-right-color: var(--dsw-alias-border-l1);
+}

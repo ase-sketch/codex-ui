@@ -1,0 +1,237 @@
+/* ============================================================================
+   codex-ink（墨白终端）· L3 输入区完整层
+   ----------------------------------------------------------------------------
+   源文件：skins/codex-ink/composer.css
+   由 tools/install-plugin.mjs 与其余各层一起拼接，并作用域化到 html[data-codex-ui]。
+   本文件写「裸选择器」——不要自己再加 html[...] 前缀，那会被 scopeCss 直通。
+
+   来源（本地克隆：D:\A-part-of-new-software\PROJIECT\dsh-codex-ui）：
+     · src/client/CodexSidebar.tsx          L119-L137  → ⑭·1 ⑭·2 ⑭·3
+     · src/client/composer-tool-menus.ts    L6-L30     → ⑭·4（仅官方锚点部分）
+     · src/client/new-conversation-style.ts L3-L14     → ⑭·5
+
+   兼容性核对（对 rc1 0.1.7-rc.1 的 shipped 包逐条 grep，不是照抄）：
+     上游 README 只声明兼容到 0.1.6-alpha.2。逐条核对后，以下锚点在本机 rc1 上
+     不存在，一律**不移植**，免得留死规则：
+       ✗ [data-input-mirror]                      rc1 无此属性（conversation 包 0 命中）
+       ✗ [class*="_rail"]（附件轨道补偿）           rc1 无此类名段
+       ✗ [class*="_selected"] / [class*="_footer"] rc1 无此类名段
+       ✗ [data-dcu-tool-menu] / [data-gitgraph-popover]  由上游 JS 观察器打标，
+         本插件不含该半，规则永远不会命中 → 弹窗换肤留在「待移植 JS 半」清单
+       ✗ .dcu-home-*                            上游自有组件的类名，本皮肤没有这些节点
+     实测存在的锚点（本条全部基于它们）：
+       ✓ [data-composer-card] [data-input-scroll] [data-composer-placeholder]
+         [data-lexical-editor=true] [data-conversation-scroll] [data-composer-seat]
+         [data-trigger-menu] [data-phase]（取值 settling / hero / active）
+
+   锚点纪律例外（必须说清）：
+     ⑭·4 ⑭·5 用到 [class*="_heroWorkspaceRow"] / [class*="_composerHero"] /
+     [class$="_workspace"] / [class$="_primary"]。这类 CSS-Modules 哈希类名在
+     patches.css 头部是被禁止的——那条禁令针对 **skin-center 加载器**的
+     "reliance on CSS-Modules hash class names" 告警。本层走**插件路径**
+     （client.js 直接注入 style 标签），不经加载器，故放行。
+     已尽量取「后缀锚点」写法（[class$=_primary]），只依赖语义后缀、不依赖哈希前缀；
+     语义名若被上游改掉，由 tools/composer-verify.mjs 的实测值暴露。
+     hero 区没有 data-* 可用：jYtg_G_heroWorkspaceRow / jYtg_G_composerHero 只有类名。
+   ============================================================================ */
+
+/* ── ⑭·1 卡片几何与表面 ───────────────────────────────────────────────────
+   上游把输入区放宽到 chat 内容宽 + 32px，左右留白 24px；卡片 20px 圆角（浏览器
+   支持 corner-shape 时升到 25px 超椭圆），亮色三层极淡投影、暗色改用内描边。 */
+[data-conversation-scroll] {
+  --dsh-composer-card-max-width: calc(var(--dsh-chat-content-width) + 32px);
+  --dsh-composer-side-clearance: 24px;
+  --dcu-composer-bg: var(--dsw-specific-input-major, #fff);
+  --dcu-composer-shadow: 0 0 0 1px #0000000a, 0 2px 8px #0000000a, 0 4px 80px 8px #00000006;
+}
+
+body[data-ds-dark-theme] [data-conversation-scroll] {
+  --dcu-composer-bg: var(--dsw-alias-bg-layer-2, #242424);
+  --dcu-composer-shadow: inset 0 0 1px #fff3;
+}
+
+[data-conversation-scroll] [data-composer-card] {
+  padding-top: 8px;
+  gap: 4px;
+  border: 0;
+  border-radius: var(--dsw-radius-xl);
+  background: var(--dcu-composer-bg);
+  box-shadow: var(--dcu-composer-shadow);
+}
+
+@supports (corner-shape: superellipse(1.5)) {
+  [data-conversation-scroll] [data-composer-card] {
+    border-radius: var(--dsw-radius-2xl);
+    corner-shape: superellipse(1.5);
+  }
+}
+
+@media (max-width: 639px) {
+  [data-conversation-scroll] {
+    --dcu-composer-shadow: 0 0 0 1px #0000000a, 0 2px 8px #0000000a, 0 4px 40px 8px #00000006;
+  }
+}
+
+@media (forced-colors: active) {
+  [data-conversation-scroll] [data-composer-card] {
+    outline: 1px solid CanvasText;
+  }
+}
+
+/* ── ⑭·2 输入区几何：44px 编辑区 + 12px 内缩，占位元素与正文同轴 ────────── */
+[data-conversation-scroll] [data-composer-card] [data-input-scroll] {
+  margin-right: 0;
+}
+
+[data-conversation-scroll] [data-input-scroll] [data-lexical-editor=true] {
+  min-height: 44px;
+  padding: 0 12px;
+}
+
+[data-conversation-scroll] [data-composer-placeholder] {
+  inset: 0 12px auto;
+}
+
+/* ── ⑭·3 底栏行与发送键：28px 控件带，发送键改墨色圆点、无位移 ────────────
+   卡内结构是 card > [data-input-scroll] + row，故用相邻兄弟定位底栏。 */
+[data-conversation-scroll] [data-composer-card] > [data-input-scroll] + div {
+  padding: 0 8px 8px;
+  gap: 5px;
+}
+
+[data-conversation-scroll] [data-composer-card] > [data-input-scroll] + div > div {
+  gap: 4px;
+}
+
+[data-conversation-scroll] [data-composer-card] > [data-input-scroll] + div > div > div {
+  gap: 4px;
+}
+
+[data-conversation-scroll] [data-composer-card] > [data-input-scroll] + div :is(button, select):not([role]) {
+  min-height: 28px;
+  height: 28px;
+}
+
+[data-conversation-scroll] [data-composer-card] > [data-input-scroll] + div button[class$=_primary] {
+  width: 28px;
+  transform: none;
+  background: var(--dsw-alias-label-primary);
+  color: var(--dsw-alias-bg-base);
+}
+
+[data-conversation-scroll] [data-composer-card] > [data-input-scroll] + div button[class$=_primary]:hover:not(:disabled) {
+  background: var(--dsw-alias-label-secondary);
+}
+
+[data-conversation-scroll] [data-composer-card] > [data-input-scroll] + div :is(button, select):focus-visible {
+  outline: 2px solid var(--dsw-alias-label-secondary);
+  outline-offset: 2px;
+}
+
+/* ── ⑭·4 工具条与建议菜单（只保留官方锚点能命中的部分） ────────────────────
+   hero 的工作区行按钮 → Codex 胶囊；@ / 指令建议菜单 → 与输入区同宽同圆角。 */
+[class*="_heroWorkspaceRow"] button {
+  min-height: 28px;
+  border-radius: var(--dsw-radius-pill);
+  font-size: 13px;
+  line-height: 20px;
+}
+
+[class*="_heroWorkspaceRow"] button:hover,
+[class*="_heroWorkspaceRow"] button[aria-expanded=true] {
+  background: color-mix(in srgb, var(--dsw-alias-label-primary) 8%, transparent);
+}
+
+[data-conversation-scroll] [data-trigger-menu] {
+  box-sizing: border-box;
+  left: 0;
+  right: 0;
+  width: auto;
+  min-width: 0;
+  max-width: none;
+  padding: 5px;
+  border-radius: var(--dsw-radius-m);
+  background: #fff;
+  box-shadow: 0 8px 32px #0002, 0 0 0 1px #0000000a;
+}
+
+body[data-ds-dark-theme] [data-conversation-scroll] [data-trigger-menu] {
+  background: #292929;
+  box-shadow: 0 8px 32px #0003, 0 0 0 1px #ffffff08;
+}
+
+[data-conversation-scroll] [data-trigger-menu] > [role=listbox] {
+  box-sizing: border-box;
+  width: 100%;
+  min-width: 0;
+  align-self: stretch;
+  scrollbar-width: thin;
+}
+
+[data-conversation-scroll] [data-trigger-menu] [role=option] {
+  box-sizing: border-box;
+  width: 100%;
+  min-width: 0;
+  min-height: 28px;
+  padding: 4px 9px;
+  gap: 8px;
+  border-radius: var(--dsw-radius-s);
+  font-size: 13px;
+  line-height: 20px;
+}
+
+[data-conversation-scroll] [data-trigger-menu] [role=option][aria-selected=true] {
+  background: color-mix(in srgb, var(--dsw-alias-label-primary) 10%, transparent);
+}
+
+/* ── ⑭·5 新建页（hero）：输入区占满、工作区行贴在卡片上沿 ─────────────────
+   上游的 .dcu-home-* 建议卡属于它自己的组件，本皮肤没有这些节点，不移植；
+   container 声明只为那些卡片服务，一并省掉。 */
+[data-phase=hero] [data-conversation-scroll][class] {
+  --dsh-composer-side-clearance: 16px;
+  justify-content: flex-start;
+  scrollbar-gutter: stable both-edges;
+}
+
+[data-phase=hero] [data-composer-seat] {
+  flex: 1 0 auto;
+  min-height: 100%;
+}
+
+[data-phase=hero] [data-composer-seat] > :has([class*="_composerHero"]) {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+}
+
+[data-phase=hero] [class*="_composerHero"] {
+  box-sizing: border-box;
+  flex: 1;
+  width: 100%;
+  max-width: none;
+  min-width: 0;
+  margin-inline: auto;
+  gap: 0;
+  padding-bottom: 32px;
+}
+
+[data-phase=hero] [class*="_heroWorkspaceRow"] {
+  box-sizing: border-box;
+  flex: none;
+  width: min(calc(var(--dsh-composer-card-max-width) + 2 * var(--dsh-composer-side-clearance) - 56px), calc(100% - 56px));
+  align-self: center;
+  justify-content: flex-start;
+  flex-wrap: wrap;
+  gap: 8px;
+  min-height: 48px;
+  margin: 0 28px -10px;
+  padding: 6px 12px 16px;
+  border-radius: var(--dsw-radius-l) var(--dsw-radius-l) 0 0;
+  background: color-mix(in srgb, var(--dsw-alias-label-primary) 4%, var(--dsw-alias-bg-base));
+}
+
+[data-phase=hero] [class*="_heroWorkspaceRow"] > [class$="_workspace"] {
+  min-width: 0;
+  max-width: 100%;
+  font-weight: 400;
+}

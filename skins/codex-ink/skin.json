@@ -1,0 +1,30 @@
+{
+  "$schema": "https://schemas.linxin666.org/dsh-skin/v2.json",
+  "skinManifestVersion": 2,
+  "id": "codex-ink",
+  "name": "墨白终端",
+  "nameEn": "Codex Ink",
+  "version": "1.0.0",
+  "author": "Agent-Evo RSI",
+  "tagline": "零彩色 chrome · 墨白灰阶即层级 · 等宽元信息 · 终端状态色",
+  "description": "《墨白终端》—— Codex / ChatGPT 系方向的 dsh web GUI 皮肤：无彩色 chrome，亮色纯白、暗色暖灰 #212121/#171717，主行动色即墨（亮=#0D0D0D 黑底白字、暗=白墨反相）；白→#F9F9F9→#F1F1EF→#E5E5E5 四档灰阶承担底/侧栏/嵌套/描边层级；等宽字体承担一切元信息（token 数、模型名、时间戳、徽标、路径、快捷键）；圆角 6/10/14px 锐利档、近零阴影（描边即层级）、动效 100/160/240ms 干脆直出；彩色只允许出现在 state 三色、diff 红绿与语法高亮。不改 shell 源码，纯 Skin v2 资产目录，可随时停用回滚。",
+  "tags": [
+    "codex",
+    "ink",
+    "monochrome",
+    "terminal",
+    "minimal",
+    "grayscale",
+    "sharp"
+  ],
+  "accent": "#0D0D0D",
+  "order": 4,
+  "preview": {
+    "light": "preview/light.png",
+    "dark": "preview/dark.png"
+  },
+  "contributes": {
+    "stylesheet": "skin.css",
+    "patches": "patches.css"
+  }
+}

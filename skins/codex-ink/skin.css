@@ -1,0 +1,395 @@
+/* ============================================================================
+   codex-ink（墨白终端）· L1 令牌层 + L2 排版层
+   ----------------------------------------------------------------------------
+   设计母题：OpenAI Codex / ChatGPT 系 —— 界面消失，只剩内容与光标。
+   黑白灰是 chrome，彩色只配给状态。
+
+   本文件只做两件事：
+     1) 把官方 --dsw-alias-* / --dsw-specific-* 语义令牌重映射到墨白灰阶；
+     2) 补齐官方缺失的 spacing / radius / typography-scale / motion / elevation 令牌层。
+
+   纪律：
+     · 不出现任何 url()、@import、远程地址、内联 JS（skin-center 安全管线白名单）；
+     · 亮色令牌同时落在 :root 与 body —— 官方亮色令牌声明在 body 上，
+       只写 :root 会被 body 自身声明盖掉（加载器会把本文件强制限定在
+       html[data-dsh-skin="codex-ink"] 之下，从而取得高于官方的特异性）；
+     · 彩色白名单：仅 state 三色 + diff 红绿 + 徽标 10% 底色，其余一律墨/灰。
+   ========================================================================== */
+
+/* ── 亮色主题 ────────────────────────────────────────────────────────────── */
+:root,
+body {
+  color-scheme: light;
+
+  /* 底色：白 → #F9F9F9 → #F1F1EF → #E5E5E5 四档灰阶即层级 */
+  --dsw-alias-bg-base: #ffffff;
+  --dsw-alias-bg-sidebar: #eef4f9; /* Codex 亮色侧栏实测取样（350×1377 截图点采样 = #EEF4F9） */
+  --dsw-alias-bg-layer-1: #ffffff;
+  --dsw-alias-bg-layer-2: #f1f1ef;
+  --dsw-alias-bg-layer-3: #e5e5e5;
+  --dsw-alias-bg-overlay: rgba(255, 255, 255, 0.88);
+  --dsw-alias-bg-module-platform: #f9f9f9;
+  --dsw-alias-bg-multi-select: #e5e5e5;
+  --dsw-alias-bg-skeleton: rgba(13, 13, 13, 0.05);
+
+  /* 描边：发丝即层级 */
+  --dsw-alias-border-l1: rgba(13, 13, 13, 0.07);
+  --dsw-alias-border-l2: rgba(13, 13, 13, 0.12);
+  --dsw-alias-border-l3: rgba(13, 13, 13, 0.18);
+  --dsw-alias-border-l4: rgba(13, 13, 13, 0.24);
+  --dsw-alias-border-l2-darkmode-thin: rgba(13, 13, 13, 0.09);
+
+  /* 文字：墨 / 次墨 / 辅墨。前景取 Codex 浅色主题的「前景」实测值 #1A1C1F
+     （冷调，不是纯黑；取色面板截图 evidence/codex-theme-light.png）。 */
+  --dsw-alias-label-primary: #1a1c1f;
+  --dsw-alias-label-primary-dimmed: #5d5d5d;
+  --dsw-alias-label-primary-inverted: #ffffff;
+  --dsw-alias-label-primary-foreground: #ffffff;
+  --dsw-alias-label-primary-bluish: #0d0d0d;
+  --dsw-alias-label-secondary: #5d5d5d;
+  --dsw-alias-label-tertiary: #767676;
+  --dsw-alias-label-caption: #767676;
+  --dsw-alias-label-dimmed: #c9c9c9;
+
+  /* 主行动 = 墨块（全界面视觉重量最高的元素，无需任何品牌色） */
+  --dsw-alias-brand-primary: #0d0d0d;
+  --dsw-alias-brand-primary-invert: #ffffff;
+  --dsw-alias-brand-text: #ffffff;
+  --dsw-alias-brand-primary-new-colorprimary-new-color: #0d0d0d;
+  /* 强调色 = Codex 浅色主题「强调色」实测值 #339CFF，只上链接；
+     主行动按钮在 Codex 里仍是墨色胶囊，故 brand-primary 不动。 */
+  --dsw-alias-link: #339cff;
+
+  --dsw-alias-button-primary-fill: #0d0d0d;
+  --dsw-alias-button-primary-hover: #2a2a2a;
+  --dsw-alias-button-primary-dimmed: #e5e5e5;
+  --dsw-alias-button-contrast-fill: #0d0d0d;
+  --dsw-alias-button-elevated-fill: #ffffff;
+  --dsw-alias-button-floating-fill: #ffffff;
+  --dsw-alias-button-floating-hover: #f1f1ef;
+  --dsw-alias-button-ghost-active-fill: #e5e5e5;
+  --dsw-alias-button-ghost-active-hover: #dcdcdc;
+  --dsw-alias-button-ghost-active-border: #8f8f8f;
+  --dsw-alias-button-info-fill: #0d0d0d;
+  --dsw-alias-button-info-hover: #2a2a2a;
+  --dsw-alias-button-tool-bar-fill: rgba(13, 13, 13, 0.28);
+  --dsw-alias-button-tool-bar-fill-invisible: rgba(13, 13, 13, 0.18);
+  --dsw-alias-button-tool-bar-hover: rgba(13, 13, 13, 0.36);
+
+  /* 交互底色：背景升一档，无位移无阴影 */
+  --dsw-alias-interactive-bg-hover: rgba(13, 13, 13, 0.04);
+  /* composer 控件悬停底：Codex 实测 #F2F2F3（冷中性，不是本层灰阶的暖 #F1F1EF）。 */
+  --dsw-codex-hover-fill: #f2f2f3;
+  --dsw-alias-interactive-bg-active: rgba(13, 13, 13, 0.08);
+  --dsw-alias-interactive-bg-hover-solid: #f1f1ef;
+  --dsw-alias-interactive-bg-hover-accent: rgba(13, 13, 13, 0.06);
+  --dsw-alias-interactive-bg-hover-danger: rgba(209, 36, 47, 0.08);
+
+  /* Markdown / 代码 */
+  --dsw-alias-markdown-code-block: #f1f1ef;
+  --dsw-alias-markdown-code-block-banner: #e5e5e5;
+  --dsw-alias-markdown-inline-code: #f1f1ef;
+  --dsw-alias-markdown-code-segment-selected: #ffffff;
+  --dsw-alias-markdown-code-segment-unselected: #f1f1ef;
+  --dsw-alias-markdown-citation: #f1f1ef;
+  --dsw-alias-markdown-placeholder: #e5e5e5;
+  --dsw-alias-markdown-tag: #f1f1ef;
+
+  /* 状态：彩色白名单的唯一合法来源 */
+  --dsw-alias-state-success-primary: #1a7f37;
+  --dsw-alias-state-success-secondary: #2e9e4c;
+  --dsw-alias-state-success-tertiary: rgba(26, 127, 55, 0.08);
+  --dsw-alias-state-error-primary: #d1242f;
+  --dsw-alias-state-error-secondary: #e5484d;
+  --dsw-alias-state-error-tertiary: rgba(209, 36, 47, 0.08);
+  --dsw-alias-state-warn-primary: #8f5f00;
+  --dsw-alias-state-warn-secondary: #bb8009;
+  --dsw-alias-state-warn-tertiary: rgba(143, 95, 0, 0.08);
+  --dsw-alias-state-warn-label: #8f5f00;
+  --dsw-alias-state-business-primary: #0d0d0d;
+  --dsw-alias-state-business-tertiary: rgba(13, 13, 13, 0.08);
+  --dsw-alias-state-idle-primary: #767676;
+
+  /* diff：白名单内的红绿 */
+  --dsw-alias-code-diff-added: rgba(26, 127, 55, 0.1);
+  --dsw-alias-code-diff-deleted: rgba(209, 36, 47, 0.1);
+  --dsw-alias-file-diff-added-bg: #e6f4e7;
+  --dsw-alias-file-diff-added-gutter: #edf7ed;
+  --dsw-alias-file-diff-added-marker: #1a7f37;
+  --dsw-alias-file-diff-deleted-bg: #fce6e2;
+  --dsw-alias-file-diff-deleted-gutter: #fdece9;
+  --dsw-alias-file-diff-deleted-marker: #d1242f;
+
+  /* 浮层 / 提示 */
+  --dsw-alias-bg-mask-drop: rgba(255, 255, 255, 0.7);
+  --dsw-alias-toast-bg: #1e1e1e;
+  --dsw-alias-tooltip-bg: #1e1e1e;
+  --dsw-alias-tooltip-fg: #ffffff;
+  --dsw-alias-hovercard-bg: #ffffff;
+
+  /* 滚动条：thumb = label-tertiary 30% / 50% */
+  --dsw-alias-scrollbar-bg-l1: rgba(118, 118, 118, 0.3);
+  --dsw-alias-scrollbar-bg-l2: rgba(118, 118, 118, 0.5);
+  --dsw-alias-scrollbar-hover-l1: rgba(13, 13, 13, 0.35);
+  --dsw-alias-scrollbar-hover-l2: rgba(13, 13, 13, 0.5);
+
+  /* 具体面 */
+  --dsw-specific-sidebar-fill: #eef4f9; /* 与 --dsw-alias-bg-sidebar 同源：Codex 亮色侧栏实测 */
+  --dsw-specific-sidebar-nav-item-hover: #e8eef3; /* 侧栏底 ↔ 选中行的中点（推导值，非取样） */
+  --dsw-specific-sidebar-nav-item-active: #e2e9ed; /* Codex 选中行（PROJIECT）实测取样 */
+  --dsw-specific-sidebar-nav-item-active-accent: rgba(13, 13, 13, 0.1);
+  --dsw-specific-input-major: #ffffff;
+  --dsw-specific-login-input: #f9f9f9;
+  --dsw-specific-menu: rgba(255, 255, 255, 0.88);
+  --dsw-specific-selector: #f1f1ef;
+  --dsw-specific-bubble: #f1f1ef;
+  --dsw-specific-bubble-highlight: #e5e5e5;
+  --dsw-specific-tip: #f1f1ef;
+
+  --dsw-shadow-lv1: 0 1px 2px rgba(13, 13, 13, 0.06);
+  --dsw-shadow-lv2: 0 2px 8px rgba(13, 13, 13, 0.08);
+  --dsw-shadow-lv3: 0 8px 24px rgba(13, 13, 13, 0.1);
+  --dsw-linear-gradient-think: linear-gradient(180deg, #ffffff 20.19%, rgba(255, 255, 255, 0) 100%);
+  --dsw-linear-think-select: linear-gradient(180deg, #f1f1ef 20.19%, rgba(241, 241, 239, 0) 100%);
+}
+
+/* ── 暗色主题 ─────────────────────────────────────────────────────────────
+   基准 = Codex 深色取色面板：背景 #111111 / 前景 #FCFCFC / 强调 #0169CC。
+   层级自基准向上抬：侧栏 #171717 → 层1 #1f1f1f → 层2 #2a2a2a → 层3 #353535。
+   侧栏高于内容（浅色下侧栏低于内容），黑底压不到 #111111 以下，故取镜像关系。 */
+body[data-ds-dark-theme] {
+  color-scheme: dark;
+
+  /* 背景取 Codex 深色主题的「背景」实测值 #111111。侧栏 #171717 未动 —— 取色面板
+     只给了背景/前景/强调三值，侧栏是推导值。 */
+  --dsw-alias-bg-base: #111111;
+  --dsw-alias-bg-sidebar: #171717;
+  --dsw-alias-bg-layer-1: #1f1f1f;
+  --dsw-alias-bg-layer-2: #2a2a2a;
+  --dsw-alias-bg-layer-3: #353535;
+  --dsw-alias-bg-overlay: rgba(17, 17, 17, 0.88);
+  --dsw-alias-bg-module-platform: #1a1a1a;
+  --dsw-alias-bg-multi-select: #353535;
+  --dsw-alias-bg-skeleton: rgba(252, 252, 252, 0.07);
+
+  --dsw-alias-border-l1: rgba(252, 252, 252, 0.08);
+  --dsw-alias-border-l2: rgba(252, 252, 252, 0.14);
+  --dsw-alias-border-l3: rgba(252, 252, 252, 0.2);
+  --dsw-alias-border-l4: rgba(252, 252, 252, 0.26);
+  --dsw-alias-border-l2-darkmode-thin: rgba(252, 252, 252, 0.1);
+
+  --dsw-alias-label-primary: #fcfcfc;
+  --dsw-alias-label-primary-dimmed: #b4b4b4;
+  --dsw-alias-label-primary-inverted: #0d0d0d;
+  --dsw-alias-label-primary-foreground: #0d0d0d;
+  --dsw-alias-label-primary-bluish: #ececec;
+  --dsw-alias-label-secondary: #b4b4b4;
+  --dsw-alias-label-tertiary: #949494;
+  --dsw-alias-label-caption: #949494;
+  --dsw-alias-label-dimmed: #4a4a4a;
+
+  --dsw-alias-brand-primary: #ffffff;
+  --dsw-alias-brand-primary-invert: #0d0d0d;
+  --dsw-alias-brand-text: #0d0d0d;
+  --dsw-alias-brand-primary-new-colorprimary-new-color: #ffffff;
+  --dsw-alias-link: #0169cc; /* Codex 深色主题「强调色」实测值 */
+
+  --dsw-alias-button-primary-fill: #ffffff;
+  --dsw-alias-button-primary-hover: #d9d9d9;
+  --dsw-alias-button-primary-dimmed: #2a2a2a;
+  --dsw-alias-button-contrast-fill: #ececec;
+  --dsw-alias-button-elevated-fill: #1f1f1f;
+  --dsw-alias-button-floating-fill: #1a1a1a;
+  --dsw-alias-button-floating-hover: #2a2a2a;
+  --dsw-alias-button-ghost-active-fill: #353535;
+  --dsw-alias-button-ghost-active-hover: #3f3f3f;
+  --dsw-alias-button-ghost-active-border: #7e7e7e;
+  --dsw-alias-button-info-fill: #ffffff;
+  --dsw-alias-button-info-hover: #d9d9d9;
+  --dsw-alias-button-tool-bar-fill: rgba(252, 252, 252, 0.22);
+  --dsw-alias-button-tool-bar-fill-invisible: rgba(252, 252, 252, 0.16);
+  --dsw-alias-button-tool-bar-hover: rgba(252, 252, 252, 0.28);
+
+  --dsw-alias-interactive-bg-hover: rgba(252, 252, 252, 0.06);
+  /* 深色悬停底：浅色 #F2F2F3 on #FFFFFF ≈ 5.1% 黑，换算成 #FCFCFC 的 6% 覆盖
+     —— 推导值，取色面板没给。 */
+  --dsw-codex-hover-fill: rgba(252, 252, 252, 0.06);
+  --dsw-alias-interactive-bg-active: rgba(252, 252, 252, 0.1);
+  --dsw-alias-interactive-bg-hover-solid: #2a2a2a;
+  --dsw-alias-interactive-bg-hover-accent: rgba(252, 252, 252, 0.08);
+  --dsw-alias-interactive-bg-hover-danger: rgba(248, 81, 73, 0.12);
+
+  --dsw-alias-markdown-code-block: #1a1a1a;
+  --dsw-alias-markdown-code-block-banner: #141414;
+  --dsw-alias-markdown-inline-code: #2a2a2a;
+  --dsw-alias-markdown-code-segment-selected: #353535;
+  --dsw-alias-markdown-code-segment-unselected: #1a1a1a;
+  --dsw-alias-markdown-citation: #1f1f1f;
+  --dsw-alias-markdown-placeholder: #2a2a2a;
+  --dsw-alias-markdown-tag: #2a2a2a;
+
+  --dsw-alias-state-success-primary: #3fb950;
+  --dsw-alias-state-success-secondary: #56d364;
+  --dsw-alias-state-success-tertiary: rgba(63, 185, 80, 0.16);
+  --dsw-alias-state-error-primary: #ff7b72;
+  --dsw-alias-state-error-secondary: #ff9492;
+  --dsw-alias-state-error-tertiary: rgba(255, 123, 114, 0.16);
+  --dsw-alias-state-warn-primary: #d29922;
+  --dsw-alias-state-warn-secondary: #e3b341;
+  --dsw-alias-state-warn-tertiary: rgba(210, 153, 34, 0.16);
+  --dsw-alias-state-warn-label: #d29922;
+  --dsw-alias-state-business-primary: #ececec;
+  --dsw-alias-state-business-tertiary: rgba(252, 252, 252, 0.12);
+  --dsw-alias-state-idle-primary: #7e7e7e;
+
+  --dsw-alias-code-diff-added: rgba(63, 185, 80, 0.14);
+  --dsw-alias-code-diff-deleted: rgba(248, 81, 73, 0.14);
+  --dsw-alias-file-diff-added-bg: #1f3124;
+  --dsw-alias-file-diff-added-gutter: #132016;
+  --dsw-alias-file-diff-added-marker: #41c977;
+  --dsw-alias-file-diff-deleted-bg: #3c1f1b;
+  --dsw-alias-file-diff-deleted-gutter: #28130e;
+  --dsw-alias-file-diff-deleted-marker: #fa423e;
+
+  --dsw-alias-bg-mask-drop: rgba(39, 39, 48, 0.7);
+  --dsw-alias-toast-bg: #2a2a2a;
+  --dsw-alias-tooltip-bg: #1f1f1f;
+  --dsw-alias-tooltip-fg: #ececec;
+  --dsw-alias-hovercard-bg: #1f1f1f;
+
+  --dsw-alias-scrollbar-bg-l1: rgba(160, 160, 160, 0.3);
+  --dsw-alias-scrollbar-bg-l2: rgba(160, 160, 160, 0.5);
+  --dsw-alias-scrollbar-hover-l1: rgba(252, 252, 252, 0.35);
+  --dsw-alias-scrollbar-hover-l2: rgba(252, 252, 252, 0.5);
+
+  --dsw-specific-sidebar-fill: #171717;
+  --dsw-specific-sidebar-nav-item-hover: #1f1f1f;
+  --dsw-specific-sidebar-nav-item-active: #2a2a2a;
+  --dsw-specific-sidebar-nav-item-active-accent: rgba(252, 252, 252, 0.14);
+  --dsw-specific-input-major: #1f1f1f;
+  --dsw-specific-login-input: #1a1a1a;
+  --dsw-specific-menu: rgba(17, 17, 17, 0.88);
+  --dsw-specific-selector: #2a2a2a;
+  --dsw-specific-bubble: #1f1f1f;
+  --dsw-specific-bubble-highlight: #2a2a2a;
+  --dsw-specific-tip: #1a1a1a;
+
+  --dsw-shadow-lv1: 0 1px 2px rgba(0, 0, 0, 0.4);
+  --dsw-shadow-lv2: 0 2px 8px rgba(0, 0, 0, 0.5);
+  --dsw-shadow-lv3: 0 8px 24px rgba(0, 0, 0, 0.6);
+  --dsw-linear-gradient-think: linear-gradient(180deg, #212121 20.19%, rgba(33, 33, 33, 0) 100%);
+  --dsw-linear-think-select: linear-gradient(180deg, #1a1a1a 20.19%, rgba(42, 42, 42, 0) 100%);
+}
+
+/* ── 官方缺失的令牌层：空间 / 圆角 / 字阶 / 动效 ─────────────────────────── */
+:root,
+body {
+  /* 4px 网格（新增 12/20 密档，比 Claude 方向紧一档） */
+  --dsw-space-1: 4px;
+  --dsw-space-2: 8px;
+  --dsw-space-3: 12px;
+  --dsw-space-4: 16px;
+  --dsw-space-5: 20px;
+  --dsw-space-6: 24px;
+  --dsw-space-8: 32px;
+
+  /* 圆角刻度（唯一真源）：所有可见边框的圆角都从这里取，各层只准引用、不准再写 px。
+     角色 → 刻度：
+       xs   行内小片 / 菜单项
+       s    控件（按钮 / 列表行 / 页签）
+       m    卡片 / 浮层（菜单、下拉、tooltip）
+       l    面板 / 模态（取 16px，与宿主窗口内容块同值 —— dsh-client-ui-layout 的
+            --dsh-windows-content-radius: 16px）
+       xl   输入卡（无 corner-shape 时的回退值）
+       2xl  输入卡（corner-shape: superellipse 版；超椭圆要更大数值才视觉等圆）
+       pill 徽标 / 圆形按钮 */
+  --dsw-radius-xs: 4px;
+  --dsw-radius-s: 8px;
+  --dsw-radius-m: 12px;
+  --dsw-radius-l: 16px;
+  --dsw-radius-xl: 20px;
+  --dsw-radius-2xl: 25px;
+  --dsw-radius-pill: 999px;
+
+  --dsw-content-max-width: 768px;
+
+  /* 字阶（§3.2）：11 / 12.5 / 14 / 16 / 20 / 28 */
+  --dsw-text-2xs: 11px;
+  --dsw-text-xs: 12.5px;
+  --dsw-text-sm: 13px;
+  --dsw-text-base: 14px;
+  --dsw-text-lg: 16px;
+  --dsw-text-xl: 20px;
+  --dsw-text-2xl: 28px;
+  --dsw-leading-2xs: 1.3;
+  --dsw-leading-xs: 1.4;
+  --dsw-leading-base: 1.65;
+  --dsw-leading-lg: 1.4;
+  --dsw-leading-xl: 1.35;
+  --dsw-leading-2xl: 1.25;
+
+  /* 元信息 mono 规约：等宽 + 大写 + 加宽字距（Codex TUI 血统） */
+  --dsw-font-meta: var(--ds-font-family-code);
+  --dsw-meta-size: 11px;
+  --dsw-meta-weight: 500;
+  --dsw-meta-tracking: 0.08em;
+  --dsw-meta-tracking-pill: 0.04em;
+
+  /* 动效：干脆利落，比官方还快 */
+  --dsw-motion-fast: 100ms;
+  --dsw-motion-base: 160ms;
+  --dsw-motion-slow: 240ms;
+  --dsw-ease: cubic-bezier(0.3, 0.7, 0.4, 1);
+
+  /* 输入区配件（skin-center 共享适配器消费的变量） */
+  --dsh-composer-accessory-radius: var(--dsw-radius-l);
+  --dsh-composer-accessory-bg: var(--dsw-alias-bg-layer-2);
+  --dsh-composer-accessory-color: var(--dsw-alias-label-secondary);
+  --dsh-composer-accessory-border: 0.5px solid var(--dsw-alias-border-l1);
+  --dsh-composer-accessory-shadow: none;
+  --dsh-composer-accessory-blur: 0px;
+}
+
+/* ── elevation：描边即层级，阴影近零 ─────────────────────────────────────── */
+/* 官方把 --dsw-elevation-* 声明在 body, body * 上，因此必须同样覆盖到 body *，
+   否则每个后代元素都会用自身声明盖掉从 body 继承下来的值。 */
+body,
+body * {
+  --dsw-elevation-stroke-color: rgba(13, 13, 13, 0.08);
+  --dsw-elevation-stroke: 0 0 0 0.5px rgba(13, 13, 13, 0.08);
+  --dsw-elevation-panel: var(--dsw-elevation-stroke);
+  --dsw-elevation-prominent: var(--dsw-elevation-stroke), 0 4px 16px rgba(13, 13, 13, 0.08);
+  --dsw-elevation-soft: var(--dsw-elevation-stroke), 0 8px 28px rgba(13, 13, 13, 0.1);
+}
+
+body[data-ds-dark-theme],
+body[data-ds-dark-theme] * {
+  --dsw-elevation-stroke-color: rgba(252, 252, 252, 0.09);
+  --dsw-elevation-stroke: 0 0 0 0.5px rgba(252, 252, 252, 0.09);
+  --dsw-elevation-panel: var(--dsw-elevation-stroke);
+  --dsw-elevation-prominent: var(--dsw-elevation-stroke), 0 4px 16px rgba(0, 0, 0, 0.5);
+  --dsw-elevation-soft: var(--dsw-elevation-stroke), 0 8px 28px rgba(0, 0, 0, 0.55);
+}
+
+/* ── 排版层：标题字重 600 封顶 ───────────────────────────────────────────── */
+/* 官方 markdown 标题是 700；Codex 无衬线无重标题，层级靠灰阶 + 字号。
+   官方把字排令牌声明在 body 上，故同样写在 body 上（字号仍挂
+   --dsh-content-font-delta，用户调字号不破比例）。 */
+:root,
+body {
+  --dsw-font-markdown-h1: 600 calc(21px + var(--dsh-content-font-delta)) / calc(30px + var(--dsh-content-font-delta)) var(--dsw-font-family);
+  --dsw-font-markdown-h1-font-weight: 600;
+  --dsw-font-markdown-h2: 600 calc(19px + var(--dsh-content-font-delta)) / calc(28px + var(--dsh-content-font-delta)) var(--dsw-font-family);
+  --dsw-font-markdown-h2-font-weight: 600;
+  --dsw-font-markdown-h3: 600 calc(18px + var(--dsh-content-font-delta)) / calc(26px + var(--dsh-content-font-delta)) var(--dsw-font-family);
+  --dsw-font-markdown-h3-font-weight: 600;
+}
+
+body[data-ds-dark-theme] {
+  --dsw-font-markdown-h1: 600 calc(21px + var(--dsh-content-font-delta)) / calc(30px + var(--dsh-content-font-delta)) var(--dsw-font-family);
+  --dsw-font-markdown-h1-font-weight: 600;
+  --dsw-font-markdown-h2: 600 calc(19px + var(--dsh-content-font-delta)) / calc(28px + var(--dsh-content-font-delta)) var(--dsw-font-family);
+  --dsw-font-markdown-h2-font-weight: 600;
+  --dsw-font-markdown-h3: 600 calc(18px + var(--dsh-content-font-delta)) / calc(26px + var(--dsh-content-font-delta)) var(--dsw-font-family);
+  --dsw-font-markdown-h3-font-weight: 600;
+}

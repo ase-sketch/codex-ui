@@ -1,0 +1,37 @@
+{
+  "name": "codex-ui",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Codex 风格 UI 复刻（独立客户端插件）：自带样式表 + 结构改造，不依赖 skin-center / dsh-web-all。",
+  "license": "MIT",
+  "type": "module",
+  "main": "index.js",
+  "exports": {
+    ".": "./index.js",
+    "./client": "./client.js",
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "index.js",
+    "client.js",
+    "cordis.patch.yml",
+    "README.md"
+  ],
+  "keywords": [
+    "dsh",
+    "dsh-plugin",
+    "codex",
+    "theme"
+  ],
+  "dsh": {
+    "bundle": {
+      "patch": "./cordis.patch.yml"
+    },
+    "client": {
+      "platform": "web",
+      "inject": [
+        "@deepseek-ai/dsh-client-ui-slots"
+      ]
+    }
+  }
+}
