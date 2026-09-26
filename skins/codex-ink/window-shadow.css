@@ -12,7 +12,7 @@
      3. 右栏分界线拖拽柄悬停时的中段渐变聚焦。
 
    取值依据（Codex 应用截图逐像素实测，非估计）：
-     evidence/codex-app-reference.png（1901x1107，DPR 1）
+     assets/reference/codex-app-reference.png（1901x1107，DPR 1）
       · 会话窗口左沿  y=600：侧栏侧 x=340..355 由 238,241,247 渐变到 231,233,239（约 15px 渐变），
                     x=356 单像素发丝线 212,215,221，x=357 起纯白。
       · 会话窗口上沿  x=800：y=30..45 由 237,242,247 渐变到 232,237,242，y=46 发丝线 214,218,224。
@@ -88,7 +88,7 @@ html[data-codex-ui] [data-sidebar-right-panel="push"][data-sidebar-right-open] [
 /* ── ③ 右栏分界线拖拽柄：悬停时的中段渐变聚焦 ─────────────────────────────
    静态：边界只有那 0.5px 发丝线，淡且细。
    悬停：柄内居中画 2px 竖向线，中段最深、两端淡出，入场自中间向两端展开。
-   实测 evidence/codex-rightbar-edge-hover.png（111x842，DPR 1）：
+   实测 assets/reference/codex-rightbar-edge-hover.png（111x842，DPR 1）：
      柄心列 y=560 处 x=65/66 = 213,214,214 / 198,198,199（中段最深）
      同一列 y=20 处 x=65/66 = 239,239,240 / 222,222,222（向两端淡出）
    左分界线（侧栏 ↔ 中列）没有这条悬停线：参考图里它始终是一条静态发丝线。 */

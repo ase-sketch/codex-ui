@@ -9,7 +9,7 @@
  *
  * 用法：
  *   1) dsh --profile web --port 3099 --no-open    （终端会打印带 token 的 URL）
- *   2) node tools/live-gui-probe.mjs --url "http://127.0.0.1:3099/?token=..." [--out evidence/live-gui.png] [--dpr 1.5]
+ *   2) node scripts/live-gui-probe.mjs --url "http://127.0.0.1:3099/?token=..." [--out assets/screenshots/live-gui.png] [--dpr 1.5]
  *
  * token 可反复使用但有存活期（实测约半小时后 401）；Node 的 fetch 不自动带 cookie，
  * 本探针显式取 Set-Cookie 再经 CDP 注入。401 时重起一次 dsh web 换新 token 即可。
@@ -34,7 +34,7 @@ const arg = (name, fallback) => {
   return i >= 0 && process.argv[i + 1] ? process.argv[i + 1] : fallback;
 };
 const TOKEN_URL = arg('url', '');
-const OUT = arg('out', join(WB, 'evidence', 'live-gui.png'));
+const OUT = arg('out', join(WB, 'assets', 'screenshots', 'live-gui.png'));
 const CHROME = arg('chrome', 'C:/Users/Zs/AppData/Local/ms-playwright/chromium-1234/chrome-win64/chrome.exe');
 const PORT = Number(arg('cdp-port', '9340'));
 /* 设备像素比：默认 2；对 Windows 桌面壳做发丝线粗细对账时用 1.5（与实机 device-scale-factor 一致）。 */

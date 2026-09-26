@@ -2,7 +2,7 @@
    codex-ink（墨白终端）· L3 侧栏对齐层
    ----------------------------------------------------------------------------
    源文件：skins/codex-ink/sidebar-align.css
-   由 tools/install-plugin.mjs 与 skin.css / patches.css 一起拼接，并作用域化到
+   由 scripts/install-plugin.mjs 与 skin.css / patches.css 一起拼接，并作用域化到
    html[data-codex-ui]。因此本文件写「裸选择器」——不要自己再加 html[...] 前缀，
    那会被 scopeCss 判为已作用域而直通，永不命中。
 
@@ -11,7 +11,7 @@
      ② New Session 行 —— 压成列表行，图标/文字落到「工作区」下方列表行的两条竖线上。
      ③ 全局面板行（插件…）—— 同一组竖线。
 
-   目标列（相对侧栏根 div 左边缘，实测值见 tools/sidebar-align-verify.mjs）：
+   目标列（相对侧栏根 div 左边缘，实测值见 scripts/sidebar-align-verify.mjs）：
      图标列 20px = 列表行左边缘 12px + padding-inline-start 8px
      文字列 42px = 20px + 图标 16px + gap 6px
    对照：工作区行（projectRow）实测 20 / 42，会话行（sessionRow）实测 20 / 40。

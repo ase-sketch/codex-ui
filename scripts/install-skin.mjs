@@ -6,9 +6,9 @@
  * 安装副本（部署产物）：$DSH_HOME/skins/<skin-id>/   ← skin-center 只从这里加载
  *
  * 用法：
- *   node tools/install-skin.mjs              # 只读体检：逐文件 SHA256 比对，有漂移则退出码 1
- *   node tools/install-skin.mjs --write      # 把正本覆盖到安装副本（缺目录则创建）
- *   node tools/install-skin.mjs --skin=xxx   # 指定皮肤 id（默认 codex-ink）
+ *   node scripts/install-skin.mjs              # 只读体检：逐文件 SHA256 比对，有漂移则退出码 1
+ *   node scripts/install-skin.mjs --write      # 把正本覆盖到安装副本（缺目录则创建）
+ *   node scripts/install-skin.mjs --skin=xxx   # 指定皮肤 id（默认 codex-ink）
  */
 import { createHash } from 'node:crypto';
 import { existsSync, mkdirSync, readdirSync, readFileSync, statSync, copyFileSync } from 'node:fs';

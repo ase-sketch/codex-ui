@@ -2,7 +2,7 @@
 /**
  * codex-ink 皮肤验收脚本（本机可跑，纯 Node 标准库）
  *
- *   node tools/audit-codex-ink.mjs [skinDir]
+ *   node scripts/audit-codex-ink.mjs [skinDir]
  *
  * 三项检查：
  *   A. skin.json 结构自检（对照 skin-manifest-v2 的必填/枚举/正则约束）

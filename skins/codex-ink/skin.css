@@ -40,7 +40,7 @@ body {
   --dsw-alias-border-l2-darkmode-thin: rgba(13, 13, 13, 0.09);
 
   /* 文字：墨 / 次墨 / 辅墨。前景取 Codex 浅色主题的「前景」实测值 #1A1C1F
-     （冷调，不是纯黑；取色面板截图 evidence/codex-theme-light.png）。 */
+     （冷调，不是纯黑；取色面板截图 assets/reference/codex-theme-light.png）。 */
   --dsw-alias-label-primary: #1a1c1f;
   --dsw-alias-label-primary-dimmed: #5d5d5d;
   --dsw-alias-label-primary-inverted: #ffffff;

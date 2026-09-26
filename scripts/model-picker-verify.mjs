@@ -10,7 +10,7 @@
  * 左列 = 原生 shipped（⑫ 段从皮肤里剥掉），右列 = 完整 codex-ui。
  * 断言只跑右列；左列供肉眼对照。
  *
- * 用法：node tools/model-picker-verify.mjs [--no-shot]
+ * 用法：node scripts/model-picker-verify.mjs [--no-shot]
  */
 import { spawn } from 'node:child_process';
 import fs from 'node:fs';
@@ -20,8 +20,8 @@ import { fileURLToPath } from 'node:url';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const WB = dirname(HERE);
-const EVID = join(WB, 'evidence');
-/** 夹具 HTML 是中间产物，落系统临时目录，不堆进 evidence/。 */
+const EVID = join(WB, 'assets', 'screenshots');
+/** 夹具 HTML 是中间产物，落系统临时目录，不堆进 assets/screenshots/。 */
 const FIX = join(tmpdir(), 'codex-ui-fixtures');
 const THEME = fs.readFileSync(join(WB, 'theme.css'), 'utf8');
 const ASAR = 'D:/A-part-of-new-software/DeepSeek Harness/resources/app.asar';
@@ -218,7 +218,7 @@ const probePage = async (path, shotName) => {
   if (shotName) {
     const shot = await send('Page.captureScreenshot', { format: 'png' }, sessionId);
     fs.writeFileSync(join(EVID, shotName), Buffer.from(shot.data, 'base64'));
-    console.log('SHOT evidence/' + shotName);
+    console.log('SHOT assets/screenshots/' + shotName);
   }
   return out;
 };

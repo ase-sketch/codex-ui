@@ -11,7 +11,7 @@
  * 样式来源：DSH 桌面壳的 app.asar（= 用户实际在跑的那一份）。
  *   --source global 切到 npm 全局安装（0.1.7-rc.1，DOM 少一层 newSessionLabelMask），仅供回归对照。
  *
- * 用法：node tools/sidebar-align-verify.mjs [--source desktop|global] [--no-shot]
+ * 用法：node scripts/sidebar-align-verify.mjs [--source desktop|global] [--no-shot]
  */
 import { spawn } from 'node:child_process';
 import fs from 'node:fs';
@@ -21,8 +21,8 @@ import { fileURLToPath } from 'node:url';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const WB = dirname(HERE);
-const EVID = join(WB, 'evidence');
-/** 夹具 HTML 是中间产物，落系统临时目录，不堆进 evidence/。 */
+const EVID = join(WB, 'assets', 'screenshots');
+/** 夹具 HTML 是中间产物，落系统临时目录，不堆进 assets/screenshots/。 */
 const FIX = join(tmpdir(), 'codex-ui-fixtures');
 const THEME = fs.readFileSync(join(WB, 'theme.css'), 'utf8');
 
@@ -235,7 +235,7 @@ const htmlPath = join(FIX, 'sidebar-align-verify.html');
 fs.writeFileSync(htmlPath, page);
 
 /* 左联要「无 codex-ui」：插件样式表是最后一条 <style>，加载后 disabled 掉即可回到原生。 */
-const probe = fs.readFileSync(join(HERE, 'sidebar-align.probe.js'), 'utf8');
+const probe = fs.readFileSync(join(HERE, 'fixtures', 'sidebar-align.probe.js'), 'utf8');
 
 /* ── 无头 Chromium + CDP ────────────────────────────────────────────────── */
 const CHROME = 'C:/Users/Zs/AppData/Local/ms-playwright/chromium-1234/chrome-win64/chrome.exe';

@@ -324,7 +324,7 @@ body > div[role="menu"][aria-busy="true"] button[role="menuitemradio"]:disabled 
 /* ═══════════════════════════════════════════════════════════════════════════
    ⑬ Codex 式输入区（圆角 / 阴影 / 顶栏消隐 / 面板按钮图标）
    ---------------------------------------------------------------------------
-   参考图 evidence/codex-composer-reference.png（1208×263）实测：
+   参考图 assets/reference/codex-composer-reference.png（1208×263）实测：
      · 页面底 #ffffff；卡片填充 #ffffff
      · 卡片下沿阴影 ≈ #fbfbfb（极淡、宽而散）；卡片左描边 ≈ #e1e1e1 发丝线
      · 卡片上栏（PROJECT 条）填充 #f5f5f5，顶圆角、左右各内缩 ≈24px
@@ -369,7 +369,7 @@ body[data-ds-dark-theme] [data-codex-filebar] {
    titleRow 的官方布局是 titleCluster（flex:1）+ utilities + corner，
    故去掉旧版的 justify-content:flex-end —— 标题要留在左边。
 
-   ⚠ 本注释块里**不能出现花括号**（左右都不行）：tools/install-plugin.mjs 的
+   ⚠ 本注释块里**不能出现花括号**（左右都不行）：scripts/install-plugin.mjs 的
    scopeCss 是按「下一个左花括号」做括号配对的，注释里混进一个花括号就会把
    后面的规则整段错位 —— 实测表现为紧随其后的规则被重复加 html[data-codex-ui]
    前缀而失效、整份 theme.css 花括号数不平衡。所以注释里只写行式记法。 */
@@ -439,7 +439,7 @@ header:has([data-conversation-header-leading]):has([data-conversation-tabs]) {
 
    为什么镜像：官方展开按钮用**未镜像**的 IconPanelLeftOutlineRegular，收起按钮用
    collapseGlyph 的 scaleX(-1) 镜像版 —— 同一块面板的两个状态图标朝向不一致。
-   参考图 evidence/codex-app-reference.png 右上角是 panel-right，故把展开态也镜像过来。
+   参考图 assets/reference/codex-app-reference.png 右上角是 panel-right，故把展开态也镜像过来。
    锚点 data-sidebar-right-expand 见 dsh-client-ui-sidebar-right 的 ExpandButton。 */
 [data-conversation-header-corner] {
   margin-left: 0;
@@ -612,7 +612,7 @@ header:has([data-conversation-header-leading]):has([data-conversation-tabs]) {
    ---------------------------------------------------------------------------
    需求：Codex 的加号控件默认**没有**背景框，只有鼠标悬停才出现；
    模型选择器与权限控件照它的悬停形态复刻。
-   参考图 evidence/codex-composer-plus.png（65×84）与 codex-composer-chip-hover.png（144×58）：
+   参考图 assets/reference/codex-composer-plus.png（65×84）与 codex-composer-chip-hover.png（144×58）：
 
      · 加号：40px 直径圆形，悬停时才填 --dsw-codex-hover-fill（实测 #F2F2F3）。
      · 悬停胶囊：整块填充 242,242,243，**没有描边**（逐像素量了外沿：白 255 → 243 → 242，

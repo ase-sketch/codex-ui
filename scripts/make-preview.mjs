@@ -2,10 +2,10 @@
 /**
  * codex-ink 预览图生成器。
  *
- *   node tools/make-preview.mjs
+ *   node scripts/make-preview.mjs
  *
- * 读取 skins/codex-ink/skin.css 的真实令牌，注入 tools/preview/page.html，
- * 产出亮/暗两份自包含 HTML 到 tools/.preview-build/，再由 Edge headless
+ * 读取 skins/codex-ink/skin.css 的真实令牌，注入 scripts/fixtures/preview.html，
+ * 产出亮/暗两份自包含 HTML 到 scripts/.preview-build/，再由 Edge headless
  * 截图成 preview/light.png 与 preview/dark.png。
  *
  * 预览是皮肤自身令牌的真实渲染，不是 live shell 截图。

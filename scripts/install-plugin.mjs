@@ -11,9 +11,9 @@
  *   4. 在 profiles/<name>/cordis.patch.yml 里确保存在 insert 条目（按 id 幂等）。
  *
  * 用法：
- *   node tools/install-plugin.mjs                       # 只读体检（默认 web profile）
- *   node tools/install-plugin.mjs --write               # 落盘
- *   node tools/install-plugin.mjs --profile desktop --write
+ *   node scripts/install-plugin.mjs                       # 只读体检（默认 web profile）
+ *   node scripts/install-plugin.mjs --write               # 落盘
+ *   node scripts/install-plugin.mjs --profile desktop --write
  *
  * --profile <name> 选目标 profile（默认 web）。桌面壳（Electron）的 profile 名是
  * desktop；它由 Electron 独占，CLI 的 `dsh plugin --profile desktop` 会被硬拒绝，
@@ -107,7 +107,7 @@ const scoped = scopeCss('/* ==== L1/L2 令牌与排版层（源：skins/codex-in
   '\n\n/* ==== L3 侧栏对齐层（源：skins/codex-ink/sidebar-align.css）==== */\n' + sidebarAlign +
   '\n\n/* ==== L3 窗口边缘阴影层（源：skins/codex-ink/window-shadow.css）==== */\n' + windowShadow +
   '\n\n/* ==== L3 输入区完整层（源：skins/codex-ink/composer.css）==== */\n' + composer);
-const tplSrc = fs.readFileSync(join(PLUGIN_DIR, 'client.template.js'), 'utf8');
+const tplSrc = fs.readFileSync(join(PLUGIN_DIR, 'src', 'client.template.js'), 'utf8');
 const clientJs = tplSrc.replace('/*__CODEX_UI_CSS__*/', JSON.stringify(scoped));
 
 /* ── 报告 ──────────────────────────────────────────────────────────────── */

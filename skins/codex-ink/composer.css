@@ -2,7 +2,7 @@
    codex-ink（墨白终端）· L3 输入区完整层
    ----------------------------------------------------------------------------
    源文件：skins/codex-ink/composer.css
-   由 tools/install-plugin.mjs 与其余各层一起拼接，并作用域化到 html[data-codex-ui]。
+   由 scripts/install-plugin.mjs 与其余各层一起拼接，并作用域化到 html[data-codex-ui]。
    本文件写「裸选择器」——不要自己再加 html[...] 前缀，那会被 scopeCss 直通。
 
    来源（本地克隆：D:\A-part-of-new-software\PROJIECT\dsh-codex-ui）：
@@ -31,7 +31,7 @@
      "reliance on CSS-Modules hash class names" 告警。本层走**插件路径**
      （client.js 直接注入 style 标签），不经加载器，故放行。
      已尽量取「后缀锚点」写法（[class$=_primary]），只依赖语义后缀、不依赖哈希前缀；
-     语义名若被上游改掉，由 tools/composer-verify.mjs 的实测值暴露。
+     语义名若被上游改掉，由 scripts/hero-verify.mjs 的实测值暴露。
      hero 区没有 data-* 可用：jYtg_G_heroWorkspaceRow / jYtg_G_composerHero 只有类名。
    ============================================================================ */
 

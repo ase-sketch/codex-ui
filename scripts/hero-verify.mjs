@@ -3,7 +3,7 @@
  * hero-verify.mjs — ⑬·3 顶栏瘦身 + ⑭ 输入区（hero）验收。
  *   用真实 shipped 组件 CSS（ConversationRoot + InputBar）+ 本插件真实 theme.css
  *   渲染两个夹具，断言计算样式并出证据图。
- * 用法：node tools/hero-verify.mjs
+ * 用法：node scripts/hero-verify.mjs
  */
 import { spawn } from 'node:child_process';
 import fs from 'node:fs';
@@ -13,8 +13,8 @@ import { fileURLToPath } from 'node:url';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const WB = dirname(HERE);
-const EVID = join(WB, 'evidence');
-/** 夹具 HTML 是中间产物，落系统临时目录，不堆进 evidence/。 */
+const EVID = join(WB, 'assets', 'screenshots');
+/** 夹具 HTML 是中间产物，落系统临时目录，不堆进 assets/screenshots/。 */
 const FIX = join(tmpdir(), 'codex-ui-fixtures');
 const ROOT = 'D:/npm-global/node_modules/@deepseek-ai/dsh/node_modules/@deepseek-ai';
 const CONV = ROOT + '/dsh-client-ui-conversation/lib/client.js';
@@ -134,7 +134,7 @@ await send('Emulation.setDeviceMetricsOverride', { width: 1100, height: 760, dev
 // file:// 也会走 Chrome 的磁盘缓存：同一个路径反复改写夹具时会读到旧版本，加查询串破缓存。
 await send('Page.navigate', { url: 'file:///' + htmlPath.replaceAll('\\', '/') + '?v=' + Date.now() }, sessionId);
 await sleep(1600);
-const probe = fs.readFileSync(join(HERE, 'hero-verify.probe.js'), 'utf8');
+const probe = fs.readFileSync(join(HERE, 'fixtures', 'hero-verify.probe.js'), 'utf8');
 const r = await send('Runtime.evaluate', { expression: probe, returnByValue: true }, sessionId);
 console.log(r.result.value);
 

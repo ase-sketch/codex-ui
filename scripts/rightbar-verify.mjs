@@ -10,7 +10,7 @@
  * 样式取 app.asar 真实 shipped（ui-theme / layout / sidebar-right / dockkit / primitives），
  * DOM 按渲染代码复刻。before 列剥掉 ⑯ 段与右栏阴影段，after 列完整。
  *
- * 用法：node tools/rightbar-verify.mjs [--no-shot]
+ * 用法：node scripts/rightbar-verify.mjs [--no-shot]
  */
 import { spawn } from 'node:child_process';
 import fs from 'node:fs';
@@ -20,8 +20,8 @@ import { fileURLToPath } from 'node:url';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const WB = dirname(HERE);
-const EVID = join(WB, 'evidence');
-/** 夹具 HTML 是中间产物，落系统临时目录，不堆进 evidence/。 */
+const EVID = join(WB, 'assets', 'screenshots');
+/** 夹具 HTML 是中间产物，落系统临时目录，不堆进 assets/screenshots/。 */
 const FIX = join(tmpdir(), 'codex-ui-fixtures');
 const THEME = fs.readFileSync(join(WB, 'theme.css'), 'utf8');
 const ASAR = 'D:/A-part-of-new-software/DeepSeek Harness/resources/app.asar';
@@ -374,7 +374,7 @@ if (!noShot) {
   for (const [sessionId, name] of [[sb, 'rightbar-before.png'], [sa, 'rightbar-after.png'], [sw, 'rightbar-web.png']]) {
     const shot = await send('Page.captureScreenshot', { format: 'png' }, sessionId);
     fs.writeFileSync(join(EVID, name), Buffer.from(shot.data, 'base64'));
-    console.log('SHOT evidence/' + name);
+    console.log('SHOT assets/screenshots/' + name);
   }
 }
 ws.close(); child.kill();

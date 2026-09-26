@@ -2,9 +2,20 @@
   "name": "codex-ui",
   "version": "0.1.0",
   "private": true,
-  "description": "Codex 风格 UI 复刻（独立客户端插件）：自带样式表 + 结构改造，不依赖 skin-center / dsh-web-all。",
+  "description": "DSH Web 的 Codex 化界面插件 · A Codex-style interface plugin for DSH Web",
   "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/<owner>/codex-ui.git"
+  },
+  "bugs": {
+    "url": "https://github.com/<owner>/codex-ui/issues"
+  },
+  "homepage": "https://github.com/<owner>/codex-ui#readme",
   "type": "module",
+  "engines": {
+    "node": ">=22"
+  },
   "main": "index.js",
   "exports": {
     ".": "./index.js",
@@ -14,8 +25,14 @@
   "files": [
     "index.js",
     "client.js",
+    "theme.css",
     "cordis.patch.yml",
-    "README.md"
+    "skins",
+    "LICENSE",
+    "README.md",
+    "README.zh-CN.md",
+    "CHANGELOG.md",
+    "CHANGELOG.zh-CN.md"
   ],
   "keywords": [
     "dsh",

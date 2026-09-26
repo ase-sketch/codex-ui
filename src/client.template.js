@@ -1,5 +1,5 @@
 /**
- * codex-ui — Browser half（由 tools/install-plugin.mjs 从 client.template.js 生成，勿手改）。
+ * codex-ui — Browser half（由 scripts/install-plugin.mjs 从 client.template.js 生成，勿手改）。
  *
  * 职责：把 <workbench>/skins/codex-ink 的整套 Codex 化样式（L1/L2 令牌 + L3 组件层）
  * 以作用域 html[data-codex-ui] 注入到文档，并在卸载时完整收回。

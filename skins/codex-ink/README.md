@@ -1,55 +1,56 @@
-# codex-ink · 墨白终端
+# codex-ink
 
-代码方向为 Codex / ChatGPT。这是 codex-ui 插件的样式正本：`tools/install-plugin.mjs` 读本目录的五个 CSS，
-作用域化到 `html[data-codex-ui]` 后写进 `client.js`。同一份目录也满足 Skin v2 清单格式，可由皮肤加载器单独收录。
+Codex / ChatGPT direction. These stylesheets are the sources for the codex-ui plugin: `scripts/install-plugin.mjs`
+reads the five CSS files here, scopes their selectors to `html[data-codex-ui]`, and inlines the result into `client.js`.
+The same directory satisfies the Skin v2 manifest format and can be picked up by a skin loader on its own.
 
-## 文件
+## Files
 
-| 文件 | 层 | 内容 |
+| File | Layer | Content |
 |---|---|---|
-| `skin.json` | 清单 | id、accent、明暗预览 |
-| `skin.css` | L1 令牌 + L2 排版 | `--dsw-alias-*` 重映射；补 spacing / radius / 字阶 / motion / elevation 令牌层 |
-| `patches.css` | L3 组件 | 焦点环、链接、卡片契约、mono pill 徽标、tag tone 归一、reduced-motion、⑫ 模型选择器、⑬ 输入区顶栏与卡片、⑯ 右栏选择组件、⑰ composer 控件悬停 |
-| `sidebar-align.css` | L3 侧栏对齐 | 新会话行与全局面板行落到工作区列表行的两条竖线（图标列 20px、文字列 42px）；含 rc.1 扁平与 rc.2 嵌套两代 DOM 选择器 |
-| `window-shadow.css` | L3 窗口边缘 | 会话窗口 0.5px 发丝线加 24px 环境影；右栏面板左沿只留 0.5px 发丝线、影只往上泄；右分界线拖拽柄悬停渐变 |
-| `composer.css` | L3 输入区 | 输入卡几何与表面、44px 编辑区、28px 底栏控件带、建议菜单、hero 布局。本层允许 `[class*=…]` 后缀锚点 |
-| `preview/` | 资产 | 亮暗预览图 |
+| `skin.json` | Manifest | id, accent, light and dark previews |
+| `skin.css` | L1 tokens and L2 typography | `--dsw-alias-*` remapping; spacing, radius, type scale, motion and elevation token layers |
+| `patches.css` | L3 components | Focus ring, links, card contract, mono pills, tag tone normalization, reduced motion, ⑫ model picker, ⑬ composer header and card, ⑯ right panel guide entries, ⑰ composer control hover |
+| `sidebar-align.css` | L3 sidebar alignment | New session and plugin rows land on the same two columns as the workspace list (icon column 20px, text column 42px); selectors cover both the rc.1 flat DOM and the rc.2 nested DOM |
+| `window-shadow.css` | L3 window edges | Conversation window 0.5px hairline plus a 24px ambient shadow; right panel keeps a hairline on its left edge only and bleeds upward; right divider handle hover gradient |
+| `composer.css` | L3 composer | Card geometry and surface, 44px editor area, 28px bottom control row, suggestion menu, hero layout. This layer is allowed to use `[class*=…]` suffix anchors |
+| `preview/` | Assets | Light and dark previews |
 
-## 设计规约
+## Design rules
 
-1. chrome 无彩色：按钮、链接、选中态、焦点环为墨色。浅色主按钮 `#1A1C1F` 底白字，深色反相。
-2. 灰阶即层级。浅色 `#FFFFFF → #F1F1EF → #E5E5E5`；深色 `#111111 → #171717 → #1f1f1f → #2a2a2a → #353535`。
-3. 亮色侧栏 `#EEF4F9`，选中行 `#E2E9ED`，hover `#E8EEF3`。
-4. 元信息（token 数、模型名、时间戳、徽标、路径、快捷键）走 `--ds-font-family-code`、11px、`.04em`/`.08em`；中文经 `:lang(zh)` 豁免字距与大写。
-5. 圆角 / 间距取 `--dsw-radius-*` 与 `--dsw-space-*`；卡片用 0.5px 描边代替投影。
-6. 动效 100 / 160 / 240ms，`cubic-bezier(.3,.7,.4,1)`；`prefers-reduced-motion` 取瞬时终态。
-7. 彩色白名单：state 三色、diff 红绿、徽标底色（state 色 8%~16% 透明底）。task-board 的六档 tag tone 收敛到 state 三色加墨灰。
+1. No color in chrome: buttons, links, selection and focus rings are ink. The light theme primary button is `#1A1C1F` on white; dark inverts.
+2. Greys carry hierarchy. Light `#FFFFFF → #F1F1EF → #E5E5E5`; dark `#111111 → #171717 → #1f1f1f → #2a2a2a → #353535`.
+3. Light sidebar `#EEF4F9`, active row `#E2E9ED`, hover `#E8EEF3`.
+4. Metadata (token counts, model names, timestamps, badges, paths, shortcuts) uses `--ds-font-family-code`, 11px and `.04em`/`.08em` tracking; `:lang(zh)` exempts Chinese from tracking and uppercase.
+5. Radius and spacing come from `--dsw-radius-*` and `--dsw-space-*`. Cards use a 0.5px stroke instead of a shadow.
+6. Motion runs at 100 / 160 / 240ms with `cubic-bezier(.3,.7,.4,1)`; `prefers-reduced-motion` jumps to the end state.
+7. Color whitelist: the three state colors, diff red and green, and badge fills (state color at 8% to 16% opacity). The six task-board tag tones collapse onto the state colors plus ink and grey.
 
-## 令牌契约（三方插件）
+## Token contract for third-party plugins
 
-1. 颜色只用 `var(--dsw-alias-*)`，不自带 hex；
-2. 圆角与间距只用 `var(--dsw-radius-*)` 与 `var(--dsw-space-*)`；
-3. hover 用背景升一档，不自创投影；
-4. 不引入白名单外的彩色；
-5. 元信息用 `var(--dsw-font-meta)` 加 `--dsw-meta-size` 加 `--dsw-meta-tracking`。
+1. Colors only from `var(--dsw-alias-*)`, no literal hex.
+2. Radius and spacing only from `var(--dsw-radius-*)` and `var(--dsw-space-*)`.
+3. Hover raises the background one step; no custom shadows.
+4. No color outside the whitelist.
+5. Metadata uses `var(--dsw-font-meta)` with `--dsw-meta-size` and `--dsw-meta-tracking`.
 
-## 验收
+## Verification
 
 ```bash
-node tools/audit-codex-ink.mjs
+node scripts/audit-codex-ink.mjs
 ```
 
-脚本做三件事：`skin.json` 结构自检、36 组 WCAG 对比度实测、`patches.css` 彩色白名单审计。
-当前结果 36/36 通过，AAA 19 组，白名单外彩色 0 个。
+The script checks the `skin.json` structure, measures 36 WCAG contrast pairs, and audits the color whitelist in `patches.css`.
+Current result: 36/36 pass, 19 AAA pairs, zero colors outside the whitelist.
 
-## 安装
+## Install
 
 ```powershell
-node tools/install-plugin.mjs --write      # 插件路径，主用法
-node tools/install-skin.mjs --write        # 皮肤加载器路径：同步到 $DSH_HOME/skins/codex-ink
+node scripts/install-plugin.mjs --write      # plugin path, the primary route
+node scripts/install-skin.mjs --write        # skin loader path: sync to $DSH_HOME/skins/codex-ink
 ```
 
-## 未覆盖
+## Not covered
 
-- shiki 语法高亮的低饱和化未在本层强制，语法色由官方高亮器内联输出；本层只约束代码块底色 `--dsw-alias-markdown-code-block` 一族。
-- `patches.css` 通过加载器安全管线并被限定作用域，未在 live GUI 上单独应用过；应用会改写皮肤选择。
+- Shiki syntax highlighting is not desaturated here; the highlighter emits its own colors inline. This layer only constrains block backgrounds through `--dsw-alias-markdown-code-block` and friends.
+- `patches.css` passes the loader safety pipeline and gets scoped correctly, but has never been applied on its own in a live GUI; applying it rewrites the skin selection.
