@@ -108,7 +108,9 @@ const scoped = scopeCss('/* ==== L1/L2 令牌与排版层（源：skins/codex-in
   '\n\n/* ==== L3 窗口边缘阴影层（源：skins/codex-ink/window-shadow.css）==== */\n' + windowShadow +
   '\n\n/* ==== L3 输入区完整层（源：skins/codex-ink/composer.css）==== */\n' + composer);
 const tplSrc = fs.readFileSync(join(PLUGIN_DIR, 'src', 'client.template.js'), 'utf8');
-const clientJs = tplSrc.replace('/*__CODEX_UI_CSS__*/', JSON.stringify(scoped));
+/* 模板里写成 `= /*__CODEX_UI_CSS__*\/ null;`，占位符连同 null 一起替换，
+   这样未替换的模板本身也是可解析的 JS。 */
+const clientJs = tplSrc.replace('/*__CODEX_UI_CSS__*/ null', JSON.stringify(scoped));
 
 /* ── 报告 ──────────────────────────────────────────────────────────────── */
 console.log('profile  : ' + PROFILE);

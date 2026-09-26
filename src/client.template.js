@@ -13,7 +13,7 @@ window.__ModuleLoader__.load({
     /** 作用域根属性：所有规则都挂在它下面，卸载即整层失效。 */
     const ROOT_ATTR = 'data-codex-ui';
     /** 生成期注入的样式表文本。 */
-    const CSS = /*__CODEX_UI_CSS__*/;
+    const CSS = /*__CODEX_UI_CSS__*/ null;
     /**
      * 这里导出的是 cordis **服务名**，与 package.json 的 dsh.client.inject 不是一回事：
      *   · package.json 的 dsh.client.inject 列**包名**，只用于客户端模块图排序；
