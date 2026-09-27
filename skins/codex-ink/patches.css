@@ -374,19 +374,17 @@ body[data-ds-dark-theme] [data-codex-filebar] {
    scopeCss 是按「下一个左花括号」做括号配对的，注释里混进一个花括号就会把
    后面的规则整段错位 —— 实测表现为紧随其后的规则被重复加 html[data-codex-ui]
    前缀而失效、整份 theme.css 花括号数不平衡。所以注释里只写行式记法。 */
-/* 隐去「标题旁动作」与「右侧工具」两格 —— 关掉它们的**槽出口里的内容**。
-   renderSlot 的出口恒为 <div data-slot="<槽名>" style="display:contents">，槽名是官方
-   稳定契约，比 [class$="_headerActions"] 这类哈希类名抗升级。
-   注意：出口自带**内联** style="display:contents"，外链规则赢不了它，所以这里
-   不关出口本身，改关它渲染出来的每一项（出口留空即无视觉）。 */
-[data-slot="conversation.session.header.actions"] > * {
-  display: none;
-}
-
-[data-slot="conversation.session.header.utilities"] > * {
-  display: none;
-}
-
+/* ⑬·3c 顶栏两格**放开**（0.3.0）：槽出口里的条目恢复渲染。
+   0.2.x 为了对齐参考图「只留会话名 + 右上角按钮」，这里把两格的槽出口内容整块 display:none。
+   代价是派出去的子代理在界面上完全看不见在跑：官方子代理包把「后代数量触发器」注册在
+   conversation.session.header.actions（id subagent-catalog，order -30），同一格还有
+   jobs 的 roster、预设徽标、在应用中打开 —— 一起被关掉了。
+   现在放开。这些条目**本身都是条件渲染**（没有子代理 / 没有 job / 没有预设 / 没有工作目录时
+   各自返回 null），所以常态顶栏仍旧是「会话名 + 右上角按钮」，只有真有东西时才多出条目。
+   配色不动：条目只用 --dsw-* 语义令牌（--dsw-alias-label-tertiary、--dsw-alias-interactive-bg-hover、
+   --dsw-alias-border-l4 …），本皮肤已重锚这些令牌，因此跟着现在的配色走，不需要另配一套色。
+   出口恒为 div[data-slot=槽名][style=display:contents]，不需要也不应该改出口本身。
+   ⚠ 本部注释里不能出现花括号（install-plugin.mjs 的 scopeCss 按花括号配对）。 */
 [data-slot="conversation.session.header"] > [data-conversation-tabs] {
   display: none;
 }

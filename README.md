@@ -35,6 +35,7 @@ The verification scripts read shipped CSS straight out of `app.asar`; a host upg
 |---|---|
 | ⑫ | Model picker: native trigger, opaque white menu, 28px rows, permanent check column, pending spinner |
 | ⑬ | Composer header turned blank, panel buttons keep the official icons |
+| ⑬c | Both header slots **released**: entries registered there render again (subagent descendant count / job roster / preset badge / open-in-app); the view tabs stay hidden. The entries are conditionally rendered, so the top bar is unchanged in the common case |
 | ⑭ | Composer card: radius, shadow, geometry, tool row, hero layout |
 | ⑯ | Right panel guide entries: no border, no fill, 52px rows, 20px icons, filled shortcut pills |
 | ⑰ | Composer bottom controls: add button has no box until hover; model and permission controls share the hover chip |
@@ -120,7 +121,7 @@ node scripts/install-skin.mjs --write  # overwrite on drift
 | `node scripts/model-picker-verify.mjs` | ⑫ and the pending indicator, 18 assertions | none |
 | `node scripts/rightbar-verify.mjs` | Shadow layer, right panel, both dividers, 42 assertions | none |
 | `node scripts/sidebar-align-verify.mjs` | Sidebar column alignment, 6 assertions | none |
-| `node scripts/hero-verify.mjs` | ⑬ ⑭ ⑰ and the focus ring, 8 assertions | none |
+| `node scripts/hero-verify.mjs` | ⑬ ⑭ ⑰, the focus ring and the released header slots, 17 assertions | none |
 | `node scripts/live-gui-probe.mjs --url <token URL>` | Real GUI: 10 assertions on shadows, both dividers, the model menu pending window | a running `dsh web` |
 | `node scripts/settings-page-verify.mjs --url <token URL>` | Real GUI: the card on the bundle page, its 8 rows, no override at defaults, switch and accent writes, survival across a reload — 22 assertions | a running `dsh web` with the plugin manager enabled |
 | `node scripts/theme-flash-probe.mjs --url <token URL>` | Per-frame sampling of the effective backdrop during theme and page switches (first opaque ancestor background); reports frames belonging to neither end of the transition (measured: 9 windows, ~720 frames, 0 anomalies) | same as above |
@@ -258,6 +259,10 @@ Source: point samples from `assets/reference/codex-sidebar-reference.png`.
 
 ## Limits
 
+- The two header slots have been released since 0.3.0 (⑬·3c), so the **top bar can carry more entries than the
+  reference screenshot shows**: they only appear when the session really has subagents / background jobs / a preset /
+  a working directory — and that is also the only visible surface for "a subagent is running". The trade-off is
+  recorded in the changelog.
 - Fixture checks are not signed-in screenshots. The `dsh web` launch token has a lifetime and lives in process memory only.
 - In headless mode only the foreground tab handles `:hover`, so multi-page fixtures open the web-shape page last.
 - A flat single list of model plus effort, and a per-model description column, need a client plugin that takes over the

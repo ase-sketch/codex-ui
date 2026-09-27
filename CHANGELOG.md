@@ -2,6 +2,31 @@
 
 [简体中文](CHANGELOG.zh-CN.md)
 
+## 0.3.0 - 2026-09-27
+
+Both header slots are **released**: the entries registered in them render again. Before this, a dispatched subagent
+left no visible trace that it was running.
+
+### Top bar (⑬·3c)
+
+- 0.2.x hid the contents of `conversation.session.header.actions` and `…utilities` with a blanket
+  `display: none`, to match the reference screenshot's "session name plus the top-right button" only. The cost was
+  not obvious at the time: the official subagent package registers its **descendant-count trigger** (total and running
+  counts) in `actions` (id `subagent-catalog`, order -30), and the same slot also carries the job roster, the preset
+  badge and "open in app" — all of them were hidden with it.
+- Only those two rules were removed; nothing else changed, and the view tabs stay hidden (the reference has no tabs).
+- The entries are **conditionally rendered** by their own packages (no subagents / no jobs / no preset / no working
+  directory means they return null), so the top bar looks exactly as before in the common case. Real-GUI A/B: with the
+  old rule re-injected into an empty session, the header geometry (header 1138×41, corner button 28×28, tabs display)
+  is **field-for-field identical**.
+- No second palette was introduced: the entries take their colours from `--dsw-*` semantic tokens, which this skin has
+  already re-anchored, so they follow the current skin. Modelled in the fixture with the official class names, the
+  measured badge colour is `rgb(118, 118, 118)` = the skin's `--dsw-alias-label-tertiary`;
+  `--dsw-alias-fill-tsp-secondary` is undefined, so the badge keeps no fill; and the official 22px height, 6px radius
+  and 12px font are asserted as "not rewritten by the skin".
+- `scripts/hero-verify.mjs` grew from 8 to **17 assertions**: title still there, preset badge visible, utility entry
+  visible, tabs still hidden, corner button still there, badge colour / radius / height, badge has no fill.
+
 ## 0.2.0 - 2026-09-27
 
 A settings page inside the plugin manager, plus the dark base re-anchored on the Codex app's own defaults.

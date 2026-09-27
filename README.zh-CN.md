@@ -32,6 +32,7 @@ DSH Web 的界面元素按 Codex 复刻：窗口边缘的阴影与发丝线、�
 |---|---|
 | ⑫ | 模型选择器：原生触发器、不透明白菜单、行高 28px、勾选列常驻、pending 转圈 |
 | ⑬ | 输入区顶栏消隐、面板按钮保留官方图标 |
+| ⑬c | 顶栏两格**放开**：注册在两个槽里的条目恢复渲染（子代理后代计数 / jobs roster / 预设徽标 / 在应用中打开）；视图页签仍隐去。条目本身条件渲染，所以常态顶栏与放开前一致 |
 | ⑭ | 输入卡：圆角、阴影、几何、工具条、hero 布局 |
 | ⑯ | 右栏展开选择组件：无描边无底色、行高 52px、图标 20px、快捷键灰底 pill |
 | ⑰ | composer 底部控件：加号默认无底色框、悬停才填；模型与权限控件同套悬停胶囊 |
@@ -116,7 +117,7 @@ node scripts/install-skin.mjs --write  # 有漂移则覆盖
 | `node scripts/model-picker-verify.mjs` | ⑫ 与 pending 指示器，18 项 | 无 |
 | `node scripts/rightbar-verify.mjs` | 阴影层、右栏三件套、两条分界线，42 项 | 无 |
 | `node scripts/sidebar-align-verify.mjs` | 侧栏列对齐，6 项 | 无 |
-| `node scripts/hero-verify.mjs` | ⑬⑭⑰ 与焦点环，8 项 | 无 |
+| `node scripts/hero-verify.mjs` | ⑬⑭⑰ 与焦点环、顶栏两格放开，17 项 | 无 |
 | `node scripts/live-gui-probe.mjs --url <带 token 的 URL>` | 真 GUI：阴影、两条分界线、模型菜单 pending 窗口共 10 项断言 | `dsh web` 实例 |
 | `node scripts/settings-page-verify.mjs --url <带 token 的 URL>` | 真 GUI：组合包页的设置卡、8 行结构、默认不覆盖、开关与强调色写入、刷新后仍在，共 22 项断言 | `dsh web` 实例（profile 需启用插件管理） |
 | `node scripts/theme-flash-probe.mjs --url <带 token 的 URL>` | 按帧采样主题/页面切换时的「有效底色」（沿祖先找第一个不透明底色），看切换过程中是否出现既不属于起点也不属于终点的中间帧（实测 9 段约 720 帧、0 异常） | 同上 |
@@ -249,6 +250,8 @@ node scripts/live-gui-probe.mjs --url "http://127.0.0.1:3099/?token=..." --dpr 1
 - 模型与强度同屏扁平单列表、行内每模型描述列需要客户端插件占用 `conversation.input.model` 槽并复用 `ctx.modelDirectories`，本层未做。
 - ⑯ 保留宿主页签条：整条隐藏会连带去掉全屏与收起按钮。
 - 会话行文字列 40px，比工作区行、新会话、插件行短 2px，来自官方 `Rows.module.css` 的 `.sessionRow .title` margin，未改。
+- 顶栏两格自 0.3.0 起放开（⑬·3c），因此**会话顶栏会比参考图多出条目**：只有当会话真有子代理 /
+  后台 job / 预设 / 工作目录时才出现，此时它同时是"子代理在跑"的唯一可见面。取舍写在 CHANGELOG。
 - `composer.css` 与 `patches.css` 使用 21 处哈希类名后缀锚点（`[class$=…]`、`[class*=…]`），宿主没有对应 `data-*` 的位置只能如此。
 
 ## 与 Codex 源码对账

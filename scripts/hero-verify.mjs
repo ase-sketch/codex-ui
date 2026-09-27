@@ -22,24 +22,24 @@ const CONV = join(ROOT, 'dsh-client-ui-conversation', 'lib', 'client.js');
 const SRC = fs.readFileSync(CONV, 'utf8');
 
 /** 取某个 .module.css 的内联样式串：按 tagId 回退到最近的一条 `const cssN = "…";`。 */
-const cssFor = (moduleFile) => {
-  const i = SRC.indexOf(moduleFile);
+const cssFor = (moduleFile, src = SRC) => {
+  const i = src.indexOf(moduleFile);
   if (i < 0) throw new Error('tagId not found: ' + moduleFile);
-  const decl = SRC.lastIndexOf('const css', i);
+  const decl = src.lastIndexOf('const css', i);
   if (decl < 0) throw new Error('css declaration not found for ' + moduleFile);
-  const start = SRC.indexOf('"', decl) + 1;
-  const end = SRC.indexOf('";', start);
-  const text = SRC.slice(start, end).replaceAll('\\"', '"');
+  const start = src.indexOf('"', decl) + 1;
+  const end = src.indexOf('";', start);
+  const text = src.slice(start, end).replaceAll('\\"', '"');
   if (!text.includes('{')) throw new Error('css extraction looks wrong for ' + moduleFile);
   return text;
 };
 /** 取某个 Module_css_default 类映射表。 */
-const mapFor = (varName) => {
-  const i = SRC.indexOf('var ' + varName + ' = {');
+const mapFor = (varName, src = SRC) => {
+  const i = src.indexOf('var ' + varName + ' = {');
   if (i < 0) throw new Error('class map not found: ' + varName);
-  const start = SRC.indexOf('{', i);
-  const end = SRC.indexOf('};', start);
-  const body = SRC.slice(start, end + 1);
+  const start = src.indexOf('{', i);
+  const end = src.indexOf('};', start);
+  const body = src.slice(start, end + 1);
   const out = {};
   for (const m of body.matchAll(/"([^"]+)":\s*"([^"]+)"/g)) out[m[1]] = m[2];
   return out;
@@ -50,11 +50,17 @@ const barCss = cssFor('@deepseek-ai/dsh-client-ui-conversation/InputBar.module.c
 const R = mapFor('ConversationRoot_module_css_default');
 const B = mapFor('InputBar_module_css_default');
 const theme = fs.readFileSync(join(WB, 'theme.css'), 'utf8');
+/* ⑬·3c 放开顶栏两格后，槽里的条目改用**官方真实样式**建模：预设徽标来自 agent-preset 的
+   AgentPresetLabel.module.css（class 前缀 PfFEtG_）。它只用 --dsw-* 语义令牌取色，
+   所以“配色跟着现在的皮肤走”这条能被夹具直接量到。 */
+const AP = fs.readFileSync(join(ROOT, 'dsh-client-ui-agent-preset', 'lib', 'client.js'), 'utf8');
+const labelCss = cssFor('@deepseek-ai/dsh-client-ui-agent-preset/AgentPresetLabel.module.css', AP);
+const L = mapFor('AgentPresetLabel_module_css_default', AP);
 
 const chip = (label, glyph) => '<button type="button" style="display:inline-flex;align-items:center;gap:6px;padding:4px 8px;border:0;background:transparent;font:inherit;cursor:pointer">' + glyph + '<span>' + label + '</span></button>';
 
 const page = '<!doctype html><html data-codex-ui><head><meta charset="utf-8">' +
-  '<style>' + rootCss + '</style><style>' + barCss + '</style><style>' + theme + '</style>' +
+  '<style>' + rootCss + '</style><style>' + barCss + '</style><style>' + labelCss + '</style><style>' + theme + '</style>' +
   /* 宿主底样式复刻（实测自真 GUI）：加号常驻 --dsw-alias-bg-layer-2 圆底并全圆角，
      两个触发器默认透明、圆角 24px。夹具缺了这几条就测不出「默认有没有框」。 */
   '<style>[class$="_add"]{background:var(--dsw-alias-bg-layer-2);border:0;border-radius:999px}'
@@ -63,7 +69,7 @@ const page = '<!doctype html><html data-codex-ui><head><meta charset="utf-8">' +
   '.stage{padding:24px 0 40px}h4{margin:0 0 10px 24px;font:600 12px/18px ui-monospace,Consolas,monospace;color:#8a8a8a}' +
   '.hdrwrap{margin:0 24px 28px;border-bottom:1px solid #e5e5e5}</style></head><body>' +
   '<div class="stage">' +
-    '<h4>⑬·3 会话分割线（应只剩会话名 + 右上角按钮）</h4>' +
+    '<h4>⑬·3 会话分割线（会话名 + 槽位条目 + 右上角按钮；页签仍隐去）</h4>' +
     '<div class="hdrwrap"><header class="' + R.header + '">' +
       '<div class="' + R.headerLeading + '" data-conversation-header-leading></div>' +
       '<div data-slot="conversation.session.header" style="display:contents">' +
@@ -72,7 +78,9 @@ const page = '<!doctype html><html data-codex-ui><head><meta charset="utf-8">' +
             '<nav class="' + R.crumbs + '" aria-label="层级">' +
               '<span class="' + R.crumbSeg + '"><span class="' + R.crumb + ' ' + R.crumbCurrent + '">codexui</span></span>' +
             '</nav>' +
-            '<div class="' + R.headerActions + '"><div data-slot="conversation.session.header.actions" style="display:contents"><span style="font-size:12px;color:#8a8a8a">🐟 Agent-Evo RSI (自进化认知体)</span></div></div>' +
+            '<div class="' + R.headerActions + '"><div data-slot="conversation.session.header.actions" style="display:contents">' +
+              '<span class="' + L.label + '" title="预设徽标（官方 AgentPresetLabel 的真实类名）">✳ Agent-Evo RSI</span>' +
+            '</div></div>' +
           '</div>' +
           '<div class="' + R.headerUtilities + '"><div data-slot="conversation.session.header.utilities" style="display:contents"><span style="font-size:12px;color:#8a8a8a">工具</span></div></div>' +
           '<div class="' + R.headerCorner + '" data-conversation-header-corner><button type="button" aria-label="展开右栏" style="width:28px;height:28px;border:0;background:transparent;cursor:pointer">▤</button></div>' +
@@ -138,7 +146,8 @@ await send('Page.navigate', { url: 'file:///' + htmlPath.replaceAll('\\', '/') +
 await sleep(1600);
 const probe = fs.readFileSync(join(HERE, 'fixtures', 'hero-verify.probe.js'), 'utf8');
 const r = await send('Runtime.evaluate', { expression: probe, returnByValue: true }, sessionId);
-console.log(r.result.value);
+const headerRaw = r.result.value;
+console.log(headerRaw);
 
 /* ── ⑰ composer 底部控件：默认无框、悬停才出现淡底 ────────────────────────
    模型/权限触发器在真实 DOM 里没有 data-*，锚点是哈希类名的后缀
@@ -192,7 +201,19 @@ const trigHover = await hoverUntil('[data-composer-card] button[class$="_trigger
 console.log('IDLE   ' + JSON.stringify(idle));
 console.log('ADD-H  ' + JSON.stringify(addHover.add));
 console.log('TRIG-H ' + JSON.stringify(trigHover.trig));
+const hdr = JSON.parse(headerRaw);
 const checks = [
+  /* ⑬·3c：两格放开后，槽里的条目必须真的渲染出来；页签仍旧隐去（参考图没有页签）。 */
+  ['会话名仍在', hdr.header.title === true],
+  ['预设徽标可见（顶栏两格已放开）', hdr.header.presetBadge === true],
+  ['右侧工具条目可见（顶栏两格已放开）', hdr.header.utilityItem === true],
+  ['页签仍隐去', hdr.header.tabs === false],
+  ['右上角按钮仍在', hdr.header.corner === true],
+  ['徽标配色 = 本皮肤 --dsw-alias-label-tertiary', hdr.presetLabel.color === 'rgb(118, 118, 118)'],
+  /* 徽标圆角是**官方自带的字面量 6px**（.SVAs4q_label），不是本皮肤的刻度；这条断言防的是我们误改它。 */
+  ['徽标圆角保持官方 6px（未被皮肤改写）', hdr.presetLabel.radius === '6px'],
+  ['徽标高 22px（官方控件高度，未改写）', hdr.presetLabel.h === 22],
+  ['徽标不填底色（令牌未定义即透明，不另配色）', hdr.presetLabel.bg === 'rgba(0, 0, 0, 0)'],
   ['加号默认无底色框', idle.add.bg === 'rgba(0, 0, 0, 0)'],
   ['加号悬停才出现淡底', addHover.add.bg === 'rgb(242, 242, 243)'],
   ['加号圆形（999px）', idle.add.radius === '999px'],
