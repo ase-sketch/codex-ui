@@ -122,7 +122,7 @@ node scripts/install-skin.mjs --write  # overwrite on drift
 | `node scripts/sidebar-align-verify.mjs` | Sidebar column alignment, 6 assertions | none |
 | `node scripts/hero-verify.mjs` | ⑬ ⑭ ⑰ and the focus ring, 8 assertions | none |
 | `node scripts/live-gui-probe.mjs --url <token URL>` | Real GUI: 10 assertions on shadows, both dividers, the model menu pending window | a running `dsh web` |
-| `node scripts/settings-page-verify.mjs --url <token URL>` | Real GUI: the card on the bundle page, its 8 rows, no override at defaults, switch and accent writes, survival across a reload — 20 assertions | a running `dsh web` with the plugin manager enabled |
+| `node scripts/settings-page-verify.mjs --url <token URL>` | Real GUI: the card on the bundle page, its 8 rows, no override at defaults, switch and accent writes, survival across a reload — 22 assertions | a running `dsh web` with the plugin manager enabled |
 | `node scripts/theme-flash-probe.mjs --url <token URL>` | Per-frame sampling of the effective backdrop during theme and page switches (first opaque ancestor background); reports frames belonging to neither end of the transition (measured: 9 windows, ~720 frames, 0 anomalies) | same as above |
 
 `npm run check` needs no host. The five fixture suites run locally: they need shipped CSS from `app.asar` plus a DOM
@@ -180,6 +180,11 @@ dark default, 60):
   `ui-theme` and field `preference` the service's internal `host.set` uses), leaving `adopt()` as the only publisher —
   one click, one publish. The control keeps a local pending value so it still feels immediate, and an unaccepted write
   falls back to the service entry point.
+  That 0.8s round trip is not left empty: the browser half carries a **local preview** — the target theme is applied
+  the moment you click (writing exactly the two things the host writes itself: `body[data-ds-dark-theme]` and the
+  `color-scheme` on `html`), then handed back idempotently when `theme/change` arrives with the same result. If the
+  confirmation does not arrive within 2.5s, the preview rolls back to the truth. Measured click → colour change:
+  **824ms → 22ms** (median), with the run sequence still two runs (light×n → dark×m) and no double publish.
 - All 11 fields are `.volatile()`: the settings service only projects volatile fields, and that is exactly how the
   plugin manager knows the entry — no `Config`, no card.
 - **Empty means no override**: at the defaults the override layer emits an empty string and `data-codex-ui-theme` never

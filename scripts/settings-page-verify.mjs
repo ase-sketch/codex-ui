@@ -265,8 +265,19 @@ check('主题行存在且显示了当前偏好', beforeTheme.segment !== null, '
 const toDark = await clickByText('^深色$', sessionId);
 check('找到「深色」分段', toDark !== null, JSON.stringify(toDark));
 if (toDark !== null) {
+  /* 预览层：点下去要**立刻**变色，而不是等设置文档往返（那一次实测 780–824ms）。 */
   await click(toDark.x, toDark.y, sessionId);
+  const t0 = Date.now();
+  let flipMs = null;
+  for (let i = 0; i < 50; i += 1) {
+    if (await evaluate('document.body.hasAttribute("data-ds-dark-theme")', sessionId)) { flipMs = Date.now() - t0; break; }
+    await sleep(40);
+  }
+  console.log('THEME 点击 → 变色 ' + flipMs + 'ms');
+  check('点下去立刻变色（≤300ms，预览层生效）', flipMs !== null && flipMs <= 300, 'flip=' + flipMs + 'ms');
   await sleep(1500);
+  const settled = await evaluate('({ preview: document.documentElement.getAttribute("data-codex-ui-preview"), scheme: document.documentElement.style.colorScheme })', sessionId);
+  check('文档落地后预览标记被摘掉（没有卡在预览态）', settled.preview === null, JSON.stringify(settled));
   const swatchExpr = '(() => { const el = [...document.querySelectorAll(".cx-swatch")].find((x) => x.getAttribute("aria-label") === "背景"); return el === undefined ? null : el.value; })()';
   const dark = {
     dark: await evaluate('document.body.hasAttribute("data-ds-dark-theme")', sessionId),

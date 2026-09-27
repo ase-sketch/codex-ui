@@ -21,6 +21,16 @@ window.__ModuleLoader__.load({
      * 元素半旧半新的那几帧看起来就是「闪」。打上它、过两个 rAF 摘掉，切换变成一次到位。
      */
     const SWITCH_ATTR = 'data-codex-ui-switching';
+    /**
+     * 本地预览标记：用户点了主题之后，宿主要把偏好写进设置文档、再回读，实测往返 ~0.8s。
+     * 这一层让「点下去」与「变颜色」之间不等那个往返：立刻按目标主题应用，
+     * 等 `theme/change` 带着同一个结果回来就交还给宿主；超时没等到就按真值回滚。
+     * 它只写宿主本来就会写的两处（body[data-ds-dark-theme] 与 html 的 color-scheme），
+     * 因此确认到达时是幂等的，不会出现第二次跳变。
+     */
+    const PREVIEW_ATTR = 'data-codex-ui-preview';
+    /** 预览等待上限：够一次文档往返（实测 ~0.8s）再多给一倍余量。 */
+    const PREVIEW_TIMEOUT_MS = 2500;
     /** 生成期注入的样式表文本。 */
     const CSS = /*__CODEX_UI_CSS__*/ null;
     /** 生成期注入的覆盖层模块（源：src/override.js）。 */
@@ -123,12 +133,72 @@ window.__ModuleLoader__.load({
           root.removeAttribute(__override.OVERRIDE_ATTR);
         }, 'codex-ui: settings override');
       }
-      /* 切主题的两帧内关掉过渡（见 SWITCH_ATTR 的注释）。宿主事件与卡片用的是同一个口子。 */
+      /* 切主题时关掉过渡：交叉淡出看起来就是「闪」。两帧后摘掉，切换变成一次到位。 */
+      const suppressTransitions = () => {
+        root.setAttribute(SWITCH_ATTR, '');
+        requestAnimationFrame(() => requestAnimationFrame(() => root.removeAttribute(SWITCH_ATTR)));
+      };
+
+      /* ── 主题的本地预览 ──────────────────────────────────────────────────
+         点下去到变色原本要等一次设置文档往返（实测 780–824ms）。这里把目标主题先应用掉，
+         宿主稍后带着同样结果回来时幂等地交还给它。 */
+      let preview = null;
+      let previewTimer = 0;
+      /** 按宿主自己的方式打主题：body 上的 palette 属性 + html 的 color-scheme。 */
+      const applyScheme = (scheme) => {
+        if (typeof document.body.toggleAttribute === 'function') document.body.toggleAttribute('data-ds-dark-theme', scheme === 'dark');
+        root.style.colorScheme = scheme;
+      };
+      /** 目标偏好 → 实际那一套（system 跟随系统，与宿主同一套解析规则）。 */
+      const schemeOf = (target) => {
+        if (target === 'dark' || target === 'light') return target;
+        return typeof matchMedia === 'function' && matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+      };
+      /**
+       * 结束预览。
+       * @param confirmed - true 表示宿主已经带着同一个结果发布过，文档就是真相；
+       *                    false 表示等超时了，按宿主当前的真值回滚，绝不把预览当成结果。
+       */
+      const endPreview = (confirmed) => {
+        if (preview === null) return;
+        if (previewTimer !== 0) { clearTimeout(previewTimer); previewTimer = 0; }
+        preview = null;
+        root.removeAttribute(PREVIEW_ATTR);
+        if (confirmed) return;
+        try {
+          const active = themeServiceActive();
+          if (active !== null) applyScheme(active);
+        } catch { /* 读不到服务就保持现状，不做二次猜测 */ }
+      };
+      /** 宿主主题服务当前解析出的那一套；读不到返回 null。 */
+      const themeServiceActive = () => {
+        const snap = ctx.theme === undefined || ctx.theme === null ? null : ctx.theme.getTheme();
+        const scheme = snap === undefined || snap === null || snap.active === undefined || snap.active === null ? null : snap.active.colorScheme;
+        return scheme === 'dark' || scheme === 'light' ? scheme : null;
+      };
+      /**
+       * 立刻按目标主题显示（不等文档往返）。
+       * @param target - 'light' | 'dark' | 'system'。
+       */
+      const previewTheme = (target) => {
+        if (target !== 'light' && target !== 'dark' && target !== 'system') return;
+        const scheme = schemeOf(target);
+        preview = { target, scheme };
+        root.setAttribute(PREVIEW_ATTR, scheme);
+        suppressTransitions();
+        applyScheme(scheme);
+        if (previewTimer !== 0) clearTimeout(previewTimer);
+        previewTimer = setTimeout(() => endPreview(false), PREVIEW_TIMEOUT_MS);
+      };
+
       if (typeof ctx.on === 'function' && typeof ctx.effect === 'function') {
-        ctx.effect(() => ctx.on('theme/change', () => {
-          root.setAttribute(SWITCH_ATTR, '');
-          requestAnimationFrame(() => requestAnimationFrame(() => root.removeAttribute(SWITCH_ATTR)));
-        }), 'codex-ui: theme switch guard');
+        ctx.effect(() => ctx.on('theme/change', (snapshot) => {
+          suppressTransitions();
+          const scheme = snapshot === undefined || snapshot === null || snapshot.active === undefined || snapshot.active === null ? null : snapshot.active.colorScheme;
+          /* 发布结果与预览一致 ⇒ 文档已落地，交还给宿主（幂等，看不见第二次跳变）。 */
+          if (preview !== null && scheme === preview.scheme) endPreview(true);
+        }), 'codex-ui: theme change');
+        ctx.effect(() => () => endPreview(false), 'codex-ui: theme preview cleanup');
       }
       registerSettingsCard(ctx, CodexUiSettingsCard, {
         theme: ctx.theme,
@@ -137,6 +207,8 @@ window.__ModuleLoader__.load({
         themeForm: typeof ctx.configForms.get === 'function' ? ctx.configForms.get('ui-theme') : null,
         /* 主题变更走宿主事件：layout 侧也是 ctx.on("theme/change", …) 这一个口子。 */
         watchTheme: (listener) => (typeof ctx.on === 'function' ? ctx.on('theme/change', listener) : () => {}),
+        /* 点下去立刻按目标主题显示，文档往返在背后跑。 */
+        previewTheme,
       });
     }
 

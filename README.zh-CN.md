@@ -118,7 +118,7 @@ node scripts/install-skin.mjs --write  # 有漂移则覆盖
 | `node scripts/sidebar-align-verify.mjs` | 侧栏列对齐，6 项 | 无 |
 | `node scripts/hero-verify.mjs` | ⑬⑭⑰ 与焦点环，8 项 | 无 |
 | `node scripts/live-gui-probe.mjs --url <带 token 的 URL>` | 真 GUI：阴影、两条分界线、模型菜单 pending 窗口共 10 项断言 | `dsh web` 实例 |
-| `node scripts/settings-page-verify.mjs --url <带 token 的 URL>` | 真 GUI：组合包页的设置卡、8 行结构、默认不覆盖、开关与强调色写入、刷新后仍在，共 20 项断言 | `dsh web` 实例（profile 需启用插件管理） |
+| `node scripts/settings-page-verify.mjs --url <带 token 的 URL>` | 真 GUI：组合包页的设置卡、8 行结构、默认不覆盖、开关与强调色写入、刷新后仍在，共 22 项断言 | `dsh web` 实例（profile 需启用插件管理） |
 | `node scripts/theme-flash-probe.mjs --url <带 token 的 URL>` | 按帧采样主题/页面切换时的「有效底色」（沿祖先找第一个不透明底色），看切换过程中是否出现既不属于起点也不属于终点的中间帧（实测 9 段约 720 帧、0 异常） | 同上 |
 
 `npm run check` 不需要宿主。五支夹具验证在本机跑：取 `app.asar` 的 shipped CSS 加按渲染代码复刻的 DOM，
@@ -172,6 +172,10 @@ node scripts/live-gui-probe.mjs --url "http://127.0.0.1:3099/?token=..." --dpr 1
   文档往返慢的机器上会依次画出 新值 → 旧值 → 新值，肉眼就是「黑 → 白 → 黑」。卡片改成**先把偏好写进主题插件
   自己的设置文档**（服务内部 `host.set` 那一次写，同一命名空间 `ui-theme` 与字段 `preference`），
   发布方于是只剩 `adopt()`，一次点击只发布一次；控件用本地暂存保持手感，写入未被接受才退回服务入口。
+  那 0.8s 的往返不能白等：浏览器半带一层**本地预览** —— 点下去立刻按目标主题应用
+  （写的就是宿主本来就会写的两处：`body[data-ds-dark-theme]` 与 `html` 的 `color-scheme`），
+  `theme/change` 带着同一个结果回来时幂等地交还；超过 2.5s 没等到就按真值回滚。
+  实测点击→变色：**824ms → 22ms**（中位），且序列仍是「亮×n → 暗×m」两段，没有回打。
 - 11 个字段全部 `.volatile()`：设置服务只投影标了它的字段，插件管理页也正是靠这一点认得这个条目 ——
   没有 `Config` 就没有这张卡。
 - **空值 = 不覆盖**：默认值下覆盖层输出空串、`data-codex-ui-theme` 属性不出现，所以装上不动一个字时，

@@ -59,6 +59,14 @@ A settings page inside the plugin manager, plus the dark base re-anchored on the
 - `scripts/theme-flash-probe.mjs` gained a "dark/light run" report (`L×12 → D×68`); more than two runs means a
   double-publish.
 
+- The theme switch no longer waits for the round trip: the browser half gained a **local preview** (applies the
+  target theme the moment you click — `body[data-ds-dark-theme]` plus the `color-scheme` on `html` — hands it back
+  idempotently when `theme/change` arrives with the same result, and rolls back to the truth after 2.5s).
+  Measured click → colour change: **824ms → 22ms** (median; 4 probe samples 22/18/18/31ms), run sequence still two runs
+  with no double publish.
+- `settings-page-verify` went from 20 to 22 assertions: "colour change within 300ms of the click" (the preview working)
+  and "the preview marker is cleared once the document lands" (never stuck in preview).
+
 ### Dark base
 
 - Background `#111111 → #181818`, foreground `#FCFCFC → #FFFFFF`, sidebar `#171717 → #181818` (same face as the

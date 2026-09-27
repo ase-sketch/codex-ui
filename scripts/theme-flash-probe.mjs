@@ -114,6 +114,7 @@ const SAMPLER = `(() => {
       dark: document.body.hasAttribute('data-ds-dark-theme'),
       scheme: getComputedStyle(document.documentElement).colorScheme,
       override: document.documentElement.hasAttribute('data-codex-ui-theme'),
+      preview: document.documentElement.getAttribute('data-codex-ui-preview') || '',
       skin: document.documentElement.hasAttribute('data-codex-ui'),
       body: getComputedStyle(document.body).backgroundColor,
       html: getComputedStyle(document.documentElement).backgroundColor,
@@ -130,14 +131,23 @@ const SAMPLER = `(() => {
 })()`;
 await evaluate(SAMPLER, sessionId);
 
-/** 一次操作：清空采样 → 点 → 等落定 → 回收这一段。 */
+/** 一次操作：清空采样 → 点 → 等落定 → 回收这一段（连同点击时刻一起带走）。 */
 const capture = async (act, settle = 1300) => {
   await evaluate('window.__flash = []', sessionId);
   const box = await act();
   if (box === null) return null;
+  const t0 = await evaluate('performance.now()', sessionId);
   await click(box.x, box.y, sessionId);
   await sleep(settle);
-  return evaluate('(() => { const f = window.__flash; window.__flash = []; return f; })()', sessionId);
+  const frames = await evaluate('(() => { const f = window.__flash; window.__flash = []; return f; })()', sessionId);
+  return { frames, t0 };
+};
+/** 点击 → 屏幕上真的变色之间的毫秒数（以第一帧 dark 标记翻转计）。 */
+const latencyOf = ({ frames, t0 }) => {
+  if (frames === undefined || frames.length === 0) return null;
+  const before = frames[0].dark;
+  const flip = frames.find((f) => f.dark !== before);
+  return flip === undefined ? null : Math.round(flip.t - t0);
 };
 const tap = (label) => async () => clickByText('^' + label + '$', sessionId);
 const spot = (f) => f.p0 + ' | ' + f.p1 + ' | ' + f.p2;
@@ -173,23 +183,32 @@ if (seg !== '亮色') { const b = await clickByText('^亮色$', sessionId); if (
 
 let anomalies = 0;
 let captured = 0;
-const plan = [['深色', tap('深色')], ['亮色', tap('亮色')], ['深色', tap('深色')], ['亮色', tap('亮色')], ['深色', tap('深色')], ['亮色', tap('亮色')]];
-themeLog.push('=== 起始 ' + seg + ' ===');
+/* 来回切：偶发闪屏要靠重复切换才抓得到；--switches N 可只跑前 N 趟。 */
+const all = [['深色', tap('深色')], ['亮色', tap('亮色')], ['深色', tap('深色')], ['亮色', tap('亮色')], ['深色', tap('深色')], ['亮色', tap('亮色')]];
+const want = Number(arg('switches', '6'));
+const plan = all.slice(0, Number.isInteger(want) && want > 0 ? Math.min(want, all.length) : all.length);
+const latencies = [];
 for (const [label, act] of plan) {
   themeLog.push('--- 点 ' + label + ' ---');
-  const frames = await capture(act);
-  if (frames === null) { console.log('切换 ' + label + '：找不到分段'); break; }
+  const shot2 = await capture(act);
+  if (shot2 === null) { console.log('切换 ' + label + '：找不到分段'); break; }
   captured += 1;
-  anomalies += analyse('主题 → ' + label, frames);
+  const ms = latencyOf(shot2);
+  if (ms !== null) latencies.push(ms);
+  anomalies += analyse('主题 → ' + label, shot2.frames);
+  console.log('   ↑ 点击 → 变色 ' + (ms === null ? '未观测到' : ms + 'ms'));
+}
+if (latencies.length > 0) {
+  console.log('\n变色延迟：样本 ' + latencies.join(' / ') + ' ms，中位 ' + latencies.slice().sort((a, b) => a - b)[Math.floor(latencies.length / 2)] + 'ms');
 }
 
 /* 页面切换也采一遍：设置页 ↔ 会话页来回走。 */
-const pageFrames = await capture(async () => clickByText('^新会话$', sessionId), 1600);
-anomalies += analyse('切到会话页', pageFrames);
-const backFrames = await capture(async () => clickByText('^插件$', sessionId), 1800);
-anomalies += analyse('切回插件页', backFrames);
-const reopenFrames = await capture(async () => clickByText('^查看 codex-ui$', sessionId), 2000);
-anomalies += analyse('打开组合包页', reopenFrames);
+const pageShot = await capture(async () => clickByText('^新会话$', sessionId), 1600);
+if (pageShot !== null) anomalies += analyse('切到会话页', pageShot.frames);
+const backShot = await capture(async () => clickByText('^插件$', sessionId), 1800);
+if (backShot !== null) anomalies += analyse('切回插件页', backShot.frames);
+const reopenShot = await capture(async () => clickByText('^查看 codex-ui$', sessionId), 2000);
+if (reopenShot !== null) anomalies += analyse('打开组合包页', reopenShot.frames);
 
 const total = await evaluate('(() => { cancelAnimationFrame(window.__flashRaf); return window.__flash.length; })()', sessionId);
 console.log('\n主题发布序列（宿主 theme/change 逐次）：');

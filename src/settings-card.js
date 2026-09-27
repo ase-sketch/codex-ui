@@ -138,7 +138,7 @@ function themeSnapshotOf(service) {
  * @param props - 座位注入的 scope / theme / watchTheme / locale，以及宿主给的视图。
  * @returns 表单，或组合包页要的一行摘要。
  */
-function CodexUiSettingsCard({ scope, theme, themeForm, watchTheme, locale, view }) {
+function CodexUiSettingsCard({ scope, theme, themeForm, watchTheme, previewTheme, locale, view }) {
   if (REACT === null || JSX === null) {
     return JSX === null && REACT === null ? null : null;
   }
@@ -182,11 +182,15 @@ function CodexUiSettingsCard({ scope, theme, themeForm, watchTheme, locale, view
    * 字段 `preference`，与服务内部 host.set 的那一次写完全同路），
    * 于是发布方只剩服务自己的 adopt()，一次点击只会发布一次。
    * 写入未被接受才退回服务入口，保证功能不会因为这条捷径失效。
+   *
+   * 那 0.8s 的往返不能白等：点下去先让浏览器半**本地预览**目标主题（立刻变颜色），
+   * 宿主确认到达时那边会幂等地交还，所以既快又不会二次跳变。
    * @param id - 'light' | 'dark' | 'system'。
    */
   const switchTheme = useCallback(async (id) => {
     if (id !== 'light' && id !== 'dark' && id !== 'system') return;
     setPendingTheme(id);
+    if (typeof previewTheme === 'function') previewTheme(id);
     const canWriteForm = themeForm !== null && themeForm !== undefined && typeof themeForm.set === 'function';
     if (canWriteForm) {
       try {
@@ -415,10 +419,11 @@ function registerSettingsCard(ctx, Card, extras = {}) {
     key: PLUGIN_ID,
     inject: () => ({
       scope: ctx.configForms.get(__override.SETTINGS_ENTRY_ID),
-      /* 宿主主题服务、它的设置表单、变更订阅：卡片上「主题」那一行的读写通道。 */
+      /* 宿主主题服务、它的设置表单、变更订阅、本地预览：卡片上「主题」那一行的读写通道。 */
       theme: extras.theme,
       themeForm: extras.themeForm,
       watchTheme: extras.watchTheme,
+      previewTheme: extras.previewTheme,
       /* locale 缺席时 inject 会给 undefined，卡片自己回落到浏览器语言。 */
       locale: ctx.reflect.get('locale'),
     }),
