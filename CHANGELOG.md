@@ -2,6 +2,42 @@
 
 [简体中文](CHANGELOG.zh-CN.md)
 
+## 0.6.0 - 2026-09-27
+
+The model picker is **redone**: the 0.5.0 approach (re-laying out the host's menu with CSS) is reverted (`0f49758`)
+and replaced by a component of our own.
+
+### Model picker (⑲, `src/model-picker.js` + `skins/codex-ink/model-picker.css`)
+
+- **Why 0.5.0 was reverted**: that rail lived on the host's menu (~25 long `:has()` selectors on
+  `body > div[role=menu]`), and the host re-renders that menu on hover, focus and `aria-busy` (the selectModel
+  round-trip measures ~1.1s) — every recalculation ran the whole chain. It also only re-arranged four labels:
+  no model list, no grouping, no draggable control. Both complaints trace back to that.
+- **The recipe comes from dsh-claude-style**: register no slot, take the seat over in the DOM. The host's own child
+  of `[data-slot="conversation.input.model"]` is marked `data-codex-ui-model-host` (the stylesheet hides it; the
+  host trigger stays in the React tree), our trigger goes into the same seat and the card onto `document.body`.
+- **Data and commits come from the host's single source of truth**:
+  `ctx.get('modelDirectories').directoryFor(sessionId)` then `dir.load()` / `dir.select({ provider, model,
+  reasoningEffort })` / `dir.store.subscribe`. The session id reads `uiSession.current.value.key` first
+  (`sessions.list.current` is gone as of 0.2) and falls back to the legacy field.
+- **The power rail really drags**: a 24px track, 4px ticks, a 28px white thumb and an accent bar ending at the
+  thumb's centre (all Codex geometry). `pointerdown` grabs, the thumb slides freely (0.3s
+  cubic-bezier(.23,1,.32,1)), and release snaps to the nearest level and commits once. `←/→/Home/End` are
+  equivalent, and levels come from the model's `reasoning.efforts`.
+- **Two reasons it does not lag**: ① the stylesheet paints only our own `.codex-mp-*` nodes — not one selector
+  touches the host menu (a check-repo discipline assertion guards this); ② rendering is signature-guarded — the
+  host marks the directory `selecting` for the whole round-trip, so using that as a repaint condition would blank
+  the card. Only a directory with nothing to show falls back to the loading line.
+- The settings card gains a **Codex model picker** row (on by default). Turning it off removes our nodes and marks,
+  and the host's control and menu come straight back — byte-for-byte identical to not having the plugin.
+- **Real-GUI acceptance** `scripts/model-picker-live.mjs`, 15/15 PASS: host trigger `display:none`, exactly one
+  trigger in the seat, one card, the host menu never built, rail levels matching the directory, ticks evenly spaced
+  (≤1px), no commit during the drag and no blanking, and **a drag to the far left commits the first level while a
+  drag to the far right commits the last, with the trigger label following**.
+- **Honestly out of reach**: the Fast particle track and the Max burst (DSH has no Fast mode and no drag-to-Max
+  moment), and the second-level 「more models」 card with vendor copy (the 40KB table dsh-claude-style ships is not
+  carried over).
+
 ## 0.4.0 - 2026-09-27
 
 The sidebar **surface**: the scroll fade moves from the host's 24px overlay to Codex's 40px four-stop mask ramp.

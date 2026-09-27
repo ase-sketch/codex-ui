@@ -55,6 +55,8 @@ export const Config = Schema.object({
   fontUi: Schema.string().default('').volatile(),
   fontCode: Schema.string().default('').volatile(),
   translucentSidebar: Schema.boolean().default(false).volatile(),
+  /* 默认开：装了就接管模型位。关掉即把席位与菜单还给宿主，外观与没装插件一致。 */
+  modelPicker: Schema.boolean().default(true).volatile(),
   contrastLight: Schema.number().default(DEFAULT_CONTRAST_LIGHT).volatile(),
   contrastDark: Schema.number().default(DEFAULT_CONTRAST_DARK).volatile(),
 });

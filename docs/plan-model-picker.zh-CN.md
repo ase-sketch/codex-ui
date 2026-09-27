@@ -1,5 +1,8 @@
 # 计划：把模型选择器做成真组件（对齐 dsh-claude-style 的做法）
 
+> **状态：已执行（0.6.0）。** 组件在 `src/model-picker.js`，样式在 `skins/codex-ink/model-picker.css`，
+> 真 GUI 验收 `scripts/model-picker-live.mjs` 15/15 PASS。下面保留当初的判断与契约，作为复跑依据。
+
 > 起因：0.5.0 用纯 CSS 把宿主菜单的竖列 radio 重排成轨，实测**切换卡顿、界面简陋、不像 Codex**。
 > 已 `git revert`（提交 0f49758）。本文记录从 `dsh-claude-style` 里取到的**做法**，以及下一版的落地契约。
 

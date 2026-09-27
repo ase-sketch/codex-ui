@@ -94,9 +94,10 @@ node scripts/install-skin.mjs --write  # 有漂移则覆盖
 | `src/client.template.js` | 浏览器半模板（注入样式、覆盖层与设置卡座位） |
 | `src/override.js` | 设置页覆盖层纯函数（无 DOM，夹具直接单测） |
 | `src/settings-card.js` | 组合包页那张配置卡（构建期拼进 `client.js`） |
+| `src/model-picker.js` | Codex 模型选择器组件：DOM 顶替模型位、自建触发器与卡片、真拖拽功率轨（构建期按 `override.js` 同一套办法包成 IIFE） |
 | `src/build.mjs` | 作用域化与产物生成，唯一实现 |
 | `theme.css` `client.js` | 生成物，由 `src/build.mjs` 从 `skins/codex-ink/` 写出 |
-| `skins/codex-ink/` | 样式正本（skin.css / patches.css / sidebar-align.css / sidebar-surface.css / window-shadow.css / composer.css / settings.css） |
+| `skins/codex-ink/` | 样式正本（skin.css / patches.css / model-picker.css / sidebar-align.css / sidebar-surface.css / window-shadow.css / composer.css / settings.css） |
 | `docs/` | 计划与决策留档 |
 | `scripts/build.mjs` | 重新生成产物；`--check` 只比对不落盘 |
 | `scripts/check-repo.mjs` | 不依赖宿主的仓库体检，CI 入口 |
@@ -119,6 +120,7 @@ node scripts/install-skin.mjs --write  # 有漂移则覆盖
 | `node scripts/sidebar-align-verify.mjs` | 侧栏列对齐，6 项 | 无 |
 | `node scripts/sidebar-surface-verify.mjs` | 侧栏滚动渐隐（Codex mask 斜坡）的机制与观感：4 种状态并排、逐像素还原遮罩 alpha 曲线，13 项 | 无 |
 | `node scripts/hero-verify.mjs` | ⑬⑭⑰ 与焦点环、顶栏两格放开，17 项 | 无 |
+| `node scripts/model-picker-live.mjs --url <带 token 的 URL>` | 真 GUI：模型选择器组件 —— 席位顶替、卡片、轨几何、两次真拖动与提交，15 项 | `dsh web` 实例 |
 | `node scripts/live-gui-probe.mjs --url <带 token 的 URL>` | 真 GUI：阴影、两条分界线、模型菜单 pending 窗口共 10 项断言 | `dsh web` 实例 |
 | `node scripts/settings-page-verify.mjs --url <带 token 的 URL>` | 真 GUI：组合包页的设置卡、8 行结构、默认不覆盖、开关与强调色写入、刷新后仍在，共 22 项断言 | `dsh web` 实例（profile 需启用插件管理） |
 | `node scripts/theme-flash-probe.mjs --url <带 token 的 URL>` | 按帧采样主题/页面切换时的「有效底色」（沿祖先找第一个不透明底色），看切换过程中是否出现既不属于起点也不属于终点的中间帧（实测 9 段约 720 帧、0 异常） | 同上 |

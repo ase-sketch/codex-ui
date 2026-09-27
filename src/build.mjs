@@ -39,6 +39,15 @@ export const TEMPLATE = join(HERE, 'client.template.js');
 export const OVERRIDE_FILE = join(HERE, 'override.js');
 /** 设置卡片片段。 */
 export const SETTINGS_FILE = join(HERE, 'settings-card.js');
+/** 模型选择器组件（ESM 模块，构建期按 override.js 同一套办法包成 IIFE）。 */
+export const MODEL_PICKER_FILE = join(HERE, 'model-picker.js');
+/** 模型选择器组件的占位符。 */
+export const MODEL_PICKER_PLACEHOLDER = '/*__CODEX_UI_MODELPICKER__*/ null';
+/** 模型选择器组件暴露给模板的名字。 */
+export const MODEL_PICKER_EXPORTS = [
+  'HOST_ATTR', 'BTN_CLASS', 'POP_CLASS', 'currentSessionId', 'directoryFor',
+  'snapIndex', 'tickOffset', 'offsetRatio', 'installModelPicker',
+];
 /**
  * 拼进 theme.css 的源文件，顺序即层叠顺序。
  * [文件名, 该层的说明] —— 说明写进分隔注释。
@@ -46,6 +55,7 @@ export const SETTINGS_FILE = join(HERE, 'settings-card.js');
 export const SKIN_PARTS = [
   ['skin.css', 'L1/L2 令牌与排版层'],
   ['patches.css', 'L3 组件层'],
+  ['model-picker.css', 'L3 模型选择器组件'],
   ['sidebar-align.css', 'L3 侧栏对齐层'],
   ['sidebar-surface.css', 'L3 侧栏面层'],
   ['window-shadow.css', 'L3 窗口边缘阴影层'],
@@ -148,7 +158,7 @@ export function build() {
   });
   const themeCss = scopeCss(blocks.join('\n\n'));
   const tplSrc = fs.readFileSync(TEMPLATE, 'utf8');
-  for (const [name, placeholder] of [['样式', CSS_PLACEHOLDER], ['覆盖层', OVERRIDE_PLACEHOLDER], ['设置卡片', SETTINGS_PLACEHOLDER]]) {
+  for (const [name, placeholder] of [['样式', CSS_PLACEHOLDER], ['覆盖层', OVERRIDE_PLACEHOLDER], ['设置卡片', SETTINGS_PLACEHOLDER], ['模型选择器', MODEL_PICKER_PLACEHOLDER]]) {
     if (!tplSrc.includes(placeholder)) throw new Error('模板缺少' + name + '占位符 ' + placeholder + '：' + TEMPLATE);
   }
   /* 占位符本身就落在 `const __override = …` 的右值位置，所以这里只给一个表达式。 */
@@ -156,10 +166,14 @@ export function build() {
     + stripExports(fs.readFileSync(OVERRIDE_FILE, 'utf8'))
     + '\nreturn { ' + OVERRIDE_EXPORTS.join(', ') + ' };\n})()';
   const settingsCard = fs.readFileSync(SETTINGS_FILE, 'utf8');
+  const pickerModule = '(() => {\n'
+    + stripExports(fs.readFileSync(MODEL_PICKER_FILE, 'utf8'))
+    + '\nreturn { ' + MODEL_PICKER_EXPORTS.join(', ') + ' };\n})()';
   /* 用函数式替换：CSS 里的 $& / $' 等序列不会被当成替换模式展开。 */
   const clientJs = tplSrc
     .replace(CSS_PLACEHOLDER, () => JSON.stringify(themeCss))
     .replace(OVERRIDE_PLACEHOLDER, () => overrideModule)
-    .replace(SETTINGS_PLACEHOLDER, () => settingsCard);
+    .replace(SETTINGS_PLACEHOLDER, () => settingsCard)
+    .replace(MODEL_PICKER_PLACEHOLDER, () => pickerModule);
   return { themeCss, clientJs, sources, scopedBytes: themeCss.length, hashAnchors: anchors };
 }

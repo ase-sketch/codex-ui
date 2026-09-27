@@ -15,6 +15,7 @@ import { dirname, join, relative } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { build, ATTR, PLUGIN_DIR, SKIN_DIR, OVERRIDE_FILE, SETTINGS_FILE, stripExports } from '../src/build.mjs';
 import * as override from '../src/override.js';
+import * as picker from '../src/model-picker.js';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 let failed = 0;
@@ -131,7 +132,7 @@ const configFields = (() => {
 /** 卡片与覆盖层用到的字段名（写死的期望表，改一处忘另一处会在这里断）。 */
 const EXPECTED_FIELDS = [
   'accentLight', 'accentDark', 'surfaceLight', 'surfaceDark', 'inkLight', 'inkDark',
-  'fontUi', 'fontCode', 'translucentSidebar', 'contrastLight', 'contrastDark',
+  'fontUi', 'fontCode', 'translucentSidebar', 'modelPicker', 'contrastLight', 'contrastDark',
 ];
 check('Config 的 ' + EXPECTED_FIELDS.length + ' 个字段齐全且都是 volatile', () => {
   const names = configFields.map((f) => f.name);
@@ -139,6 +140,43 @@ check('Config 的 ' + EXPECTED_FIELDS.length + ' 个字段齐全且都是 volati
   for (const want of EXPECTED_FIELDS) assert(names.includes(want), '缺字段 ' + want);
   for (const f of configFields) assert(f.volatile, f.name + ' 没有 .volatile()：设置服务不会投影它，插件管理页也就不认这个条目');
   return names.join(' ');
+});
+/* ── 6c. 模型选择器：纯函数 + 一条纪律断言（无宿主）───────────────────── */
+check('模型选择器：功率轨几何与松手对齐', () => {
+  /* 行程 = [thumb/2, 宽 - thumb/2]，档位等距 —— 与 Codex _Thumb 的行程同一套。 */
+  assert(picker.tickOffset(0, 4, 400, 28) === 14, '首档不在 14px');
+  assert(picker.tickOffset(3, 4, 400, 28) === 386, '末档不在 宽-14px');
+  const one = picker.tickOffset(1, 4, 400, 28);
+  const two = picker.tickOffset(2, 4, 400, 28);
+  assert(Math.abs((two - one) - (one - 14)) < 1e-9, '四档不等距');
+  assert(picker.tickOffset(0, 1, 400, 28) === 200, '单档没有居中');
+  assert(picker.snapIndex(0, 4) === 0 && picker.snapIndex(1, 4) === 3, '两端对齐错');
+  assert(picker.snapIndex(0.34, 4) === 1 && picker.snapIndex(0.5, 4) === 2, '中间对齐错');
+  assert(picker.snapIndex(-5, 4) === 0 && picker.snapIndex(9, 4) === 3, '超界没有被夹住');
+  assert(picker.snapIndex(0.9, 1) === 0, '单档应恒为 0');
+  assert(picker.offsetRatio(14, 0, 400, 28) === 0 && picker.offsetRatio(386, 0, 400, 28) === 1, '指针到比例的两端不对');
+  const ratio = picker.offsetRatio(200, 0, 400, 28);
+  assert(Math.abs(picker.tickOffset(ratio * 3, 4, 400, 28) - 200) < 1e-9, '指针→比例→位置 往返不一致');
+  return '几何 9 项 + 往返 1 项';
+});
+check('模型选择器：取不到宿主上下文时不抛', () => {
+  const bare = { get() { return undefined; } };
+  assert(picker.currentSessionId(bare) === null, '没有 uiSession/sessions 时应返回 null');
+  assert(picker.directoryFor(bare, 'x') === null, '没有 modelDirectories 时应返回 null');
+  assert(picker.directoryFor(bare, null) === null, '会话 id 为空时应返回 null');
+  /* 会话作用域没物化时宿主会抛，这里必须吞掉 —— 不吞就会把整个插件拖下水。 */
+  const throwing = { get() { throw new Error('scope not materialized'); } };
+  assert(picker.currentSessionId(throwing) === null, 'currentSessionId 没有吞掉宿主抛错');
+  assert(picker.directoryFor(throwing, 'x') === null, 'directoryFor 没有吞掉宿主抛错');
+  return '5 项';
+});
+check('模型选择器样式不碰宿主菜单（0.5.0 卡顿的根因）', () => {
+  const text = fs.readFileSync(join(SKIN_DIR, 'model-picker.css'), 'utf8');
+  assert(!text.includes('[aria-busy]'), 'model-picker.css 里出现了宿主菜单选择器（aria-busy）');
+  assert(!text.includes(':has(> button'), 'model-picker.css 里出现了按宿主菜单结构写的 :has()');
+  assert(!text.includes('div[role="menu"] button'), 'model-picker.css 里出现了宿主菜单内部选择器');
+  assert(text.includes('[data-codex-ui-model-host]'), '缺少宿主触发器隐藏开关');
+  return '只画 .codex-mp-* 与隐藏开关';
 });
 check('覆盖层：默认值不产生任何 CSS', () => {
   assert(override.themeOverrideCss({}) === '', '空值下输出了 CSS，装上就会改外观');

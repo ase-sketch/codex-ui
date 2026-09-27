@@ -37,6 +37,12 @@ window.__ModuleLoader__.load({
     const __override = /*__CODEX_UI_OVERRIDE__*/ null;
     /* 生成期注入的设置卡片（源：src/settings-card.js）。 */
     /*__CODEX_UI_SETTINGS__*/ null
+    /* 生成期注入的模型选择器组件（源：src/model-picker.js）。
+       占位符必须落在**赋值右值**上（和 __override 一样）：它替换出来的是一段 IIFE 表达式，
+       写成裸语句就只是求值完丢掉，后面引用 __modelPicker 直接 ReferenceError。 */
+    const __modelPicker = /*__CODEX_UI_MODELPICKER__*/ null;
+    /** 模型选择器句柄；没有它就说明组件没挂上，设置页那一行也就无从联动。 */
+    let picker = null;
 
     /**
      * 这里导出的是 cordis **服务名**，与 package.json 的 dsh.client.inject 不是一回事：
@@ -86,6 +92,16 @@ window.__ModuleLoader__.load({
       } else {
         console.warn('[codex-ui] ctx.effect 不可用：样式已注入，但不会随 fiber 卸载回收。');
       }
+      /* 模型选择器：自己的 DOM（不碰宿主菜单）。失败只降级 —— 组件在把宿主触发器
+         藏起来之前会先把自己的控件放好，所以这里的失败等于「什么都没发生」。 */
+      try {
+        picker = __modelPicker.installModelPicker(ctx);
+        if (typeof ctx.effect === 'function') {
+          ctx.effect(() => () => picker.dispose(), 'codex-ui: model picker');
+        }
+      } catch (error) {
+        console.warn('[codex-ui] 模型选择器挂载失败，宿主控件照常：', error);
+      }
       /* 设置页那一半：任何一步失败都只降级，不能连皮肤一起拖下水。 */
       try {
         installSettings(ctx, root);
@@ -118,6 +134,8 @@ window.__ModuleLoader__.load({
            真正的「没有覆盖」是 value 存在且字段为空 —— 那条路径照旧清空。 */
         if (snapshot !== undefined && snapshot !== null && snapshot.value === undefined) return;
         const values = snapshot === undefined || snapshot === null || snapshot.value === null ? {} : snapshot.value;
+        /* 开关默认开：字段缺省（老设置文档里没有这一项）也当开。 */
+        if (picker !== null) picker.setEnabled(values.modelPicker !== false);
         const css = __override.themeOverrideCss(values);
         tag.textContent = css;
         /* 没有覆盖时连属性一起摘掉：默认态与「没装设置页」逐字节相同。 */
