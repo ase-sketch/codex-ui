@@ -147,14 +147,6 @@ const menuEffort = surface(
   + option('Medium', true, true)
   + option('Low', false, true), 'position:fixed;left:640px;top:120px', true);
 
-/* 功率轨夹具：非 busy 的推理等级菜单（真 GUI 实测：4 档、第 3 档选中）。
-   放在 (40,300)，与上面三个菜单互不重叠。 */
-const menuRail = surface(
-  option('Provider default', false, false)
-  + option('Low', false, false)
-  + option('High', true, false)
-  + option('Max', false, false), 'position:fixed;left:40px;top:300px');
-
 const trigger = '<div data-slot="conversation.input.model" style="display:contents"><div class="' + M.root + '">'
   + '<button type="button" class="' + M.trigger + '" aria-haspopup="menu" aria-expanded="true" title="DeepSeek V4.1 Flash · High">'
   + '<span class="' + M.triggerLabel + '">DeepSeek V4.1 Flash</span>'
@@ -179,7 +171,7 @@ const page = (theme, label) => '<!doctype html><html data-codex-ui data-platform
   + '.seat{position:fixed;left:40px;top:44px;background:#fff;border-radius:14px;padding:10px 12px;width:360px;display:flex;justify-content:flex-end}</style></head><body>'
   + '<h4>' + label + '</h4>'
   + '<div class="seat">' + trigger + '</div>'
-  + menuRoot + menuModel + menuEffort + menuRail
+  + menuRoot + menuModel + menuEffort
   + '</body></html>';
 
 fs.mkdirSync(FIX, { recursive: true });
@@ -215,47 +207,6 @@ const PROBE = '(() => { try {'
   + 'cell: { minH: cs(cellEl).minHeight }'
   + '}); } catch (e) { return JSON.stringify({ error: String(e) }); } })()';
 
-/* 功率轨探针：单独一次 evaluate，不动上面那份既有探针。
-   身份判据与 CSS 里那条前缀同源：直接子元素（忽略素材层）全是 menuitemradio。 */
-const RAIL_PROBE = [
-  '(() => { try {',
-  'const cs = (el, p) => el ? getComputedStyle(el, p) : null;',
-  'const kids = (m) => [...m.children].filter((c) => c.getAttribute("aria-hidden") !== "true");',
-  'const isRail = (m) => { const k = kids(m); return k.length > 0 && k.every((c) => c.tagName === "BUTTON" && c.getAttribute("role") === "menuitemradio"); };',
-  'const menus = [...document.querySelectorAll("body > [role=menu]")];',
-  'const rail = menus.find((m) => m.getAttribute("aria-busy") === "false" && isRail(m)) || null;',
-  'const busyRail = menus.find((m) => m.getAttribute("aria-busy") === "true" && isRail(m)) || null;',
-  'const root = menus[0] || null;',
-  'const model = menus[1] || null;',
-  'const rcs = rail === null ? null : cs(rail);',
-  'const rows = rail === null ? [] : kids(rail).map((b) => {',
-  '  const r = b.getBoundingClientRect(); const bs = cs(b); const be = cs(b, "::before"); const af = cs(b, "::after");',
-  '  const chip = cs(b.firstElementChild);',
-  '  return { name: (b.textContent || "").trim().slice(0, 20), checked: b.getAttribute("aria-checked"),',
-  '    cx: Math.round(r.x + r.width / 2), cy: Math.round(r.y + r.height / 2), w: Math.round(r.width), h: Math.round(r.height),',
-  '    flexGrow: bs.flexGrow, pad: bs.padding, size: bs.fontSize, cursor: bs.cursor, bg: bs.backgroundColor, bgImage: bs.backgroundImage,',
-  '    beforeW: be.width, beforeH: be.height, beforeBg: be.backgroundColor, beforeRadius: be.borderTopLeftRadius,',
-  '    afterW: af.width, afterH: af.height, afterBg: af.backgroundColor,',
-  '    checkDisplay: cs(b.lastElementChild).display, chipVisibility: chip.visibility, chipOpacity: chip.opacity };',
-  '});',
-  'const busyRow = busyRail === null ? null : kids(busyRail).find((b) => b.getAttribute("aria-checked") === "true");',
-  'const busyAfter = busyRow === undefined || busyRow === null ? null : cs(busyRow, "::after");',
-  'return JSON.stringify({',
-  '  railFound: rail !== null, busyRailFound: busyRail !== null, rowCount: rows.length, rows: rows,',
-  '  rail: rcs === null ? null : { display: rcs.display, dir: rcs.flexDirection, h: rcs.height, radius: rcs.borderTopLeftRadius, pad: rcs.padding, bg: rcs.backgroundColor, shadow: rcs.boxShadow, overflow: rcs.overflow },',
-  '  busyRail: busyAfter === null ? null : { afterW: busyAfter.width, afterH: busyAfter.height, anim: busyAfter.animationName + " " + busyAfter.animationDuration, borderTop: busyAfter.borderTopColor, bg: busyAfter.backgroundColor },',
-  '  rootMenu: root === null ? null : { display: cs(root).display, dir: cs(root).flexDirection, radius: cs(root).borderTopLeftRadius },',
-  '  modelMenu: model === null ? null : { radius: cs(model).borderTopLeftRadius, dir: cs(model).flexDirection, optionH: cs(model.querySelector("[role=menuitemradio]")).minHeight },',
-  '}); } catch (e) { return JSON.stringify({ error: String(e) }); } })()',
-].join('');
-
-/** 悬停后读第 n 行的名字胶囊（:hover 只能在真指针事件下量）。 */
-const HOVER_PROBE = (idx) => '(() => { try {'
-  + 'const rail = [...document.querySelectorAll("body > [role=menu]")].find((m) => m.getAttribute("aria-busy") === "false" && [...m.children].filter((c) => c.getAttribute("aria-hidden") !== "true").every((c) => c.tagName === "BUTTON" && c.getAttribute("role") === "menuitemradio"));'
-  + 'const rows = [...rail.children].filter((c) => c.getAttribute("aria-hidden") !== "true"); const row = rows[' + idx + ']; const chip = row.firstElementChild; const c = getComputedStyle(chip);'
-  + 'return JSON.stringify({ visibility: c.visibility, opacity: c.opacity, text: (chip.textContent || "").trim(), name: row.getAttribute("aria-label") || row.textContent.trim() });'
-  + '} catch (e) { return JSON.stringify({ error: String(e) }); } })()';
-
 const probePage = async (path, shotName) => {
   const { targetId } = await send('Target.createTarget', { url: 'file:///' + path.replaceAll('\\', '/') });
   const { sessionId } = await send('Target.attachToTarget', { targetId, flatten: true });
@@ -265,22 +216,6 @@ const probePage = async (path, shotName) => {
   const out = { sessionId };
   const probeRaw = (await send('Runtime.evaluate', { expression: PROBE, returnByValue: true }, sessionId)).result;
   out.value = JSON.parse(probeRaw.value);
-  const railRaw = (await send('Runtime.evaluate', { expression: RAIL_PROBE, returnByValue: true }, sessionId)).result;
-  if (railRaw === undefined || railRaw.value === undefined) {
-    console.log('RAILPROBE FAILED ' + JSON.stringify(railRaw).slice(0, 900));
-    console.log('RAILPROBE FAILED ' + JSON.stringify(railRaw).slice(0, 400));
-  }
-  out.rail = JSON.parse(railRaw.value);
-  if (out.rail.railFound && out.rail.rows.length > 1) {
-    /* 真指针悬停：:hover 不响应合成样式，必须走 Input 域。 */
-    const t = out.rail.rows[1];
-    await send('Input.dispatchMouseEvent', { type: 'mouseMoved', x: t.cx, y: t.cy, buttons: 0 }, sessionId);
-    await sleep(180);
-    const hovRaw = (await send('Runtime.evaluate', { expression: HOVER_PROBE(1), returnByValue: true }, sessionId)).result;
-    out.hover = JSON.parse(hovRaw.value);
-    await send('Input.dispatchMouseEvent', { type: 'mouseMoved', x: 5, y: 5, buttons: 0 }, sessionId);
-    await sleep(60);
-  }
   if (shotName) {
     const shot = await send('Page.captureScreenshot', { format: 'png' }, sessionId);
     fs.writeFileSync(join(EVID, shotName), Buffer.from(shot.data, 'base64'));
@@ -308,11 +243,8 @@ const send = (method, params = {}, sessionId) => new Promise((res, rej) => { con
 const before = await probePage(beforePath, noShot ? null : 'model-picker-before.png');
 const after = await probePage(afterPath, noShot ? null : 'model-picker-after.png');
 const got = after.value;
-const rail = after.rail;
 console.log('BEFORE', JSON.stringify(before.value));
 console.log('AFTER ', JSON.stringify(got));
-console.log('RAIL  ', JSON.stringify(rail));
-console.log('HOVER ', JSON.stringify(after.hover));
 const checks = [
   ['触发器高度 28（原生，不再压 24）', got.trigger.height === '28px'],
   ['触发器字号 13', got.trigger.size === '13px'],
@@ -332,53 +264,6 @@ const checks = [
   ['pending 动效在跑', got.pending.anim.startsWith('codex-ui-spin')],
   ['pending 光标 progress', got.pending.cursor === 'progress'],
   ['disabled 行不洗灰', got.disabledOpacity === '1'],
-
-  /* ── ⑲ 功率轨（skins/codex-ink/model-rail.css）────────────────────────
-     判据分两类：轨本身的计算样式，以及「哪些菜单**没有**被误判成轨」。 */
-  ['轨：认出非 busy 的推理等级菜单', rail.railFound === true],
-  ['轨：菜单变成横向 flex、24px 高、12px 圆角',
-    rail.rail !== null && rail.rail.display === 'flex' && rail.rail.dir === 'row'
-    && rail.rail.h === '24px' && rail.rail.radius === '12px'],
-  ['轨：内衬 0px 6px（Codex _Container 的 padding-inline 6px）', rail.rail.pad === '0px 6px'],
-  ['轨：底 = interactive-bg-active（墨 8% / 白 10%）',
-    rail.rail.bg.startsWith('rgba(13, 13, 13') || rail.rail.bg.startsWith('rgba(255, 255, 255')],
-  ['轨：inset 0.5px 描边（Codex _Track 的 box-shadow）',
-    rail.rail.shadow.includes('inset') && rail.rail.shadow.includes('0.5px')],
-  ['轨：overflow visible（28px 拇指不被 24px 轨裁掉）', rail.rail.overflow === 'visible'],
-  ['轨：可见行数 4', rail.rowCount === 4],
-  ['轨：四行等分、24px 高、字号 0、内衬 0',
-    rail.rows.length === 4 && rail.rows.every((r) => r.flexGrow === '1' && r.h === 24 && r.size === '0px' && r.pad === '0px')],
-  ['轨：四行等宽（等分，不靠坐标硬算）',
-    new Set(rail.rows.map((r) => r.w)).size === 1],
-  ['轨：四行中心等距（间距差 ≤1px）',
-    Math.abs((rail.rows[1].cx - rail.rows[0].cx) - (rail.rows[2].cx - rail.rows[1].cx)) <= 1
-    && Math.abs((rail.rows[2].cx - rail.rows[1].cx) - (rail.rows[3].cx - rail.rows[2].cx)) <= 1],
-  ['轨：选中行之前的行铺满强调色条',
-    rail.rows[0].bg === rail.rows[1].bg && rail.rows[0].bg !== 'rgba(0, 0, 0, 0)' && rail.rows[3].bg === 'rgba(0, 0, 0, 0)'],
-  ['轨：选中行左半边强调色（条止于拇指中线）',
-    rail.rows[2].bgImage.includes('linear-gradient') && rail.rows[2].bgImage.includes('50%')],
-  ['轨：选中行拇指 = 28px 白圆片 + 0.5px 描边',
-    rail.rows[2].beforeW === '28px' && rail.rows[2].beforeH === '28px'
-    && rail.rows[2].beforeBg === 'rgb(255, 255, 255)' && rail.rows[2].beforeRadius === '50%'],
-  ['轨：未选中行不长拇指', rail.rows[0].beforeBg === 'rgba(0, 0, 0, 0)'],
-  ['轨：圆点 4px；选中点是白 30%（压在拇指上）',
-    rail.rows[0].afterW === '4px' && rail.rows[0].afterH === '4px' && rail.rows[2].afterBg === 'rgba(255, 255, 255, 0.3)'],
-  ['轨：勾选列已收起', rail.rows.every((r) => r.checkDisplay === 'none')],
-  ['轨：行文字默认收起（可访问名不靠 display:none 抹掉）', rail.rows[1].chipVisibility === 'hidden'],
-  ['轨：悬停才出名字胶囊',
-    after.hover !== undefined && after.hover.visibility === 'visible' && after.hover.opacity === '1'],
-  ['轨：胶囊里就是这一档的名字', after.hover !== undefined && after.hover.text === 'Low'],
-  ['轨：可访问名仍在（按钮文字没被抹掉）',
-    rail.rows.map((r) => r.name).join('|') === 'Provider default|Low|High|Max'],
-  ['守卫：根菜单（两格）没被误判成轨',
-    rail.rootMenu.display === 'flex' && rail.rootMenu.dir === 'column' && rail.rootMenu.radius === '16px'],
-  /* 模型菜单必须留在 ⑫·3 的列表契约上（圆角 16、行 28），不是轨的 12/24/0。 */
-  ['守卫：模型菜单（groups/section）没被误判成轨',
-    rail.modelMenu.radius === '16px' && rail.modelMenu.dir === 'column' && rail.modelMenu.optionH === '28px'],
-  ['待机：busy 的推理等级菜单也认出来了', rail.busyRailFound === true],
-  ['待机：转圈改画在点上（12px 环 + codex-ui-spin）',
-    rail.busyRail !== null && rail.busyRail.afterW === '12px' && rail.busyRail.bg === 'rgba(0, 0, 0, 0)'
-    && rail.busyRail.anim.startsWith('codex-ui-spin')],
 ];
 let fail = 0;
 for (const [name, ok] of checks) { if (!ok) fail += 1; console.log((ok ? 'PASS ' : 'FAIL ') + name); }

@@ -96,7 +96,7 @@ node scripts/install-skin.mjs --write  # 有漂移则覆盖
 | `src/settings-card.js` | 组合包页那张配置卡（构建期拼进 `client.js`） |
 | `src/build.mjs` | 作用域化与产物生成，唯一实现 |
 | `theme.css` `client.js` | 生成物，由 `src/build.mjs` 从 `skins/codex-ink/` 写出 |
-| `skins/codex-ink/` | 样式正本（skin.css / patches.css / sidebar-align.css / sidebar-surface.css / window-shadow.css / composer.css / model-rail.css / settings.css） |
+| `skins/codex-ink/` | 样式正本（skin.css / patches.css / sidebar-align.css / sidebar-surface.css / window-shadow.css / composer.css / settings.css） |
 | `docs/` | 计划与决策留档 |
 | `scripts/build.mjs` | 重新生成产物；`--check` 只比对不落盘 |
 | `scripts/check-repo.mjs` | 不依赖宿主的仓库体检，CI 入口 |
@@ -114,7 +114,7 @@ node scripts/install-skin.mjs --write  # 有漂移则覆盖
 |---|---|---|
 | `npm run check` | 语法、JSON、清单自洽、产物同源、编码、双语文档成对、机器专属路径 | 无 |
 | `node scripts/audit-codex-ink.mjs` | 皮肤结构、36 组 WCAG、彩色白名单 | 无 |
-| `node scripts/model-picker-verify.mjs` | ⑫、pending 指示器与 ⑲ 推理等级功率轨，42 项 | 无 |
+| `node scripts/model-picker-verify.mjs` | ⑫ 与 pending 指示器，18 项 | 无 |
 | `node scripts/rightbar-verify.mjs` | 阴影层、右栏三件套、两条分界线，42 项 | 无 |
 | `node scripts/sidebar-align-verify.mjs` | 侧栏列对齐，6 项 | 无 |
 | `node scripts/sidebar-surface-verify.mjs` | 侧栏滚动渐隐（Codex mask 斜坡）的机制与观感：4 种状态并排、逐像素还原遮罩 alpha 曲线，13 项 | 无 |

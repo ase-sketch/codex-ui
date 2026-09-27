@@ -170,33 +170,3 @@ node D:\codex-ref\focus-mimic-probe.mjs   --url "<URL>" --chrome "<Chromium>"
 
 下一步的候选顺序（都需要先拍板，因为都动现有观感）：行几何（36/34/32 → 42）→ 工作区行的选中胶囊
 （宿主 `Rows.module.css` 里只有 `sessionRow._selected`，`projectRow` 没有选中态，需查 ui-workspace 是否发状态）。
-## 9. 本轮已做：模型选择器功率轨（0.5.0）
-
-清单 §1 的「模型选择器」一行写的是「触发器 + 功率滑杆 + Fast 粒子轨」。逐项清点（真 GUI 实测）：
-
-| Codex | 宿主 DSH | 结论 |
-|---|---|---|
-| 触发器 `ModelPickerTrigger*` | `[data-slot="conversation.input.model"] button`，28px，文案「模型名 强度」 | 已有（⑫·1 只归一焦点环） |
-| 菜单两格 + 选项行 | `div[role=menu]` + `button[role=menuitem]` 两格 + `menuitemradio` 行 | 已有（⑫·2/3） |
-| **功率滑杆** `_Track/_Range/_Tick/_Thumb` | **没有滑杆**：推理等级是一竖列 4 行 radio | **已做**（⑲ `model-rail.css`，纯 CSS 把竖列重排成轨） |
-| `data-max-effort` 强调 | 没有这个属性，档位名只在文本里 | 够不着（CSS 读不到文本内容） |
-| **Fast 粒子轨** `_FastTrackParticles` | DSH 没有 Fast 模式 | 够不着，如实不做 |
-| Max 爆发 `_Burst` | DSH 是「点一下就提交」，没有拖到 Max 的那个瞬间 | 够不着，如实不做 |
-
-**关键工程结论（可复跑：`node scripts/model-picker-verify.mjs`）**：把 N 行 radio 变成一条轨，
-不需要知道 N，也不需要为每个档位写坐标 —— 等分格（flex:1）让相邻行底色连成一条连续条，
-`:has(~ …)` 当兄弟选择器选中「后面还有选中行的所有行」，拇指交给选中行自己的 `::before`。
-40 行 CSS 换来一个与档位数无关的组件；换成 nth-child 台阶就要写 N=2..6 六遍。
-
-**两个坑，都留档**：
-
-1. **注释里的花括号会吃掉下一条规则**。`scopeCss` 靠花括号配对切规则，第一版注释里写了
-   `.menu{min-width:…}`，构建产物变成
-   `html[data-codex-ui] /* 注释 */ html[data-codex-ui] body > div[role=menu]…` ——
-   选择器成了「html 里的 html」，轨的容器规则整条不生效，而**行规则照常生效**，
-   表现是「轨没出来但点都在」，很容易误判成选择器写得不够狠。`sidebar-align.css` 文件头
-   早就写了这条纪律，这次是撞上去才想起来。
-2. **`:has()` 的守卫要按真实 DOM 写**。夹具里每个菜单都垫了一层 `div[aria-hidden]` 的素材层，
-   而真 GUI 没有 —— 按夹具写的 `:not(:has(> div))` 在两边都判错。改成
-   `:not(:has(> div [role]))`（模型菜单的 `div.groups` 里有 `section[role=group]`）才对两边
-   同时成立。**夹具与真 GUI 的结构差一步之差，就能让守卫整条失效。**
