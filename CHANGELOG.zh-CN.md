@@ -2,33 +2,6 @@
 
 [English](CHANGELOG.md)
 
-## 0.6.0 - 2026-09-27
-
-模型选择器**重做**：0.5.0 那条「用 CSS 重排宿主菜单」的路撤掉（`0f49758`），换成自己的组件。
-
-### 模型选择器（⑲，`src/model-picker.js` + `skins/codex-ink/model-picker.css`）
-
-- **0.5.0 为什么撤**：那条轨寄生在宿主的菜单上（~25 条 `:has()` 长选择器挂在 `body > div[role=menu]`），
-  而宿主菜单在 hover／focus／`aria-busy`（selectModel 往返实测 ~1.1s）里被反复重渲染 —— 每次重算都要跑一遍；
-  而且只重排了 4 行名字，没有模型列表、没有分组、没有可拖的控件。「切换卡顿、界面简陋」都是这个成因。
-- **改法照 dsh-claude-style**：不注册 slot、靠 DOM 顶替。给 `[data-slot="conversation.input.model"]` 的原生子节点
-  打 `data-codex-ui-model-host`（样式表把它 `display:none`，宿主触发器仍在 React 树里），自己的触发器挂进同一席位、卡片挂 `document.body`。
-- **数据与提交走宿主唯一真源**：`ctx.get('modelDirectories').directoryFor(会话 id)` → `dir.load()` /
-  `dir.select({ provider, model, reasoningEffort })` / `dir.store.subscribe`。会话 id 先读 `uiSession.current.value.key`
-  （0.2 起 `sessions.list.current` 已废），再回退旧字段。
-- **功率轨是真拖拽**：轨道 24px、圆点 4px、拇指 28px 白圆片、强调色条止于拇指中线（都是 Codex 的几何）；
-  `pointerdown` 抓取 → 自由滑动（0.3s cubic-bezier(.23,1,.32,1)）→ 松手对齐最近档位并提交一次；`←/→/Home/End` 键盘等价；
-  档位与名字来自模型的 `reasoning.efforts`。
-- **不卡顿的两条**：① 样式只作用于自己建的 `.codex-mp-*`，一条都不挂宿主菜单（check-repo 有一条纪律断言守着）；
-  ② 渲染带签名守卫 —— 宿主在整个选型往返期间把目录标成 `selecting`，拿它当重画条件就会清空卡片，所以只在
-  「一组都没有、也没当前项」时才退化成加载行。
-- 设置卡新增一行「Codex 模型选择器」（默认开）。关掉即撤掉自己的节点与标记，宿主控件与菜单立刻恢复，外观与没装插件逐字节相同。
-- **真 GUI 验收** `scripts/model-picker-live.mjs`，15/15 PASS：宿主触发器 `display:none`、席位里只有我们一个触发器、只挂一张卡片、
-  宿主菜单没有被建出来、轨档位数与目录一致、圆点等距（间距差 ≤1px）、拖动中不提交且列表不清空、
-  **左拖到底提交到首档 / 右拖到底提交到末档且触发器文案跟着变**。
-- **够不着的不做**：Fast 粒子轨与 Max 爆发（DSH 没有 Fast 模式，也没有拖到 Max 的那个瞬间）、
-  二级「更多模型」卡与厂商标识文案（claude-style 自带的 40KB 数据本插件不搬）。
-
 ## 0.4.0 - 2026-09-27
 
 侧栏「面」：滚动渐隐从宿主那条 24px 覆盖层换成 Codex 的 40px 四段 mask 斜坡。

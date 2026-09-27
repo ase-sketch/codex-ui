@@ -98,10 +98,9 @@ node scripts/install-skin.mjs --write  # overwrite on drift
 | `src/client.template.js` | Browser half template (stylesheet, override layer, settings seat) |
 | `src/override.js` | Override-layer pure functions (no DOM; unit-tested by the repo checks) |
 | `src/settings-card.js` | The config card on the bundle page (inlined into `client.js` at build time) |
-| `src/model-picker.js` | The Codex model picker: DOM seat takeover, its own trigger and card, a really draggable power rail (wrapped into an IIFE like `override.js`) |
 | `src/build.mjs` | Scoping and artifact generation; the only implementation |
 | `theme.css` `client.js` | Generated from `skins/codex-ink/` by `src/build.mjs` |
-| `skins/codex-ink/` | Stylesheet sources (skin.css / patches.css / model-picker.css / sidebar-align.css / sidebar-surface.css / window-shadow.css / composer.css / settings.css) |
+| `skins/codex-ink/` | Stylesheet sources (skin.css / patches.css / sidebar-align.css / sidebar-surface.css / window-shadow.css / composer.css / settings.css) |
 | `docs/` | Plans and decisions |
 | `scripts/build.mjs` | Regenerate the artifacts; `--check` compares without writing |
 | `scripts/check-repo.mjs` | Host-free repository checks; the CI entry point |
@@ -124,7 +123,6 @@ node scripts/install-skin.mjs --write  # overwrite on drift
 | `node scripts/sidebar-align-verify.mjs` | Sidebar column alignment, 6 assertions | none |
 | `node scripts/sidebar-surface-verify.mjs` | Sidebar scroll fade (the Codex mask ramp): mechanism plus pixels, four states side by side, 13 assertions | none |
 | `node scripts/hero-verify.mjs` | ⑬ ⑭ ⑰, the focus ring and the released header slots, 17 assertions | none |
-| `node scripts/model-picker-live.mjs --url <token URL>` | Real GUI: the model picker component — seat takeover, card, rail geometry, two real drags and their commits — 15 assertions | a running `dsh web` |
 | `node scripts/live-gui-probe.mjs --url <token URL>` | Real GUI: 10 assertions on shadows, both dividers, the model menu pending window | a running `dsh web` |
 | `node scripts/settings-page-verify.mjs --url <token URL>` | Real GUI: the card on the bundle page, its 8 rows, no override at defaults, switch and accent writes, survival across a reload — 22 assertions | a running `dsh web` with the plugin manager enabled |
 | `node scripts/theme-flash-probe.mjs --url <token URL>` | Per-frame sampling of the effective backdrop during theme and page switches (first opaque ancestor background); reports frames belonging to neither end of the transition (measured: 9 windows, ~720 frames, 0 anomalies) | same as above |

@@ -12,7 +12,6 @@ Skin v2 清单格式，可由皮肤加载器单独收录。
 | `skin.css` | L1 令牌 + L2 排版 | `--dsw-alias-*` 重映射；spacing / radius / 字阶 / motion / elevation 令牌层 |
 | `patches.css` | L3 组件 | 焦点环、链接、卡片契约、mono pill 徽标、tag tone 归一、reduced-motion、⑫ 模型选择器、⑬ 输入区顶栏与卡片、⑯ 右栏展开选择组件、⑰ composer 控件悬停 |
 | `sidebar-align.css` | L3 侧栏对齐 | 新会话行与插件行落到工作区列表行的两条竖线（图标列 20px、文字列 42px）；选择器同时覆盖 rc.1 扁平 DOM 与 rc.2 嵌套 DOM |
-| `model-picker.css` | L3 模型选择器组件 | 只画本插件自己建的 `.codex-mp-*` 节点与宿主触发器的隐藏开关；配套组件在 `src/model-picker.js`。**不碰宿主的菜单**（0.5.0 把选择器挂在宿主菜单上是卡顿根因）。验收 `scripts/model-picker-live.mjs` |
 | `sidebar-surface.css` | L3 侧栏面 | 侧栏滚动渐隐：把宿主那条 24px 覆盖层让位，改用 Codex 的 40px 四段 mask 斜坡（挂在滚动容器上，右侧 12px 让开滚动条槽）。验收 `scripts/sidebar-surface-verify.mjs` |
 | `window-shadow.css` | L3 窗口边缘 | 会话窗口 0.5px 发丝线加 24px 环境影；右栏面板左沿只留 0.5px 发丝线、影只往上泄；右分界线拖拽柄悬停渐变 |
 | `composer.css` | L3 输入区 | 卡片几何与表面、编辑区 44px、底部控件行 28px、候选菜单、hero 布局。本层允许使用 `[class*=…]` 后缀锚点 |
