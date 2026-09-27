@@ -39,7 +39,17 @@ if (!info) { console.error('Chromium 没起来'); process.exit(2); }
 const ws = new WebSocket(info.webSocketDebuggerUrl);
 await new Promise((res, rej) => { ws.onopen = res; ws.onerror = rej; });
 let seq = 0; const waiting = new Map();
-ws.onmessage = (ev) => { const m = JSON.parse(ev.data); const fn = waiting.get(m.id); if (fn) { waiting.delete(m.id); fn(m); } };
+/** 主题发布序列：宿主每次 theme/change 都会被本插件打一行日志（临时埋点），这里全部收集起来。 */
+const themeLog = [];
+ws.onmessage = (ev) => {
+  const m = JSON.parse(ev.data);
+  if (m.method === 'Runtime.consoleAPICalled') {
+    const text = m.params.args.map((a) => String(a.value ?? a.description ?? '')).join(' ');
+    if (text.includes('[codex-ui][probe]')) themeLog.push(text.replace('[codex-ui][probe] ', ''));
+  }
+  const fn = waiting.get(m.id);
+  if (fn) { waiting.delete(m.id); fn(m); }
+};
 const send = (method, params = {}, sessionId) => new Promise((res, rej) => {
   const id = ++seq;
   waiting.set(id, (m) => (m.error ? rej(new Error(method + ': ' + JSON.stringify(m.error))) : res(m.result)));
@@ -135,8 +145,20 @@ const spot = (f) => f.p0 + ' | ' + f.p1 + ' | ' + f.p2;
  * 异常帧 = 有效底色既不是切换前的值、也不是切换后的稳定值。
  * 这正是肉眼看到的「闪」：某一帧画出来的东西不属于任何一端。
  */
+/** 把逐帧的深浅状态压成连续段，例：L×12 → D×68 —— 段数多于 2 就是「回打」（黑→白→黑）。 */
+const runsOf = (frames) => {
+  const runs = [];
+  for (const f of frames) {
+    const key = f.dark ? 'D' : 'L';
+    if (runs.length > 0 && runs[runs.length - 1][0] === key) runs[runs.length - 1][1] += 1;
+    else runs.push([key, 1]);
+  }
+  return runs;
+};
 const analyse = (name, frames) => {
   if (frames === null || frames.length === 0) { console.log(name + '：没采到帧'); return 0; }
+  const runs = runsOf(frames);
+  console.log('   ' + name + ' 深浅序列 ' + runs.map(([k, n]) => k + '×' + n).join(' → ') + (runs.length > 2 ? '   ← 回打！' : ''));
   const head = frames[0];
   const last = frames[frames.length - 1];
   const bad = frames.filter((f, i) => i > 0 && i < frames.length - 1 && spot(f) !== spot(head) && spot(f) !== spot(last));
@@ -152,7 +174,9 @@ if (seg !== '亮色') { const b = await clickByText('^亮色$', sessionId); if (
 let anomalies = 0;
 let captured = 0;
 const plan = [['深色', tap('深色')], ['亮色', tap('亮色')], ['深色', tap('深色')], ['亮色', tap('亮色')], ['深色', tap('深色')], ['亮色', tap('亮色')]];
+themeLog.push('=== 起始 ' + seg + ' ===');
 for (const [label, act] of plan) {
+  themeLog.push('--- 点 ' + label + ' ---');
   const frames = await capture(act);
   if (frames === null) { console.log('切换 ' + label + '：找不到分段'); break; }
   captured += 1;
@@ -168,6 +192,8 @@ const reopenFrames = await capture(async () => clickByText('^查看 codex-ui$', 
 anomalies += analyse('打开组合包页', reopenFrames);
 
 const total = await evaluate('(() => { cancelAnimationFrame(window.__flashRaf); return window.__flash.length; })()', sessionId);
+console.log('\n主题发布序列（宿主 theme/change 逐次）：');
+for (const line of themeLog) console.log('  ' + line);
 console.log('\n采样段 ' + (captured + 3) + ' 段，异常帧合计 ' + anomalies + '，探测器仍在跑的帧 ' + total);
 console.log(anomalies === 0 ? 'RESULT 未捕捉到中间态帧' : 'RESULT 捕捉到 ' + anomalies + ' 个中间态帧');
 ws.close(); child.kill();

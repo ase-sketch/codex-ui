@@ -103,7 +103,11 @@ window.__ModuleLoader__.load({
       document.head.appendChild(tag);
       const render = () => {
         const snapshot = scope.getSnapshot();
-        const values = snapshot === undefined || snapshot === null || snapshot.value === undefined || snapshot.value === null ? {} : snapshot.value;
+        /* 文档还没到（status=loading / 连接刚重连）时 value 是 undefined。
+           这时**保持现状**：把已生效的覆盖撤掉会让用户看到自己的设置闪一下没了。
+           真正的「没有覆盖」是 value 存在且字段为空 —— 那条路径照旧清空。 */
+        if (snapshot !== undefined && snapshot !== null && snapshot.value === undefined) return;
+        const values = snapshot === undefined || snapshot === null || snapshot.value === null ? {} : snapshot.value;
         const css = __override.themeOverrideCss(values);
         tag.textContent = css;
         /* 没有覆盖时连属性一起摘掉：默认态与「没装设置页」逐字节相同。 */
@@ -128,6 +132,9 @@ window.__ModuleLoader__.load({
       }
       registerSettingsCard(ctx, CodexUiSettingsCard, {
         theme: ctx.theme,
+        /* 主题插件自己的设置表单（命名空间 ui-theme，字段 preference）。
+           卡片写主题偏好走它，而不是 theme.setTheme() —— 原因见 settings-card.js 里的注释。 */
+        themeForm: typeof ctx.configForms.get === 'function' ? ctx.configForms.get('ui-theme') : null,
         /* 主题变更走宿主事件：layout 侧也是 ctx.on("theme/change", …) 这一个口子。 */
         watchTheme: (listener) => (typeof ctx.on === 'function' ? ctx.on('theme/change', listener) : () => {}),
       });

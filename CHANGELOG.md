@@ -47,6 +47,18 @@ A settings page inside the plugin manager, plus the dark base re-anchored on the
   ancestor background) — 9 windows, ~720 frames, currently 0 intermediate frames. This kind of flash does not
   reproduce in headless Chromium, so the probe stays as a regression detector.
 
+- Fixed "the theme switch flashes twice (black → white → black)": the preference is now written document-first. The
+  host's `theme.setTheme()` publishes optimistically and is then re-read from the settings document by `adopt()`, which
+  on a slow round trip draws new → old → new; the card writes `preference` into the theme plugin's own settings document
+  instead (the same write the service's internal `host.set` performs), leaving `adopt()` as the only publisher — one
+  click, one publish. Live GUI: all 20 assertions pass (theme switch, survival across reload, clean-up at the end).
+  **Note**: this flash does not reproduce in headless Chromium here; what was fixed is the only mechanism that can
+  produce that sequence, not "it looks fine now".
+- Override layer hardening: a transiently unavailable settings document (`status=loading` / just reconnected) no longer
+  clears the overrides already in effect — that would make a user's own settings blink out.
+- `scripts/theme-flash-probe.mjs` gained a "dark/light run" report (`L×12 → D×68`); more than two runs means a
+  double-publish.
+
 ### Dark base
 
 - Background `#111111 → #181818`, foreground `#FCFCFC → #FFFFFF`, sidebar `#171717 → #181818` (same face as the

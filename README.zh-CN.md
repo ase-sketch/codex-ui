@@ -166,9 +166,12 @@ node scripts/live-gui-probe.mjs --url "http://127.0.0.1:3099/?token=..." --dpr 1
 | 半透明侧边栏 | `translucentSidebar` | 关 | 侧栏填充与行填充转半透明 |
 | 对比度 | `contrastLight` / `contrastDark` | 45 / 60 | 文本档位与中性 alpha 阶梯 |
 
-- **主题那一行不是卡片自己的界面状态**：它走宿主 `theme` 服务的唯一写入口（`ctx.theme.setTheme(id)`，
-  `id ∈ light/dark/system`），写的是 `ui-theme` 的 `preference`，与「设置 → 通用 → 外观」是同一处 ——
+- **主题那一行不是卡片自己的界面状态**：写的是宿主 `ui-theme` 的 `preference`，与「设置 → 通用 → 外观」同一处 ——
   切完整应用一起变，刷新后还在。下面三行颜色编辑的是**当前生效的那一套**（`active.colorScheme`）。
+- 但它**不走** `theme.setTheme()`：那一步是「先本地乐观发布、随后 `adopt()` 再从设置文档回读」的写法，
+  文档往返慢的机器上会依次画出 新值 → 旧值 → 新值，肉眼就是「黑 → 白 → 黑」。卡片改成**先把偏好写进主题插件
+  自己的设置文档**（服务内部 `host.set` 那一次写，同一命名空间 `ui-theme` 与字段 `preference`），
+  发布方于是只剩 `adopt()`，一次点击只发布一次；控件用本地暂存保持手感，写入未被接受才退回服务入口。
 - 11 个字段全部 `.volatile()`：设置服务只投影标了它的字段，插件管理页也正是靠这一点认得这个条目 ——
   没有 `Config` 就没有这张卡。
 - **空值 = 不覆盖**：默认值下覆盖层输出空串、`data-codex-ui-theme` 属性不出现，所以装上不动一个字时，

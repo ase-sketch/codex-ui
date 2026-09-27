@@ -138,7 +138,7 @@ function themeSnapshotOf(service) {
  * @param props - 座位注入的 scope / theme / watchTheme / locale，以及宿主给的视图。
  * @returns 表单，或组合包页要的一行摘要。
  */
-function CodexUiSettingsCard({ scope, theme, watchTheme, locale, view }) {
+function CodexUiSettingsCard({ scope, theme, themeForm, watchTheme, locale, view }) {
   if (REACT === null || JSX === null) {
     return JSX === null && REACT === null ? null : null;
   }
@@ -165,16 +165,43 @@ function CodexUiSettingsCard({ scope, theme, watchTheme, locale, view }) {
   const [drafts, setDrafts] = useState({});
   const [saving, setSaving] = useState(false);
   const [failed, setFailed] = useState(false);
+  /* 分段控件上先显示用户点的那个值：写文档是异步的，不暂存的话控件会滞后一拍。 */
+  const [pendingTheme, setPendingTheme] = useState(null);
+  const { useEffect } = REACT;
+  useEffect(() => {
+    if (pendingTheme !== null && pendingTheme === preference) setPendingTheme(null);
+  }, [pendingTheme, preference]);
 
   const fieldOf = useCallback((base) => base + (variant === 'light' ? 'Light' : 'Dark'), [variant]);
-  /** 切主题：走宿主服务的唯一写入口，成功与否都靠快照回读判定。 */
-  const switchTheme = useCallback((id) => {
+  /**
+   * 切主题。
+   *
+   * 不调 `theme.setTheme(id)`：那是「先本地乐观发布、再让 adopt() 从文档回读」的写法 ——
+   * 文档往返慢的时候会依次画出 新值 → 旧值 → 新值（用户看到的「黑 → 白 → 黑」）。
+   * 这里改成**先把偏好写进主题插件自己的设置文档**（宿主源码里的命名空间 `ui-theme`、
+   * 字段 `preference`，与服务内部 host.set 的那一次写完全同路），
+   * 于是发布方只剩服务自己的 adopt()，一次点击只会发布一次。
+   * 写入未被接受才退回服务入口，保证功能不会因为这条捷径失效。
+   * @param id - 'light' | 'dark' | 'system'。
+   */
+  const switchTheme = useCallback(async (id) => {
+    if (id !== 'light' && id !== 'dark' && id !== 'system') return;
+    setPendingTheme(id);
+    const canWriteForm = themeForm !== null && themeForm !== undefined && typeof themeForm.set === 'function';
+    if (canWriteForm) {
+      try {
+        if ((await themeForm.set('preference', id)) !== false) return;
+      } catch (error) {
+        console.warn('[codex-ui] 直接写主题偏好失败，退回服务入口：', error);
+      }
+    }
+    setPendingTheme(null);
     try {
       theme.setTheme(id);
     } catch (error) {
       console.warn('[codex-ui] 切主题失败：', error);
     }
-  }, [theme]);
+  }, [theme, themeForm]);
   const unavailable = snapshot.status === 'unavailable';
   const readOnly = snapshot.writable === false;
   const disabled = saving || unavailable || readOnly;
@@ -348,7 +375,7 @@ function CodexUiSettingsCard({ scope, theme, watchTheme, locale, view }) {
     jsx('p', { className: 'cx-note', children: copy.intro }),
     row('theme', copy.theme, copy.themeDesc, jsx(SegmentedControl, {
       id: 'codex-ui-theme',
-      value: preference,
+      value: pendingTheme ?? preference,
       label: copy.theme,
       disabled,
       options: [
@@ -380,7 +407,7 @@ function CodexUiSettingsCard({ scope, theme, watchTheme, locale, view }) {
  * 把卡片挂到组合包页的座位上。
  * @param ctx - 客户端上下文。
  * @param Card - 卡片组件。
- * @param extras - 额外的注入面（宿主 theme 服务与它的变更订阅）。
+ * @param extras - 额外的注入面（宿主 theme 服务、它的设置表单、变更订阅）。
  */
 function registerSettingsCard(ctx, Card, extras = {}) {
   ctx.slots.inject('plugins.bundle.config', () => ctx.slots.register({
@@ -388,8 +415,9 @@ function registerSettingsCard(ctx, Card, extras = {}) {
     key: PLUGIN_ID,
     inject: () => ({
       scope: ctx.configForms.get(__override.SETTINGS_ENTRY_ID),
-      /* 宿主主题服务与变更订阅：卡片上「主题」那一行的读写通道。 */
+      /* 宿主主题服务、它的设置表单、变更订阅：卡片上「主题」那一行的读写通道。 */
       theme: extras.theme,
+      themeForm: extras.themeForm,
       watchTheme: extras.watchTheme,
       /* locale 缺席时 inject 会给 undefined，卡片自己回落到浏览器语言。 */
       locale: ctx.reflect.get('locale'),

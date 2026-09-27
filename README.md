@@ -171,10 +171,15 @@ dark default, 60):
 | Translucent sidebar | `translucentSidebar` | off | sidebar fill and row fills become translucent |
 | Contrast | `contrastLight` / `contrastDark` | 45 / 60 | text tiers and the neutral alpha ladder |
 
-- **The theme row is not card-local view state**: it goes through the host `theme` service's only preference write
-  entry (`ctx.theme.setTheme(id)`, `id ∈ light/dark/system`), writing `ui-theme`'s `preference` — the same setting as
-  Settings → General → Appearance, so the whole app switches and it survives a reload. The three colour rows below edit
+- **The theme row is not card-local view state**: it writes the host's `ui-theme` `preference`, the same setting as
+  Settings → General → Appearance — the whole app switches and it survives a reload. The three colour rows below edit
   the variant currently in effect (`active.colorScheme`).
+- It does **not** go through `theme.setTheme()`: that path publishes optimistically first and is then re-read from the
+  settings document by `adopt()`, so on a slow round trip it draws new → old → new, which reads as "black → white →
+  black". The card writes the preference into the theme plugin's own settings document instead (the same namespace
+  `ui-theme` and field `preference` the service's internal `host.set` uses), leaving `adopt()` as the only publisher —
+  one click, one publish. The control keeps a local pending value so it still feels immediate, and an unaccepted write
+  falls back to the service entry point.
 - All 11 fields are `.volatile()`: the settings service only projects volatile fields, and that is exactly how the
   plugin manager knows the entry — no `Config`, no card.
 - **Empty means no override**: at the defaults the override layer emits an empty string and `data-codex-ui-theme` never
