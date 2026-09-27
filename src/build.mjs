@@ -50,6 +50,7 @@ export const SKIN_PARTS = [
   ['sidebar-surface.css', 'L3 侧栏面层'],
   ['window-shadow.css', 'L3 窗口边缘阴影层'],
   ['composer.css', 'L3 输入区完整层'],
+  ['model-rail.css', 'L3 模型选择器功率轨'],
   ['settings.css', 'L3 插件设置页层'],
 ];
 

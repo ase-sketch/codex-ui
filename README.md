@@ -100,7 +100,7 @@ node scripts/install-skin.mjs --write  # overwrite on drift
 | `src/settings-card.js` | The config card on the bundle page (inlined into `client.js` at build time) |
 | `src/build.mjs` | Scoping and artifact generation; the only implementation |
 | `theme.css` `client.js` | Generated from `skins/codex-ink/` by `src/build.mjs` |
-| `skins/codex-ink/` | Stylesheet sources (skin.css / patches.css / sidebar-align.css / sidebar-surface.css / window-shadow.css / composer.css / settings.css) |
+| `skins/codex-ink/` | Stylesheet sources (skin.css / patches.css / sidebar-align.css / sidebar-surface.css / window-shadow.css / composer.css / model-rail.css / settings.css) |
 | `docs/` | Plans and decisions |
 | `scripts/build.mjs` | Regenerate the artifacts; `--check` compares without writing |
 | `scripts/check-repo.mjs` | Host-free repository checks; the CI entry point |
@@ -118,7 +118,7 @@ node scripts/install-skin.mjs --write  # overwrite on drift
 |---|---|---|
 | `npm run check` | Syntax, JSON, manifest, artifact sync, encoding, docs pairing, machine-specific paths | none |
 | `node scripts/audit-codex-ink.mjs` | Skin structure, 36 WCAG pairs, color whitelist | none |
-| `node scripts/model-picker-verify.mjs` | ⑫ and the pending indicator, 18 assertions | none |
+| `node scripts/model-picker-verify.mjs` | ⑫, the pending indicator and the ⑲ effort power rail, 42 assertions | none |
 | `node scripts/rightbar-verify.mjs` | Shadow layer, right panel, both dividers, 42 assertions | none |
 | `node scripts/sidebar-align-verify.mjs` | Sidebar column alignment, 6 assertions | none |
 | `node scripts/sidebar-surface-verify.mjs` | Sidebar scroll fade (the Codex mask ramp): mechanism plus pixels, four states side by side, 13 assertions | none |

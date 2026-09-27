@@ -2,6 +2,44 @@
 
 [English](CHANGELOG.md)
 
+## 0.5.0 - 2026-09-27
+
+模型选择器（⑲）：推理等级那一格从**竖列 radio** 变成 Codex 的一条**横向功率轨**。
+
+### 模型选择器功率轨（⑲）
+
+- 真 GUI 实测宿主形态：点「推理等级」展开的是一竖列 `button[role=menuitemradio]`
+  （本机 4 档 Off/Low/High/Max，240x28，勾选列 14px；档位数由模型决定，另一台模型见过 6 档）。
+  Codex 那边是一条横向轨：24px 高、12px 圆角、前景 10% 填充、inset 0.5px 描边的 `_Track`，
+  4px 的 `_Tick` 圆点，28px 白色 `_Thumb`，以及从左端铺到拇指的 `_Range` 强调色条。
+- 本层不新增 DOM，只把既有四行重排成轨：
+  **① 认轨** —— 菜单的直接子元素全是 `menuitemradio` 才算轨。根菜单的直接子是两格
+  `menuitem`、模型菜单的直接子是 `div.groups`（内含 `section[role=group]`），两者都进不来；
+  两个菜单的 `aria-label` 完全相同，没有别的身份信号可用。
+  **② 分格** —— 每行 `flex:1` 等分轨道宽度，相邻行的底色就连成一条连续的强调色条。
+  这是**不依赖档位数**的关键：用 `row:has(~ row[aria-checked=true])` 选中「后面还有选中行的
+  所有行」，不知道自己是第几个，也就不必为 N=2..6 各写一遍。
+  **③ 拇指** —— 选中行的 `::before` 画 28px 白圆片，位置由行盒自己决定，同样不算坐标。
+  **④ 圆点** —— 每行 `::after` 画 4px 点，选中的是白 30%（压在拇指上）。
+- 真 GUI 复核（重启 verify profile 后实测）：轨 `flex/row · 24px · radius 12 · padding 0 6px ·
+  bg rgba(13,13,13,.08) · inset 0.5px 描边 · overflow visible · 宽 240`（宽度来自宿主自己的
+  `.menu{min-width:min(240px,…)}`，本层不重定宽）；四行各 57px、中心 997/1054/1111/1168，
+  等距 57；Off/Low 铺满强调色、High 左半边 + 白拇指 + 白 30% 点、Max 空。
+- 三处相对 Codex 的取舍，各给理由：**增补**悬停名字胶囊（Codex 拖拽时触发器标签跟手，
+  DSH 点一下就提交、菜单随即关闭，没有跟手预览，一排点无从辨认；名字就是行原有的文字，
+  只是从常驻改成按需，可访问名一直在 —— 用 `span:first-child` 收起而不是 `display:none`，
+  因为后者会把文字从可访问名计算里拿掉）；**换色**强调色取 `--dsw-alias-link`
+  （亮 #339cff / 暗 #0169cc，本皮肤唯一的彩色，且跟着设置卡里的强调色走），
+  Codex 的 charts-blue 直接搬会把另一套蓝调色板带进「无彩色 chrome」纪律；
+  **省略** Fast 粒子轨与 Max 爆发 —— DSH 没有 Fast 模式，`_FastTrackParticles` 没有落点，
+  `_Burst` 是「拖到 Max 的瞬间」的帧爆发，DSH 没有拖拽过程也就没有那个时机，两项都如实不做。
+- 待机（`aria-busy=true`）：⑫·3 的 pending 转圈挂在勾选列上，轨上勾选列已隐藏，
+  所以把同一个信号搬到点上（12px 环 + `codex-ui-spin`），并补回 `cursor: progress`
+  —— 否则「点一下没有反馈」这个 0.2.x 修过的老毛病会从轨里回来。
+- `scripts/model-picker-verify.mjs` 从 18 项扩到 **42 项**：新增 24 项覆盖轨的几何、
+  强调色条、拇指、圆点、悬停胶囊、可访问名，以及两条**反向守卫**
+  （根菜单与模型菜单不得被误判成轨）。
+
 ## 0.4.0 - 2026-09-27
 
 侧栏「面」：滚动渐隐从宿主那条 24px 覆盖层换成 Codex 的 40px 四段 mask 斜坡。

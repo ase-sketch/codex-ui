@@ -1472,6 +1472,236 @@
 }
 
 
+/* ==== L3 模型选择器功率轨（源：skins/codex-ink/model-rail.css）==== */
+/* ============================================================================
+   codex-ink（墨白终端）· L3 模型选择器功率轨
+   ----------------------------------------------------------------------------
+   源文件：skins/codex-ink/model-rail.css
+   由 scripts/build.mjs 与其余层一起拼接，并作用域化到 html[data-codex-ui]。
+   因此本文件写「裸选择器」——不要自己再加 html[...] 前缀。
+
+   组件：**推理等级的功率轨**（Codex 的 _Container / _Root / _Track / _Range /
+   _Tick / _Thumb）。验收：scripts/model-picker-verify.mjs。
+
+   ── 宿主的真实形态（2026-09-27 真 GUI 实测，verify profile）────────────────
+   点「推理等级」后展开的是**一竖列 radio**，菜单直挂 body：
+
+     div[role=menu][aria-busy=false]           250x112  flex column  bg #fff
+     ├─ button[role=menuitemradio][aria-checked=false]  240x28
+     │    span > span  "Off" ／ span（勾选列，未选中时 14x0）
+     ├─ … "Low"
+     ├─ button[role=menuitemradio][aria-checked=true]  bg rgba(13,13,13,.08)
+     │    span > span  "High" ／ span > svg（勾选 14x14）
+     └─ … "Max"
+   档位数由模型决定（本机 4 档；另一台模型见过 6 档：Default/Off/Low/Medium/High/Max）。
+
+   Codex 那边是**一条横向轨**：_Track 24px 高、12px 圆角、前景 10% 填充、
+   inset 0.5px 描边；_Tick 是 4px 圆点（未选中 = description-foreground 50%，
+   选中 = #ffffff4d）；_Thumb 是 28px 白色圆片（.5px border-heavy + 0 0 2px #0000001a）；
+   _Range 是从左端铺到拇指的强调色条；悬停某个点 scale(2)。
+
+   ── 怎么把竖列变成横轨（不新增 DOM）────────────────────────────────────────
+   ① 认轨：菜单的**直接子元素全是 menuitemradio** 才算功率轨。三个否定条件：
+        · 直接子元素里有一个「内部带 role 的 div」→ 是模型菜单（div.groups > section[role=group]）；
+        · 直接子元素里有 section → 同上（扁平化后的模型列表长这样）；
+        · 第 7 个 direct radio → 档位数不会那么多，超了就不认。
+      根菜单的直接子是 button[role=menuitem]（两格），天然进不来。
+      这是本层唯一的「菜单身份判据」：两个菜单的 aria-label 一模一样，
+      没有别的信号可用。
+   ② 分格：每行 flex:1 等分轨道宽度。于是相邻行的底色能连成一条连续的强调色条 ——
+      这是**不依赖档位数**的关键：用 :has(~ …) 选中「后面还有选中行的所有行」，
+      不需要知道自己是第几个，也就不必为 N=2..6 各写一遍。
+   ③ 拇指：选中行的 ::before 画 28px 白圆片，位置由行盒自己决定，同样不算坐标。
+   ④ 圆点：每行 ::after 画 4px 点。选中行的点是白 30%（压在拇指上）。
+
+   ── 三处相对 Codex 的增补 / 省略，各给理由 ────────────────────────────────
+   · 增补「悬停名字胶囊」：Codex 的滑杆是**拖**的，拖的时候触发器标签跟手，
+     一排点不需要标签；DSH 这四行是**点一下就提交**、菜单随即关闭，没有跟手预览，
+     所以补一个悬停/聚焦才出现的小胶囊，否则一排点无从辨认。名字就是宿主那行
+     原有的文字，只是从常驻改成按需，可访问名一直在。
+   · 强调色取 --dsw-alias-link（亮 #339cff / 暗 #0169cc，本皮肤唯一的彩色，
+     且跟着设置卡里的强调色走）：Codex 用的是 charts-blue，直接搬会把另一套
+     蓝调色板带进「无彩色 chrome + 单一强调色」的纪律。
+   · 省略 Fast 粒子轨与 Max 爆发：DSH 没有 Fast 模式（Codex 的
+     composer.toggleFastMode 无对应），_FastTrackParticles 那一轨没有落点；
+     _Burst 是「拖到 Max 的瞬间」的帧爆发，DSH 没有拖拽过程，也就没有那个时机。
+     两项都如实不做，不拿别的动画顶替。
+
+   ── 待机（aria-busy=true）────────────────────────────────────────────────
+   ⑫·3 把 pending 反馈放在选中行的勾选列（转圈），轨上的勾选列是 display:none，
+   所以这里把同一个信号搬到点上；⑫·3 那条留着，万一身份判据失效（宿主改结构），
+   退回去仍是一张带转圈的竖列表，不会变成「点了没反应」。
+   ============================================================================ */
+
+
+/* 轨身份判据（本文件内所有规则共用同一段前缀，避免各处漂移）。
+   为免触发 scopeCss 的括号解析，注释里不写花括号。 */
+
+
+/* ── ① 轨：菜单本身变成 Codex 的 _Track ───────────────────────────────────
+   240px 宽度来自宿主自己的 .menu 上那条 min-width:min(240px,100vw-32px)，
+   本层不重定宽，轨长跟的是宿主的弹层宽度，不是我们拍的数。
+   （注释里一律不写花括号：scopeCss 靠花括号配对切规则，注释里的花括号会把
+     后面那条规则的选择器吃进注释里。） */html[data-codex-ui] body > div[role="menu"][aria-busy]:has(> button[role="menuitemradio"]):not(:has(> div [role])):not(:has(> section)):not(:has(> button[role="menuitemradio"]:nth-of-type(7))){
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: stretch;
+  height: 24px;
+  min-height: 24px;
+  padding: 0 6px;
+  border-radius: 12px;
+  /* Codex: color-mix(in srgb, var(--color-token-foreground) 10%, transparent)。
+     取本皮肤最接近的语义令牌 interactive-bg-active —— 实测 8%（亮）/ 10%（暗），
+     差 2 个百分点；为这点差值另写一个字面色不值得，故用语义令牌。 */
+  background: var(--dsw-alias-interactive-bg-active);
+  box-shadow: inset 0 0 0 0.5px var(--dsw-alias-border-l3);
+  /* 拇指 28px 比轨高 2px，必须允许溢出 */
+  overflow: visible;
+}
+
+
+/* ── ② 行：等分格 ─────────────────────────────────────────────────────────
+   ⑫·3 给的是「28px 高、padding 4px 9px、圆角 8px」的列表行，这里全部推平。 */html[data-codex-ui] body > div[role="menu"][aria-busy]:has(> button[role="menuitemradio"]):not(:has(> div [role])):not(:has(> section)):not(:has(> button[role="menuitemradio"]:nth-of-type(7))) > button[role="menuitemradio"]{
+  position: relative;
+  box-sizing: border-box;
+  flex: 1 1 0;
+  min-width: 0;
+  min-height: 0;
+  height: 24px;
+  padding: 0;
+  gap: 0;
+  border: 0;
+  border-radius: 0;
+  background: none;
+  color: inherit;
+  font-size: 0;
+  line-height: 0;
+  cursor: pointer;
+}
+
+/* 首末行跟轨端一起收角（未填充时空背景，写了也无副作用） */html[data-codex-ui] body > div[role="menu"][aria-busy]:has(> button[role="menuitemradio"]):not(:has(> div [role])):not(:has(> section)):not(:has(> button[role="menuitemradio"]:nth-of-type(7))) > button[role="menuitemradio"]:first-child{
+  border-start-start-radius: 12px;
+  border-end-start-radius: 12px;
+}html[data-codex-ui] body > div[role="menu"][aria-busy]:has(> button[role="menuitemradio"]):not(:has(> div [role])):not(:has(> section)):not(:has(> button[role="menuitemradio"]:nth-of-type(7))) > button[role="menuitemradio"]:last-child{
+  border-start-end-radius: 12px;
+  border-end-end-radius: 12px;
+}
+
+
+/* ── ③ 强调色条：从轨左端铺到拇指中线 ─────────────────────────────────────
+   「后面还有选中行的行」= 选中行之前的全部行（:has() 当兄弟选择器用）。
+   这些行首尾相接，底色连成一条连续的条；选中行自己补左半边。
+   与档位数无关：既不数第几个，也不数总共几个。 */html[data-codex-ui] body > div[role="menu"][aria-busy]:has(> button[role="menuitemradio"]):not(:has(> div [role])):not(:has(> section)):not(:has(> button[role="menuitemradio"]:nth-of-type(7))) > button[role="menuitemradio"]:has(~ button[role="menuitemradio"][aria-checked="true"]){
+  background: var(--dsw-alias-link);
+}html[data-codex-ui] body > div[role="menu"][aria-busy]:has(> button[role="menuitemradio"]):not(:has(> div [role])):not(:has(> section)):not(:has(> button[role="menuitemradio"]:nth-of-type(7))) > button[role="menuitemradio"][aria-checked="true"]{
+  background: linear-gradient(90deg, var(--dsw-alias-link) 50%, transparent 50%);
+}
+
+
+/* ── ④ 拇指（::before）与圆点（::after）────────────────────────────────── */html[data-codex-ui] body > div[role="menu"][aria-busy]:has(> button[role="menuitemradio"]):not(:has(> div [role])):not(:has(> section)):not(:has(> button[role="menuitemradio"]:nth-of-type(7))) > button[role="menuitemradio"]::before{
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  box-sizing: border-box;
+  width: 28px;
+  height: 28px;
+  margin: -14px 0 0 -14px;
+  border: 0.5px solid transparent;
+  border-radius: 50%;
+  background: none;
+  pointer-events: none;
+}html[data-codex-ui] body > div[role="menu"][aria-busy]:has(> button[role="menuitemradio"]):not(:has(> div [role])):not(:has(> section)):not(:has(> button[role="menuitemradio"]:nth-of-type(7))) > button[role="menuitemradio"][aria-checked="true"]::before{
+  /* Codex _Thumb：.5px border-heavy + #fff + 0 0 2px #0000001a */
+  border-color: var(--dsw-alias-border-l3);
+  background: #fff;
+  box-shadow: 0 0 2px rgba(0, 0, 0, 0.1);
+}
+
+/* 键盘焦点：Codex 在 _Container[data-keyboard-focused=true] 下给 _Thumb 加
+   2px 焦点色 outline。轨上没有独立拇指，所以让焦点行自己长出一个同尺寸圆片来承这个环。 */html[data-codex-ui] body > div[role="menu"][aria-busy]:has(> button[role="menuitemradio"]):not(:has(> div [role])):not(:has(> section)):not(:has(> button[role="menuitemradio"]:nth-of-type(7))) > button[role="menuitemradio"]:focus-visible::before{
+  border-color: var(--dsw-alias-border-l3);
+  background: #fff;
+  box-shadow: 0 0 2px rgba(0, 0, 0, 0.1);
+  outline: 2px solid var(--dsw-codex-focus);
+  outline-offset: 0;
+}html[data-codex-ui] body > div[role="menu"][aria-busy]:has(> button[role="menuitemradio"]):not(:has(> div [role])):not(:has(> section)):not(:has(> button[role="menuitemradio"]:nth-of-type(7))) > button[role="menuitemradio"]::after{
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 4px;
+  height: 4px;
+  margin: -2px 0 0 -2px;
+  border-radius: 50%;
+  /* Codex _Tick[data-selected=false]：description-foreground 50% */
+  background: var(--dsw-alias-label-caption);
+  pointer-events: none;
+}html[data-codex-ui] body > div[role="menu"][aria-busy]:has(> button[role="menuitemradio"]):not(:has(> div [role])):not(:has(> section)):not(:has(> button[role="menuitemradio"]:nth-of-type(7))) > button[role="menuitemradio"][aria-checked="true"]::after{
+  /* Codex _Tick[data-selected=true]：白 30%，压在拇指上 */
+  background: rgba(255, 255, 255, 0.3);
+}
+
+/* 悬停：Codex 对 _Tick 的 :hover 写的是 filter:brightness(.85) 与 transform:scale(2) */html[data-codex-ui] body > div[role="menu"][aria-busy]:has(> button[role="menuitemradio"]):not(:has(> div [role])):not(:has(> section)):not(:has(> button[role="menuitemradio"]:nth-of-type(7))) > button[role="menuitemradio"]:hover:not(:disabled)::after{
+  filter: brightness(0.85);
+  transform: scale(2);
+}
+
+/* 命中区：Codex 用 _Tick 的 ::before 上那条 inset:-6px 把 4px 的点放大成 16px 可点区。
+   这里整行 1/N 都是按钮本体，命中区本来就比 Codex 更大，无需再补。 */
+
+
+/* ── ⑤ 隐藏常驻文字与勾选列（可访问名必须留下）───────────────────────────
+   勾选列直接 display:none（它不含任何语义）；行文字改成悬停胶囊而不是 display:none，
+   因为 display:none 会把文字从可访问名计算里拿掉，一排没有名字的点是没法用的。 */html[data-codex-ui] body > div[role="menu"][aria-busy]:has(> button[role="menuitemradio"]):not(:has(> div [role])):not(:has(> section)):not(:has(> button[role="menuitemradio"]:nth-of-type(7))) > button[role="menuitemradio"] > span:last-child{
+  display: none;
+}html[data-codex-ui] body > div[role="menu"][aria-busy]:has(> button[role="menuitemradio"]):not(:has(> div [role])):not(:has(> section)):not(:has(> button[role="menuitemradio"]:nth-of-type(7))) > button[role="menuitemradio"] > span:first-child{
+  position: absolute;
+  bottom: calc(100% + 8px);
+  left: 50%;
+  box-sizing: border-box;
+  width: auto;
+  height: auto;
+  margin: 0;
+  padding: 3px 7px;
+  transform: translateX(-50%);
+  opacity: 0;
+  visibility: hidden;
+  white-space: nowrap;
+  font-size: 12px;
+  line-height: 16px;
+  color: var(--dsw-alias-label-primary);
+  background: var(--dsw-alias-bg-layer-1);
+  border-radius: var(--dsw-radius-s);
+  box-shadow: 0 4px 16px rgba(13, 13, 13, 0.13), 0 0 0 0.5px rgba(13, 13, 13, 0.06);
+  pointer-events: none;
+}html[data-codex-ui] body[data-ds-dark-theme] body > div[role="menu"][aria-busy]:has(> button[role="menuitemradio"]):not(:has(> div [role])):not(:has(> section)):not(:has(> button[role="menuitemradio"]:nth-of-type(7))) > button[role="menuitemradio"] > span:first-child{
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.5), 0 0 0 0.5px rgba(236, 236, 236, 0.06);
+}html[data-codex-ui] body > div[role="menu"][aria-busy]:has(> button[role="menuitemradio"]):not(:has(> div [role])):not(:has(> section)):not(:has(> button[role="menuitemradio"]:nth-of-type(7))) > button[role="menuitemradio"]:hover > span:first-child,html[data-codex-ui] body > div[role="menu"][aria-busy]:has(> button[role="menuitemradio"]):not(:has(> div [role])):not(:has(> section)):not(:has(> button[role="menuitemradio"]:nth-of-type(7))) > button[role="menuitemradio"]:focus-visible > span:first-child{
+  opacity: 1;
+  visibility: visible;
+}
+
+
+/* ── ⑥ 待机：转圈改画在点上 ────────────────────────────────────────────── */
+
+/* ② 里把 cursor 推平成 pointer，会盖掉 ⑫·3 的 pending 光标（那条比本层低），
+   所以这里补回 disabled 时的 progress —— 否则等待期的手感就丢了。 */html[data-codex-ui] body > div[role="menu"][aria-busy]:has(> button[role="menuitemradio"]):not(:has(> div [role])):not(:has(> section)):not(:has(> button[role="menuitemradio"]:nth-of-type(7))) > button[role="menuitemradio"]:disabled{
+  cursor: progress;
+}html[data-codex-ui] body > div[role="menu"][aria-busy="true"]:has(> button[role="menuitemradio"]):not(:has(> div [role])):not(:has(> section)):not(:has(> button[role="menuitemradio"]:nth-of-type(7))) > button[role="menuitemradio"][aria-checked="true"]::after{
+  box-sizing: border-box;
+  width: 12px;
+  height: 12px;
+  margin: -6px 0 0 -6px;
+  background: none;
+  border: 1.5px solid var(--dsw-alias-border-l3);
+  border-top-color: var(--dsw-alias-label-primary);
+  animation: codex-ui-spin 1s linear infinite;
+}
+
+
 /* ==== L3 插件设置页层（源：skins/codex-ink/settings.css）==== */
 /* ============================================================================
    codex-ink · L3 插件设置页层

@@ -2,6 +2,48 @@
 
 [简体中文](CHANGELOG.zh-CN.md)
 
+## 0.5.0 - 2026-09-27
+
+The model picker (⑲): the reasoning-effort drill-in turns from a **vertical radio list** into Codex's
+**horizontal power rail**.
+
+### Model picker power rail (⑲)
+
+- Live shape of the host: clicking "reasoning effort" opens a vertical list of
+  `button[role=menuitemradio]` rows (4 levels here — Off/Low/High/Max — 240x28, a 14px check column;
+  the number of levels comes from the model, another model showed 6). Codex has a horizontal rail:
+  a 24px-tall `_Track` with a 12px radius, 10% foreground fill and an inset 0.5px stroke, 4px `_Tick`
+  dots, a 28px white `_Thumb`, and a `_Range` accent bar running from the left edge to the thumb.
+- No new DOM: the four existing rows are re-laid out. **① Identify** — only a menu whose direct
+  children are all `menuitemradio` counts as a rail; the root menu's children are two `menuitem` cells
+  and the model menu's child is `div.groups` (holding `section[role=group]`), so neither qualifies.
+  Both menus carry the same `aria-label`, so there is no other identity signal.
+  **② Segments** — every row is `flex:1`, so adjacent rows' backgrounds join into one continuous bar.
+  That is what makes it **independent of the number of levels**: `row:has(~ row[aria-checked=true])`
+  selects "every row that has a checked row after it" without knowing its own index, so no N=2..6 ladder.
+  **③ Thumb** — the checked row's `::before` draws the 28px white circle, positioned by the row box itself.
+  **④ Dots** — each row's `::after` draws a 4px dot; the checked one is white at 30%, on top of the thumb.
+- Live re-check after restarting the verify profile: rail `flex/row · 24px · radius 12 · padding 0 6px ·
+  bg rgba(13,13,13,.08) · inset 0.5px stroke · overflow visible · width 240` (the width comes from the
+  host's own `.menu{min-width:min(240px,…)}`; this layer does not re-declare it); four rows of 57px with
+  centres at 997/1054/1111/1168 — evenly spaced by 57; Off/Low filled with the accent, High half-filled
+  plus a white thumb and a white-30% dot, Max empty.
+- Three deliberate deviations, each with a reason: **added** a hover name chip (Codex drags and its
+  trigger label follows; DSH commits on a single click and the menu closes, so a row of bare dots would
+  be unreadable — the name is the row's own text, moved from always-on to on-demand, and it is collapsed
+  with `span:first-child` rather than `display:none` because the latter removes it from accessible-name
+  computation); **re-coloured** the fill to `--dsw-alias-link` (light #339cff / dark #0169cc — the skin's
+  only chromatic colour, tracking the accent in the settings card), because Codex's charts-blue would
+  drag a second blue palette into the "monochrome chrome" discipline; **omitted** the Fast particle track
+  and the Max burst — DSH has no Fast mode, so `_FastTrackParticles` has nowhere to live, and `_Burst`
+  is the frame burst at the moment of dragging to Max, which DSH never does. Both are honestly not done.
+- Pending (`aria-busy=true`): ⑫·3's spinner lives in the check column, which the rail hides, so the same
+  signal is moved onto the dot (a 12px ring with `codex-ui-spin`), and `cursor: progress` is restored —
+  otherwise the "click and nothing happens" bug fixed back in 0.2.x would return through the rail.
+- `scripts/model-picker-verify.mjs` grows from 18 to **42 assertions**: 24 new ones covering the rail's
+  geometry, accent bar, thumb, dots, hover chip and accessible name, plus two **reverse guards**
+  (the root menu and the model menu must not be mistaken for a rail).
+
 ## 0.4.0 - 2026-09-27
 
 The sidebar **surface**: the scroll fade moves from the host's 24px overlay to Codex's 40px four-stop mask ramp.
