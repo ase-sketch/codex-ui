@@ -1,0 +1,140 @@
+/* ============================================================================
+   codex-ink · L3 插件设置页层
+   ----------------------------------------------------------------------------
+   官方插件管理 → 组合包页里那块配置卡的版式（座位 plugins.bundle.config）。
+   取色只用 --dsw-alias-* / --dsw-specific-* 令牌，**不引入任何彩色** —— 与
+   skin.css 的「无彩色 chrome」纪律一致；唯一的彩色是强调色本身，由设置值给。
+
+   为什么放在皮肤层而不是卡片内联：这一层同样受 html[data-codex-ui] 作用域约束，
+   进同一份 theme.css，可被体检脚本与审计脚本一起看见。
+   ========================================================================== */
+
+.cx-form {
+  display: flex;
+  flex-direction: column;
+  margin: 0;
+}
+
+.cx-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  column-gap: 16px;
+  padding: 10px 0;
+  border-bottom: 0.5px solid var(--dsw-alias-border-l1);
+}
+
+.cx-row:last-child {
+  border-bottom: none;
+}
+
+.cx-row__text {
+  min-width: 0;
+}
+
+.cx-row__label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--dsw-alias-label-primary);
+  font-size: 13px;
+  line-height: 20px;
+}
+
+.cx-row__desc {
+  margin-top: 2px;
+  color: var(--dsw-alias-label-tertiary);
+  font-size: 11px;
+  line-height: 16px;
+}
+
+.cx-row__control {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  justify-self: end;
+}
+
+.cx-row--stack .cx-row__control {
+  justify-self: stretch;
+}
+
+.cx-swatch {
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  border: 0.5px solid var(--dsw-alias-border-l2);
+  border-radius: var(--dsw-radius-s, 6px);
+  background: none;
+  cursor: pointer;
+}
+
+.cx-swatch::-webkit-color-swatch-wrapper {
+  padding: 2px;
+}
+
+.cx-swatch::-webkit-color-swatch {
+  border: none;
+  border-radius: calc(var(--dsw-radius-s, 6px) - 2px);
+}
+
+.cx-hex {
+  width: 96px;
+  height: 24px;
+  padding: 0 8px;
+  border: 0.5px solid var(--dsw-alias-border-l2);
+  border-radius: var(--dsw-radius-s, 6px);
+  background: var(--dsw-alias-bg-base);
+  color: var(--dsw-alias-label-primary);
+  font-family: var(--ds-font-family-code);
+  font-size: 11px;
+  letter-spacing: 0.04em;
+}
+
+.cx-hex:focus-visible {
+  outline: 2px solid var(--dsw-codex-focus);
+  outline-offset: 1px;
+}
+
+.cx-text {
+  width: 220px;
+  height: 24px;
+  padding: 0 8px;
+  border: 0.5px solid var(--dsw-alias-border-l2);
+  border-radius: var(--dsw-radius-s, 6px);
+  background: var(--dsw-alias-bg-base);
+  color: var(--dsw-alias-label-primary);
+  font-size: 12px;
+}
+
+.cx-text:focus-visible {
+  outline: 2px solid var(--dsw-codex-focus);
+  outline-offset: 1px;
+}
+
+.cx-range {
+  width: 160px;
+  accent-color: var(--dsw-alias-link);
+}
+
+.cx-range__value {
+  min-width: 24px;
+  color: var(--dsw-alias-label-secondary);
+  font-family: var(--ds-font-family-code);
+  font-size: 11px;
+  text-align: right;
+}
+
+.cx-note {
+  margin: 0 0 8px;
+  color: var(--dsw-alias-label-tertiary);
+  font-size: 11px;
+  line-height: 16px;
+}
+
+.cx-error {
+  margin: 8px 0 0;
+  color: var(--dsw-alias-state-error, var(--dsw-alias-label-primary));
+  font-size: 11px;
+  line-height: 16px;
+}

@@ -42,6 +42,7 @@ The verification scripts read shipped CSS straight out of `app.asar`; a host upg
 | ②c | Conversation window edge: 0.5px hairline plus a 24px ambient shadow |
 | ②d | Right panel: hairline only on its left edge, shadow bleeds upward only; the dockkit 1px border is removed |
 | ②e | Right divider handle: center-darkest gradient on hover |
+| ⑱ | Settings card on the plugin manager's codex-ui bundle page: theme / accent / background / foreground / UI font / code font / translucent sidebar / contrast |
 
 ## Screenshots
 
@@ -65,12 +66,21 @@ npm run install:desktop    # desktop shell; restart the app afterwards
 npm run build              # regenerate theme.css and client.js from skins/codex-ink
 
 node scripts/install-plugin.mjs                              # dry run (web profile by default)
+node scripts/install-plugin.mjs --bundle --write              # register through dsh.profile.bundles and drop the redundant insert
 node scripts/build.mjs --check                               # report stale artifacts without writing
 ```
 
-The installer scopes the five stylesheets in `skins/codex-ink/` to `html[data-codex-ui]`, combines them with
-`src/client.template.js` into `client.js`, copies the result to `profiles/<name>/vendor/codex-ui`, creates the
-`node_modules/codex-ui` junction, and appends the insert entry to the profile `cordis.patch.yml`.
+The installer scopes the six stylesheets in `skins/codex-ink/` to `html[data-codex-ui]`, combines them with
+`src/client.template.js` (which inlines `src/override.js` and `src/settings-card.js`) into `client.js`, copies the
+result to `profiles/<name>/vendor/codex-ui`, creates the `node_modules/codex-ui` junction, and keeps exactly one
+registration path.
+
+Never use both registration paths at once — two rows share the id and the market check disables the plugin:
+
+| Path | How | Used by |
+|---|---|---|
+| bundle | the package name goes into the profile `package.json` `dsh.profile.bundles`; the package's own `cordis.patch.yml` inserts the entry | the desktop shell profile and the web profile (`--bundle`) |
+| insert | a hand-written `- insert:` in the profile `cordis.patch.yml` | throwaway verification profiles that skip pnpm install |
 
 The same stylesheets can be picked up by a skin loader:
 
@@ -84,15 +94,18 @@ node scripts/install-skin.mjs --write  # overwrite on drift
 | Path | Content |
 |---|---|
 | `index.js` `cordis.patch.yml` `package.json` | Host half and manifest |
-| `src/client.template.js` | Browser half template |
+| `src/client.template.js` | Browser half template (stylesheet, override layer, settings seat) |
+| `src/override.js` | Override-layer pure functions (no DOM; unit-tested by the repo checks) |
+| `src/settings-card.js` | The config card on the bundle page (inlined into `client.js` at build time) |
 | `src/build.mjs` | Scoping and artifact generation; the only implementation |
 | `theme.css` `client.js` | Generated from `skins/codex-ink/` by `src/build.mjs` |
-| `skins/codex-ink/` | Stylesheet sources (skin.css / patches.css / sidebar-align.css / window-shadow.css / composer.css) |
+| `skins/codex-ink/` | Stylesheet sources (skin.css / patches.css / sidebar-align.css / window-shadow.css / composer.css / settings.css) |
+| `docs/` | Plans and decisions |
 | `scripts/build.mjs` | Regenerate the artifacts; `--check` compares without writing |
 | `scripts/check-repo.mjs` | Host-free repository checks; the CI entry point |
 | `scripts/host-paths.mjs` | Resolves `app.asar`, the global `@deepseek-ai` modules and Chromium |
 | `scripts/install-plugin.mjs` `scripts/install-skin.mjs` | Installers |
-| `scripts/*-verify.mjs` `scripts/live-gui-probe.mjs` | Fixture verification and live probing |
+| `scripts/*-verify.mjs` `scripts/live-gui-probe.mjs` `scripts/settings-page-verify.mjs` | Fixture verification and live probing |
 | `assets/reference/` | Codex reference images |
 | `assets/screenshots/` | Verification output |
 | `.github/workflows/ci.yml` | CI |
@@ -108,6 +121,7 @@ node scripts/install-skin.mjs --write  # overwrite on drift
 | `node scripts/sidebar-align-verify.mjs` | Sidebar column alignment, 6 assertions | none |
 | `node scripts/hero-verify.mjs` | ⑬ ⑭ ⑰ and the focus ring, 8 assertions | none |
 | `node scripts/live-gui-probe.mjs --url <token URL>` | Real GUI: 10 assertions on shadows, both dividers, the model menu pending window | a running `dsh web` |
+| `node scripts/settings-page-verify.mjs --url <token URL>` | Real GUI: the card on the bundle page, its 8 rows, no override at defaults, switch and accent writes, survival across a reload — 13 assertions | a running `dsh web` with the plugin manager enabled |
 
 `npm run check` needs no host. The five fixture suites run locally: they need shipped CSS from `app.asar` plus a DOM
 rebuilt from the render code, read with `getComputedStyle`. Fixtures have no title bar, no real AppFrame grid and no
@@ -130,6 +144,40 @@ node scripts/live-gui-probe.mjs --url "http://127.0.0.1:3099/?token=..." --dpr 1
 
 The probe opens a new conversation before timing the pending window, and exits non-zero if an assertion fails.
 The token expires; after about half an hour requests return 401 and a restart is needed.
+
+## Settings page
+
+The config card on the plugin manager's bundle page (slot `plugins.bundle.config`, keyed by the **package name**
+`codex-ui`). In the desktop app: sidebar **Plugins** → **Installed** → `codex-ui` → the card on that page.
+Changes apply immediately; no restart needed.
+
+![Settings page](assets/screenshots/settings-page-accent.png)
+
+| Row | Config field | Default | Lands on |
+|---|---|---|---|
+| Theme | — (view state) | Light | which of the next three rows you edit |
+| Accent | `accentLight` / `accentDark` | empty = follow skin | `--dsw-alias-link`, `--dsw-codex-focus` |
+| Background | `surfaceLight` / `surfaceDark` | empty | `--dsw-alias-bg-base` |
+| Foreground | `inkLight` / `inkDark` | empty | `--dsw-alias-label-primary` |
+| UI font | `fontUi` | empty | `--dsw-font-family` |
+| Code font | `fontCode` | empty | `--ds-font-family-code` |
+| Translucent sidebar | `translucentSidebar` | off | sidebar fill and row fills become translucent |
+| Contrast | `contrastLight` / `contrastDark` | 45 / 60 | text tiers and the neutral alpha ladder |
+
+- All 11 fields are `.volatile()`: the settings service only projects volatile fields, and that is exactly how the
+  plugin manager knows the entry — no `Config`, no card.
+- **Empty means no override**: at the defaults the override layer emits an empty string and `data-codex-ui-theme` never
+  appears, so an untouched install looks byte-for-byte like 0.1.x (a repo check asserts this).
+- Overrides live in one runtime `<style>` whose selector carries one extra attribute (specificity +1), so sheet order
+  does not matter and `skins/*.css` is never touched.
+- Instant write, no save button; text inputs commit on Enter or blur and every write is read back to confirm it landed;
+  overridden rows show a badge and a Reset control.
+- The contrast slider is a **documented simplification**: the app lerps text towards ink in linear RGB and raises the
+  ramp by a constant; here the text tiers are mixed in the same direction and the hairline/neutral-tone family is scaled
+  (clamped to 0.5×–2×). Colored state and diff fills are excluded so the palette never leaks into the override layer.
+- The translucent sidebar has no window layer to reveal on the web, and in dark the sidebar shares the surface colour,
+  so it is invisible there — the switch therefore also turns the sidebar row fills translucent, otherwise it would be
+  completely silent in dark. Recorded as a gap, not presented as an equivalent.
 
 ## Measurements
 
@@ -159,11 +207,17 @@ Source: `assets/reference/codex-theme-light.png` and `codex-theme-dark.png` (the
 | Role | Light | Dark | Token |
 |---|---|---|---|
 | Accent | `#339CFF` | `#0169CC` | `--dsw-alias-link` |
-| Background | `#FFFFFF` | `#111111` | `--dsw-alias-bg-base` |
-| Foreground | `#1A1C1F` | `#FCFCFC` | `--dsw-alias-label-primary` |
-| Hover fill | `#F2F2F3` | `rgba(252,252,252,.06)` | `--dsw-codex-hover-fill` |
+| Background | `#FFFFFF` | `#181818` | `--dsw-alias-bg-base` |
+| Foreground | `#1A1C1F` | `#FFFFFF` | `--dsw-alias-label-primary` |
+| Hover fill | `#F2F2F3` | `rgba(255,255,255,.08)` | `--dsw-codex-hover-fill` |
 
-The dark ramp rises from `#111111`: sidebar `#171717`, layer 1 `#1f1f1f`, layer 2 `#2a2a2a`, layer 3 `#353535`.
+The light values come from the color picker screenshot `codex-theme-light.png`. **Since 0.2.0 the dark values come from
+the app's own defaults** (the `jdi` object inside `resources/app.asar`: `surface #181818`, `ink #ffffff`,
+`accent #339cff`) instead of the picker. The dark link stays on the app's text-link token `#0169CC`.
+
+The dark ramp rises from `#181818`: sidebar `#181818` (the same face as the surface, separated by the 0.5px hairline),
+layer 1 `#212121`, layer 2 `#282828`, layer 3 `#303030`; the alpha family moved from `rgba(252,252,252,·)` to
+`rgba(255,255,255,·)` (the app's dark `--alpha-base` is `#fff`).
 
 ### Sidebar colors
 
@@ -204,17 +258,21 @@ The Codex desktop app carries its webview CSS inside `resources/app.asar` (`webv
 
 Deliberate differences:
 
-- The dark base stays `#111111` from the Codex color picker. The app CSS resolves the dark surface to `--gray-900`
+- The dark base moved to the app default in 0.2.0: `jdi.dark.surface = #181818`, `jdi.dark.ink = #ffffff`, ramp
+  `#212121 / #282828 / #303030` (the app's gray-800 / gray-750 / gray-700). The 0.1.x picker values
+  `#111111 / #FCFCFC` are no longer used. For the record, the app CSS resolves the dark surface to `--gray-900`
   `#181818`; picker and CSS disagree, and the picker wins here.
-- The dark layer ramp (`#171717 / #1f1f1f / #2a2a2a / #353535`) is a derivation, not Codex's ramp. Codex's grays are
-  `#0d0d0d / #181818 / #212121 / #282828 / #303030 / #414141 / #4f4f4f / #5d5d5d / #afafaf / #ededed / #f3f3f3 / #f9f9f9 / #fff`.
 - The composer card radius is 25px as measured on `assets/reference/codex-composer-reference.png`. The app CSS gives
   `--radius-3xl` (20px) for the multi-line composer and 22px for the single-line one; the gap is the screenshot's
   device scale factor, which is not recorded.
 - The sidebar is 280px wide, set by the host layout. Codex clamps its own sidebar with
   `clamp(240px, 275px, min(520px, calc(100vw - 320px)))`.
-- Dark link text keeps `#0169cc`, which the app uses for `--color-token-text-link-foreground`; the app's own
-  `--color-text-accent` is `#99ceff` (`--blue-100`) in dark.
+- Dark link text keeps `#0169cc`, which the app uses for `--color-token-text-link-foreground`; dragging the accent
+  control on the settings page is now the way to get `#339CFF` there. The app's own `--color-text-accent` is
+  `#99ceff` (`--blue-100`) in dark.
+- The contrast slider is a documented simplification (see "Settings page"), not the app's `Rdi + zdi·contrast` blend.
+- For the record, the app's full gray ramp is
+  `#0d0d0d / #181818 / #212121 / #282828 / #303030 / #414141 / #4f4f4f / #5d5d5d / #afafaf / #ededed / #f3f3f3 / #f9f9f9 / #fff`.
 
 ## CI
 

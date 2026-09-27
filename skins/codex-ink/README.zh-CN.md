@@ -19,11 +19,11 @@ Skin v2 清单格式，可由皮肤加载器单独收录。
 ## 设计规则
 
 1. chrome 以墨色为主：按钮、链接、选中态都是墨色；浅色主题主按钮为白底 `#1A1C1F` 字，深色反转。唯一例外是焦点环，取 Codex `--color-border-focus`（`#339CFF`，深色 70%）。
-2. 灰阶承担层级。浅色 `#FFFFFF → #F1F1EF → #E5E5E5`；深色 `#111111 → #171717 → #1f1f1f → #2a2a2a → #353535`。
+2. 灰阶承担层级。浅色 `#FFFFFF → #F1F1EF → #E5E5E5`；深色 `#181818 → #212121 → #282828 → #303030`（侧栏与底色同面，分隔靠 0.5px 发丝线）。
 3. 浅色侧栏 `#EEF4F9`，激活行 `#E2E9ED`，悬停 `#E8EEF3`。
 4. 元信息（token 数、模型名、时间戳、徽标、路径、快捷键）用 `--ds-font-family-code`、11px、`.04em`/`.08em` 字距；`:lang(zh)` 下中文免字距与大写。
 5. 圆角与间距取自 `--dsw-radius-*` 与 `--dsw-space-*`。卡片用 0.5px 描边代替投影。
-6. 动效为 100 / 160 / 240ms，缓动 `cubic-bezier(.3,.7,.4,1)`；`prefers-reduced-motion` 下直接跳到终态。
+6. 动效为 150 / 200 / 300ms，缓动 `cubic-bezier(.4, 0, .2, 1)`（取自 Codex 应用的 `--transition-duration-*` 与 `--default-transition-timing-function`）；`prefers-reduced-motion` 下直接跳到终态。
 7. 彩色白名单：state 三色、diff 红绿，以及徽标底色（state 色 8% 到 16% 透明度）。任务板 6 档 tag tone 归到 state 三色加墨色与灰色。
 
 ## 第三方插件的令牌契约

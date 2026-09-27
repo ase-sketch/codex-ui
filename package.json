@@ -1,6 +1,6 @@
 {
   "name": "codex-ui",
-  "version": "0.1.2",
+  "version": "0.2.0",
   "private": true,
   "description": "DSH Web 的 Codex 化界面插件 · A Codex-style interface plugin for DSH Web",
   "license": "MIT",
@@ -53,7 +53,8 @@
     "client": {
       "platform": "web",
       "inject": [
-        "@deepseek-ai/dsh-client-ui-slots"
+        "@deepseek-ai/dsh-client-ui-slots",
+        "@deepseek-ai/dsh-client-ui-settings"
       ]
     }
   }

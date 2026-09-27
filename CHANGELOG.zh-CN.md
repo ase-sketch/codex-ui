@@ -2,6 +2,47 @@
 
 [English](CHANGELOG.md)
 
+## 0.2.0 - 2026-09-27
+
+插件管理里那张设置页，加上深色基面按 Codex 应用自身的默认值重锚。
+
+### 设置页（座位 `plugins.bundle.config`）
+
+- 官方插件管理的组合包页上新增配置卡：主题 / 强调色 / 背景 / 前景 / UI 字体 / 代码字体 / 半透明侧边栏 / 对比度。
+  座位键是**包名** `codex-ui`，表单命名空间是 **profile 条目 id** `codex-ui`，两者不能混。
+- 宿主半新增 `export const Config`：11 个字段全部 `.default(x).volatile()`。设置服务只投影标了 `.volatile()` 的字段，
+  也只为带 volatile 字段的条目暴露一份表单 —— 没有它，组合包页上就没有这张卡。
+- 覆盖层是纯函数（`src/override.js`）：默认值下输出空串、不打 `data-codex-ui-theme`，装上不动一个字，
+  外观与 0.1.2 逐字节相同；有覆盖时写一条运行时 `<style>`，选择器比皮肤多一个属性（特异性 +1），
+  `skins/*.css` 一个字不动。
+- 改一下即写、没有保存按钮；文本框回车或失焦提交，写后回读确认落地；已覆盖的行有徽标与「重置」。
+- 对比度按 Codex 默认档位归一（亮 45 / 暗 60 即原样）：文本档位往 ink 方向混合、中性 alpha 阶梯按比例缩放
+  （夹在 0.5×–2×）。**这是简化实现**，没有复刻应用的 `Rdi + zdi·contrast` 线性混合常量，README 如实写明。
+- 半透明侧边栏在 Web 上没有窗口层可透，深色下侧栏又与内容同面；开关因此同时把侧栏行填充转半透明，
+  免得整个开关在深色下无声。差距如实记录，不当作等价实现。
+- 新增 `skins/codex-ink/settings.css`（只取 `--dsw-alias-*` 令牌，零彩色）与 `scripts/settings-page-verify.mjs`
+  （真 GUI 13 项断言）。
+
+### 深色基面
+
+- 背景 `#111111 → #181818`、前景 `#FCFCFC → #FFFFFF`、侧栏 `#171717 → #181818`（与 surface 同面）、
+  层1/2/3 `#1f1f1f / #2a2a2a / #353535 → #212121 / #282828 / #303030`、alpha 家族
+  `rgba(252,252,252,·) → rgba(255,255,255,·)`。取值来自应用 `resources/app.asar` 里的 `jdi`
+  （`surface #181818` / `ink #ffffff`）与生成灰阶；0.1.x 用的取色面板三值不再使用。深色链接仍是应用的
+  text-link 令牌 `#0169CC`。
+- 皮肤审计 36 组 WCAG 重跑全过（深色底变浅后比值上升，最低一组 4.35）。
+
+### 工程
+
+- `src/build.mjs` 增加两个占位符：覆盖层模块（构建期去掉 `export` 包成 IIFE）与设置卡片；
+  出现不支持的 `export` 形式直接抛，不静默漏导出。
+- `scripts/check-repo.mjs` 从 13 项加到 19 项：Config 字段齐全且全 volatile、默认值不产生 CSS、色值/字体栈校验、
+  对比度恒等与上下限、覆盖层与 `skin.css` 逐条对账（37 条）、产物里确实带上设置页与覆盖层。
+- `scripts/install-plugin.mjs` 新增 `--bundle`：把包名写进 `dsh.profile.bundles` 并清掉冗余 `- insert:` 块
+  （两条注册路径同时存在会造成重复 loader 条目 id）。web profile 已切到 bundle 注册。
+- 修一个真 bug：设置卡片里 `jsxs(type, props, children)` 的第三参其实是 **key**，children 必须放进 props，
+  否则渲染出空元素。已加体检断言防复发。
+
 ## 0.1.2 - 2026-09-26
 
 按 Codex 桌面应用自身的令牌对齐（应用 `26.727.4816.0`，`resources/app.asar` → `webview/assets/app-*.css`）。

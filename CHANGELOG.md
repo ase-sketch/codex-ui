@@ -2,6 +2,52 @@
 
 [简体中文](CHANGELOG.zh-CN.md)
 
+## 0.2.0 - 2026-09-27
+
+A settings page inside the plugin manager, plus the dark base re-anchored on the Codex app's own defaults.
+
+### Settings page (slot `plugins.bundle.config`)
+
+- A config card on the plugin manager's bundle page: theme / accent / background / foreground / UI font / code font /
+  translucent sidebar / contrast. The seat key is the **package name** `codex-ui`; the form namespace is the
+  **profile entry id** `codex-ui`. They are not the same string.
+- The host half exports `Config`: 11 fields, each `.default(x).volatile()`. The settings service projects volatile
+  fields only and exposes a form only for entries that have them — no `Config`, no card.
+- The override layer is a pure function (`src/override.js`): at the defaults it emits an empty string and never sets
+  `data-codex-ui-theme`, so an untouched install looks byte-for-byte like 0.1.2. When something is overridden it writes
+  one runtime `<style>` whose selector carries one extra attribute (specificity +1); `skins/*.css` is never touched.
+- Instant write, no save button; text inputs commit on Enter or blur and every write is read back; overridden rows show
+  a badge and a Reset control.
+- Contrast is normalised to the Codex defaults (45 light / 60 dark means unchanged): text tiers mix towards ink and the
+  neutral alpha ladder is scaled (clamped to 0.5×–2×). **This is a simplification** — the app's `Rdi + zdi·contrast`
+  blend is not reproduced, and the README says so.
+- The translucent sidebar has no window layer to reveal on the web and shares the surface colour in dark, so the switch
+  also turns the sidebar row fills translucent. Recorded as a gap, not as an equivalent.
+- New `skins/codex-ink/settings.css` (tokens only, zero colors) and `scripts/settings-page-verify.mjs`
+  (13 assertions against a real GUI).
+
+### Dark base
+
+- Background `#111111 → #181818`, foreground `#FCFCFC → #FFFFFF`, sidebar `#171717 → #181818` (same face as the
+  surface), layers 1/2/3 `#1f1f1f / #2a2a2a / #353535 → #212121 / #282828 / #303030`, alpha family
+  `rgba(252,252,252,·) → rgba(255,255,255,·)`. Values come from the `jdi` defaults inside the app
+  `resources/app.asar` (`surface #181818` / `ink #ffffff`) and the generated ramp; the 0.1.x picker values are gone.
+  The dark link stays on the app's text-link token `#0169CC`.
+- The 36 WCAG pairs in the skin audit all pass again (ratios rise as the dark base lightens; the lowest is 4.35).
+
+### Engineering
+
+- `src/build.mjs` gained two placeholders: the override module (exports stripped at build time, wrapped in an IIFE) and
+  the settings card. An unsupported `export` form throws instead of silently dropping a binding.
+- `scripts/check-repo.mjs` went from 13 checks to 19: Config fields complete and all volatile, defaults emit no CSS,
+  hex/font-stack validation, contrast identity and clamps, a 37-entry reconciliation against `skin.css`, and the
+  presence of the settings page and override layer in the built artifacts.
+- `scripts/install-plugin.mjs` gained `--bundle`: it writes the package name into `dsh.profile.bundles` and removes a
+  redundant `- insert:` block (both paths at once produce a duplicate loader entry id). The web profile now registers
+  through bundles.
+- Fixed a real bug: in the settings card `jsxs(type, props, children)` takes a **key** as its third argument, so
+  children must live in props — otherwise React renders an empty element. A repo check now guards against it.
+
 ## 0.1.2 - 2026-09-26
 
 Aligned to the Codex desktop app's own tokens (app `26.727.4816.0`, `resources/app.asar` → `webview/assets/app-*.css`).

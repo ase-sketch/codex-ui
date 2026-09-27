@@ -157,31 +157,33 @@ body {
 }
 
 /* ── 暗色主题 ─────────────────────────────────────────────────────────────
-   基准 = Codex 深色取色面板：背景 #111111 / 前景 #FCFCFC / 强调 #0169CC。
-   层级自基准向上抬：侧栏 #171717 → 层1 #1f1f1f → 层2 #2a2a2a → 层3 #353535。
-   侧栏高于内容（浅色下侧栏低于内容），黑底压不到 #111111 以下，故取镜像关系。 */
+   基准 = Codex 应用自身的深色默认值（app.asar 的 jdi）：surface #181818 / ink #ffffff /
+   accent #339CFF。0.1.2 及以前用的是取色面板那三值（#111111 / #FCFCFC / #0169CC），
+   已按应用默认值重锚；链接色仍是应用的 text-link 令牌 #0169CC，未随 accent 走。
+   层级自基准向上抬：侧栏 #181818（与 surface 同面，分隔交给 0.5px 发丝线）→
+   层1 #212121 → 层2 #282828 → 层3 #303030。alpha 家族随之由 252 抬到 255
+   （Codex 深色 --alpha-base = #fff）。 */
 body[data-ds-dark-theme] {
   color-scheme: dark;
 
-  /* 背景取 Codex 深色主题的「背景」实测值 #111111。侧栏 #171717 未动 —— 取色面板
-     只给了背景/前景/强调三值，侧栏是推导值。 */
-  --dsw-alias-bg-base: #111111;
-  --dsw-alias-bg-sidebar: #171717;
-  --dsw-alias-bg-layer-1: #1f1f1f;
-  --dsw-alias-bg-layer-2: #2a2a2a;
-  --dsw-alias-bg-layer-3: #353535;
-  --dsw-alias-bg-overlay: rgba(17, 17, 17, 0.88);
-  --dsw-alias-bg-module-platform: #1a1a1a;
-  --dsw-alias-bg-multi-select: #353535;
-  --dsw-alias-bg-skeleton: rgba(252, 252, 252, 0.07);
+  /* 背景/侧栏同取 jdi.dark.surface #181818 —— Codex 深色里侧栏与内容同一个面。 */
+  --dsw-alias-bg-base: #181818;
+  --dsw-alias-bg-sidebar: #181818;
+  --dsw-alias-bg-layer-1: #212121;
+  --dsw-alias-bg-layer-2: #282828;
+  --dsw-alias-bg-layer-3: #303030;
+  --dsw-alias-bg-overlay: rgba(24, 24, 24, 0.88);
+  --dsw-alias-bg-module-platform: #1f1f1f;
+  --dsw-alias-bg-multi-select: #303030;
+  --dsw-alias-bg-skeleton: rgba(255, 255, 255, 0.07);
 
-  --dsw-alias-border-l1: rgba(252, 252, 252, 0.08);
-  --dsw-alias-border-l2: rgba(252, 252, 252, 0.14);
-  --dsw-alias-border-l3: rgba(252, 252, 252, 0.2);
-  --dsw-alias-border-l4: rgba(252, 252, 252, 0.26);
-  --dsw-alias-border-l2-darkmode-thin: rgba(252, 252, 252, 0.1);
+  --dsw-alias-border-l1: rgba(255, 255, 255, 0.08);
+  --dsw-alias-border-l2: rgba(255, 255, 255, 0.14);
+  --dsw-alias-border-l3: rgba(255, 255, 255, 0.2);
+  --dsw-alias-border-l4: rgba(255, 255, 255, 0.26);
+  --dsw-alias-border-l2-darkmode-thin: rgba(255, 255, 255, 0.1);
 
-  --dsw-alias-label-primary: #fcfcfc;
+  --dsw-alias-label-primary: #ffffff;
   --dsw-alias-label-primary-dimmed: #b4b4b4;
   --dsw-alias-label-primary-inverted: #0d0d0d;
   --dsw-alias-label-primary-foreground: #0d0d0d;
@@ -199,38 +201,38 @@ body[data-ds-dark-theme] {
 
   --dsw-alias-button-primary-fill: #ffffff;
   --dsw-alias-button-primary-hover: #d9d9d9;
-  --dsw-alias-button-primary-dimmed: #2a2a2a;
+  --dsw-alias-button-primary-dimmed: #282828;
   --dsw-alias-button-contrast-fill: #ececec;
-  --dsw-alias-button-elevated-fill: #1f1f1f;
-  --dsw-alias-button-floating-fill: #1a1a1a;
-  --dsw-alias-button-floating-hover: #2a2a2a;
-  --dsw-alias-button-ghost-active-fill: #353535;
-  --dsw-alias-button-ghost-active-hover: #3f3f3f;
+  --dsw-alias-button-elevated-fill: #212121;
+  --dsw-alias-button-floating-fill: #1f1f1f;
+  --dsw-alias-button-floating-hover: #282828;
+  --dsw-alias-button-ghost-active-fill: #303030;
+  --dsw-alias-button-ghost-active-hover: #383838;
   --dsw-alias-button-ghost-active-border: #7e7e7e;
   --dsw-alias-button-info-fill: #ffffff;
   --dsw-alias-button-info-hover: #d9d9d9;
-  --dsw-alias-button-tool-bar-fill: rgba(252, 252, 252, 0.22);
-  --dsw-alias-button-tool-bar-fill-invisible: rgba(252, 252, 252, 0.16);
-  --dsw-alias-button-tool-bar-hover: rgba(252, 252, 252, 0.28);
+  --dsw-alias-button-tool-bar-fill: rgba(255, 255, 255, 0.22);
+  --dsw-alias-button-tool-bar-fill-invisible: rgba(255, 255, 255, 0.16);
+  --dsw-alias-button-tool-bar-hover: rgba(255, 255, 255, 0.28);
 
-  --dsw-alias-interactive-bg-hover: rgba(252, 252, 252, 0.06);
+  --dsw-alias-interactive-bg-hover: rgba(255, 255, 255, 0.06);
   /* 深色悬停底：Codex --color-background-button-secondary-hover = --gray-0 8% = #ffffff14。 */
   --dsw-codex-hover-fill: rgba(255, 255, 255, 0.08);
   /* 焦点环：Codex 深色 --color-border-focus = --blue-300 70%，即 #339cffb3。 */
   --dsw-codex-focus: rgba(51, 156, 255, 0.7);
-  --dsw-alias-interactive-bg-active: rgba(252, 252, 252, 0.1);
-  --dsw-alias-interactive-bg-hover-solid: #2a2a2a;
-  --dsw-alias-interactive-bg-hover-accent: rgba(252, 252, 252, 0.08);
+  --dsw-alias-interactive-bg-active: rgba(255, 255, 255, 0.1);
+  --dsw-alias-interactive-bg-hover-solid: #282828;
+  --dsw-alias-interactive-bg-hover-accent: rgba(255, 255, 255, 0.08);
   --dsw-alias-interactive-bg-hover-danger: rgba(248, 81, 73, 0.12);
 
-  --dsw-alias-markdown-code-block: #1a1a1a;
+  --dsw-alias-markdown-code-block: #1f1f1f;
   --dsw-alias-markdown-code-block-banner: #141414;
-  --dsw-alias-markdown-inline-code: #2a2a2a;
-  --dsw-alias-markdown-code-segment-selected: #353535;
-  --dsw-alias-markdown-code-segment-unselected: #1a1a1a;
-  --dsw-alias-markdown-citation: #1f1f1f;
-  --dsw-alias-markdown-placeholder: #2a2a2a;
-  --dsw-alias-markdown-tag: #2a2a2a;
+  --dsw-alias-markdown-inline-code: #282828;
+  --dsw-alias-markdown-code-segment-selected: #303030;
+  --dsw-alias-markdown-code-segment-unselected: #1f1f1f;
+  --dsw-alias-markdown-citation: #212121;
+  --dsw-alias-markdown-placeholder: #282828;
+  --dsw-alias-markdown-tag: #282828;
 
   --dsw-alias-state-success-primary: #3fb950;
   --dsw-alias-state-success-secondary: #56d364;
@@ -243,7 +245,7 @@ body[data-ds-dark-theme] {
   --dsw-alias-state-warn-tertiary: rgba(210, 153, 34, 0.16);
   --dsw-alias-state-warn-label: #d29922;
   --dsw-alias-state-business-primary: #ececec;
-  --dsw-alias-state-business-tertiary: rgba(252, 252, 252, 0.12);
+  --dsw-alias-state-business-tertiary: rgba(255, 255, 255, 0.12);
   --dsw-alias-state-idle-primary: #7e7e7e;
 
   --dsw-alias-code-diff-added: rgba(63, 185, 80, 0.14);
@@ -256,33 +258,33 @@ body[data-ds-dark-theme] {
   --dsw-alias-file-diff-deleted-marker: #fa423e;
 
   --dsw-alias-bg-mask-drop: rgba(39, 39, 48, 0.7);
-  --dsw-alias-toast-bg: #2a2a2a;
-  --dsw-alias-tooltip-bg: #1f1f1f;
+  --dsw-alias-toast-bg: #282828;
+  --dsw-alias-tooltip-bg: #212121;
   --dsw-alias-tooltip-fg: #ececec;
-  --dsw-alias-hovercard-bg: #1f1f1f;
+  --dsw-alias-hovercard-bg: #212121;
 
   --dsw-alias-scrollbar-bg-l1: rgba(160, 160, 160, 0.3);
   --dsw-alias-scrollbar-bg-l2: rgba(160, 160, 160, 0.5);
-  --dsw-alias-scrollbar-hover-l1: rgba(252, 252, 252, 0.35);
-  --dsw-alias-scrollbar-hover-l2: rgba(252, 252, 252, 0.5);
+  --dsw-alias-scrollbar-hover-l1: rgba(255, 255, 255, 0.35);
+  --dsw-alias-scrollbar-hover-l2: rgba(255, 255, 255, 0.5);
 
-  --dsw-specific-sidebar-fill: #171717;
-  --dsw-specific-sidebar-nav-item-hover: #1f1f1f;
-  --dsw-specific-sidebar-nav-item-active: #2a2a2a;
-  --dsw-specific-sidebar-nav-item-active-accent: rgba(252, 252, 252, 0.14);
-  --dsw-specific-input-major: #1f1f1f;
-  --dsw-specific-login-input: #1a1a1a;
-  --dsw-specific-menu: rgba(17, 17, 17, 0.88);
-  --dsw-specific-selector: #2a2a2a;
-  --dsw-specific-bubble: #1f1f1f;
-  --dsw-specific-bubble-highlight: #2a2a2a;
-  --dsw-specific-tip: #1a1a1a;
+  --dsw-specific-sidebar-fill: #181818;
+  --dsw-specific-sidebar-nav-item-hover: #212121;
+  --dsw-specific-sidebar-nav-item-active: #282828;
+  --dsw-specific-sidebar-nav-item-active-accent: rgba(255, 255, 255, 0.14);
+  --dsw-specific-input-major: #212121;
+  --dsw-specific-login-input: #1f1f1f;
+  --dsw-specific-menu: rgba(24, 24, 24, 0.88);
+  --dsw-specific-selector: #282828;
+  --dsw-specific-bubble: #212121;
+  --dsw-specific-bubble-highlight: #282828;
+  --dsw-specific-tip: #1f1f1f;
 
   --dsw-shadow-lv1: 0 1px 2px rgba(0, 0, 0, 0.4);
   --dsw-shadow-lv2: 0 2px 8px rgba(0, 0, 0, 0.5);
   --dsw-shadow-lv3: 0 8px 24px rgba(0, 0, 0, 0.6);
   --dsw-linear-gradient-think: linear-gradient(180deg, #212121 20.19%, rgba(33, 33, 33, 0) 100%);
-  --dsw-linear-think-select: linear-gradient(180deg, #1a1a1a 20.19%, rgba(42, 42, 42, 0) 100%);
+  --dsw-linear-think-select: linear-gradient(180deg, #1f1f1f 20.19%, rgba(40, 40, 40, 0) 100%);
 }
 
 /* ── 官方缺失的令牌层：空间 / 圆角 / 字阶 / 动效 ─────────────────────────── */
@@ -372,8 +374,8 @@ body * {
 
 body[data-ds-dark-theme],
 body[data-ds-dark-theme] * {
-  --dsw-elevation-stroke-color: rgba(252, 252, 252, 0.09);
-  --dsw-elevation-stroke: 0 0 0 0.5px rgba(252, 252, 252, 0.09);
+  --dsw-elevation-stroke-color: rgba(255, 255, 255, 0.09);
+  --dsw-elevation-stroke: 0 0 0 0.5px rgba(255, 255, 255, 0.09);
   --dsw-elevation-panel: var(--dsw-elevation-stroke);
   --dsw-elevation-prominent: var(--dsw-elevation-stroke), 0 4px 16px rgba(0, 0, 0, 0.5);
   --dsw-elevation-soft: var(--dsw-elevation-stroke), 0 8px 28px rgba(0, 0, 0, 0.55);

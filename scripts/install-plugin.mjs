@@ -13,6 +13,7 @@
  *   node scripts/install-plugin.mjs                       # 只读体检（默认 web profile）
  *   node scripts/install-plugin.mjs --write               # 落盘
  *   node scripts/install-plugin.mjs --profile desktop --write
+ *   node scripts/install-plugin.mjs --bundle --write      # 把包名写进 dsh.profile.bundles（并清掉冗余 insert）
  *
  * --profile <name> 选目标 profile（默认 web）。桌面壳（Electron）的 profile 名是
  * desktop；它由 Electron 独占，CLI 的 `dsh plugin --profile desktop` 会被硬拒绝，
@@ -43,6 +44,43 @@ const PROFILE_PKG = join(PROFILE, 'package.json');
 const SHIPPED = ['package.json', 'index.js', 'cordis.patch.yml', 'client.js', 'theme.css'];
 const PATCH = join(PROFILE, 'cordis.patch.yml');
 const write = process.argv.includes('--write');
+/** --bundle：把包名写进 profile 的 dsh.profile.bundles，而不是往 patch 里手写 insert。 */
+const wantBundle = process.argv.includes('--bundle');
+/* 去 BOM：PowerShell 的 Set-Content -Encoding UTF8 会写 BOM，JSON.parse 见到它会直接抛。 */
+let pkgText = fs.readFileSync(PROFILE_PKG, 'utf8').replace(/^\uFEFF/, '');
+
+/**
+ * 把 codex-ui 追加进 dsh.profile.bundles，保留原文件的缩进与顺序。
+ * @param text - profile package.json 原文。
+ * @returns 新文本；已经在数组里则返回 null。
+ */
+function addToBundles(text) {
+  const bundles = JSON.parse(text)?.dsh?.profile?.bundles;
+  if (!Array.isArray(bundles)) throw new Error('profile 没有 dsh.profile.bundles 数组：' + PROFILE_PKG);
+  if (bundles.includes('codex-ui')) return null;
+  const open = text.indexOf('[', text.indexOf('"bundles"'));
+  let depth = 0;
+  let i = open;
+  for (; i < text.length; i += 1) {
+    if (text[i] === '[') depth += 1;
+    else if (text[i] === ']') { depth -= 1; if (depth === 0) break; }
+  }
+  /* 闭合方括号前的空白先摘掉：数组末尾本来就没有逗号，靠它判断要不要补。 */
+  const head = text.slice(0, i).trimEnd();
+  const tail = text.slice(i);
+  const next = head + (head.endsWith('[') ? '' : ',') + '\n        "codex-ui"\n      ' + tail;
+  JSON.parse(next); /* 兜底：写坏 JSON 就当场抛，别落盘 */
+  return next;
+}
+if (wantBundle) {
+  if (!write) {
+    console.log('BUNDLE  : 计划把 codex-ui 写进 dsh.profile.bundles（--write 才落盘）');
+  } else {
+    const next = addToBundles(pkgText);
+    if (next === null) console.log('BUNDLE  : 已在 dsh.profile.bundles 中，跳过');
+    else { fs.writeFileSync(PROFILE_PKG, next); pkgText = next; console.log('BUNDLE  : 已写入 dsh.profile.bundles'); }
+  }
+}
 
 /* ── 生成 ──────────────────────────────────────────────────────────────── */
 /* 作用域化与拼装只有一份实现，在 src/build.mjs；安装产物与 CI 校验同源。 */
@@ -70,9 +108,7 @@ const patchText = fs.readFileSync(PATCH, 'utf8');
  */
 const inBundles = (() => {
   try {
-    /* 去 BOM：PowerShell 的 Set-Content -Encoding UTF8 会写 BOM，JSON.parse 见到它会直接抛。 */
-    const pkg = JSON.parse(fs.readFileSync(PROFILE_PKG, 'utf8').replace(/^\uFEFF/, ''));
-    return (pkg?.dsh?.profile?.bundles ?? []).includes('codex-ui');
+    return (JSON.parse(pkgText)?.dsh?.profile?.bundles ?? []).includes('codex-ui');
   } catch {
     return false;
   }
@@ -123,9 +159,7 @@ if (linkTarget !== INSTALL_DIR) {
 }
 
 // profile package.json 声明 link 依赖（让将来的 pnpm install 能重建这个链接）
-/* 去 BOM：PowerShell 的 Set-Content -Encoding UTF8 会写 BOM，JSON.parse 见到它会直接抛。 */
-const pkgText = fs.readFileSync(PROFILE_PKG, 'utf8').replace(/^\uFEFF/, '');
-if (!pkgText.includes('"codex-ui"')) {
+if (!pkgText.includes('"dependencies"') || !/"codex-ui"\s*:/.test(pkgText)) {
   /* 空 dependencies 时不能补尾逗号，否则写出非法 JSON —— 分两支插。 */
   const EMPTY_DEPS = /("dependencies"\s*:\s*\{)\s*\}/;
   const patched = EMPTY_DEPS.test(pkgText)

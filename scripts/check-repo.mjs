@@ -13,7 +13,8 @@ import fs from 'node:fs';
 import { execFileSync } from 'node:child_process';
 import { dirname, join, relative } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { build, ATTR, PLUGIN_DIR, SKIN_DIR } from '../src/build.mjs';
+import { build, ATTR, PLUGIN_DIR, SKIN_DIR, OVERRIDE_FILE, SETTINGS_FILE, stripExports } from '../src/build.mjs';
+import * as override from '../src/override.js';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 let failed = 0;
@@ -114,6 +115,101 @@ check('theme.css 花括号配平', () => {
     assert(depth >= 0, '出现多余的 }');
   }
   assert(depth === 0, '有 ' + depth + ' 个 { 未闭合');
+});
+
+/* ── 6b. 设置页契约（无宿主，纯函数 + 漂移对账）─────────────────────────── */
+/** 从 index.js 里取 Config 的字段名与是否标了 volatile。 */
+const configFields = (() => {
+  const text = fs.readFileSync(join(PLUGIN_DIR, 'index.js'), 'utf8');
+  const body = /export const Config = Schema\.object\(\{([\s\S]*?)\n\}\)/.exec(text);
+  if (body === null) throw new Error('index.js 里找不到 Config schema');
+  return body[1].split('\n')
+    .map((line) => /^\s*([A-Za-z][A-Za-z0-9]*):\s*Schema\.(\w+)\(\)(.*)$/.exec(line))
+    .filter((m) => m !== null)
+    .map((m) => ({ name: m[1], type: m[2], volatile: m[3].includes('.volatile()') }));
+})();
+/** 卡片与覆盖层用到的字段名（写死的期望表，改一处忘另一处会在这里断）。 */
+const EXPECTED_FIELDS = [
+  'accentLight', 'accentDark', 'surfaceLight', 'surfaceDark', 'inkLight', 'inkDark',
+  'fontUi', 'fontCode', 'translucentSidebar', 'contrastLight', 'contrastDark',
+];
+check('Config 的 ' + EXPECTED_FIELDS.length + ' 个字段齐全且都是 volatile', () => {
+  const names = configFields.map((f) => f.name);
+  assert(names.length === EXPECTED_FIELDS.length, '字段数 ' + names.length + '：' + names.join(','));
+  for (const want of EXPECTED_FIELDS) assert(names.includes(want), '缺字段 ' + want);
+  for (const f of configFields) assert(f.volatile, f.name + ' 没有 .volatile()：设置服务不会投影它，插件管理页也就不认这个条目');
+  return names.join(' ');
+});
+check('覆盖层：默认值不产生任何 CSS', () => {
+  assert(override.themeOverrideCss({}) === '', '空值下输出了 CSS，装上就会改外观');
+  assert(override.themeOverrideCss({ translucentSidebar: false, contrastLight: 45, contrastDark: 60 }) === '', '默认档位下输出了 CSS');
+  return '空串';
+});
+check('覆盖层：色值与字体栈校验', () => {
+  assert(override.isHex('#339cff') && override.isHex('#ABCDEF'), '合法十六进制被拒');
+  for (const bad of ['339cff', '#339c', '#339cfff', 'red', '', ' #339cff; }', null, undefined]) assert(!override.isHex(bad), '非法色值被接受：' + String(bad));
+  assert(override.isFontStack('"Segoe UI", sans-serif'), '合法字体栈被拒');
+  for (const bad of ['', 'a;}', 'url(x)', 'a'.repeat(300), 'x<y']) assert(!override.isFontStack(bad), '非法字体栈被接受：' + String(bad).slice(0, 20));
+  return 'ok';
+});
+check('覆盖层：对比度在默认档位是恒等变换', () => {
+  for (const [theme, base] of [['light', 45], ['dark', 60]]) {
+    const identity = override.contrastEffect(base, theme);
+    assert(identity.mix === 0 && identity.scale === 1, theme + ' 默认档位不是恒等：' + JSON.stringify(identity));
+    const high = override.contrastEffect(100, theme);
+    assert(high.scale > 1 && high.mix > 0, theme + ' 高对比度没有抬升');
+    const low = override.contrastEffect(0, theme);
+    assert(low.scale < 1 && low.mix < 0, theme + ' 低对比度没有压低');
+    assert(low.scale >= override.SCALE_RANGE[0], theme + ' 缩放越界');
+  }
+  return '恒等 + 上下限';
+});
+/** 从 skin.css 的某个主题区块里取一个 token 的字面值。 */
+const skinBlocks = (() => {
+  const lines = fs.readFileSync(join(SKIN_DIR, 'skin.css'), 'utf8').split('\n');
+  const darkAt = lines.findIndex((l) => l.trim().startsWith('body[data-ds-dark-theme]'));
+  assert(darkAt > 0, 'skin.css 里找不到暗色区块');
+  const light = lines.slice(0, darkAt).join('\n');
+  const dark = lines.slice(darkAt).join('\n');
+  return { light, dark };
+})();
+check('覆盖层与皮肤对账：文本档位与 alpha 阶梯逐条一致', () => {
+  const hex = (block, token) => {
+    const m = new RegExp('\\' + token + ':\\s*(#[0-9a-fA-F]{6})').exec(block);
+    return m === null ? null : m[1].toLowerCase();
+  };
+  const rgba = (block, token) => {
+    const m = new RegExp('\\' + token + ':\\s*rgba\\(([^)]+)\\)').exec(block);
+    return m === null ? null : m[1].replace(/\s/g, '');
+  };
+  const drift = [];
+  for (const theme of ['light', 'dark']) {
+    const block = skinBlocks[theme];
+    for (const [token, value] of Object.entries(override.LABEL_TIERS[theme])) {
+      const found = hex(block, token);
+      if (found !== value.toLowerCase()) drift.push(theme + ' ' + token + ' 期望 ' + value + ' 实为 ' + found);
+    }
+    const rgb = theme === 'light' ? '13,13,13' : '255,255,255';
+    for (const [token, alpha] of Object.entries(override.ALPHA_LADDER[theme])) {
+      const found = rgba(block, token);
+      if (found !== rgb + ',' + alpha) drift.push(theme + ' ' + token + ' 期望 rgba(' + rgb + ',' + alpha + ') 实为 ' + rgba(block, token));
+    }
+  }
+  assert(drift.length === 0, drift.join('\n     '));
+  const count = Object.keys(override.LABEL_TIERS.light).length + Object.keys(override.LABEL_TIERS.dark).length
+    + Object.keys(override.ALPHA_LADDER.light).length + Object.keys(override.ALPHA_LADDER.dark).length;
+  return count + ' 条';
+});
+check('产物里确实带上了设置页与覆盖层', () => {
+  const clientJs = fs.readFileSync(join(PLUGIN_DIR, 'client.js'), 'utf8');
+  for (const need of ['plugins.bundle.config', 'CodexUiSettingsCard', 'registerSettingsCard', '__override', 'data-codex-ui-theme']) {
+    assert(clientJs.includes(need), 'client.js 里缺 ' + need);
+  }
+  const stripped = stripExports(fs.readFileSync(OVERRIDE_FILE, 'utf8'));
+  assert(stripped.includes('function themeOverrideCss'), 'override.js 去掉 export 后丢了函数');
+  const card = fs.readFileSync(SETTINGS_FILE, 'utf8');
+  assert(!/jsxs\('[a-z]+', \{[^}]*\}, \[/.test(card) && !/jsxs\('[a-z]+', \{ className: '[^']*', key \}, \[/.test(card), 'settings-card.js 又把 children 传成了第三个参数（jsx 运行时那里是 key）');
+  return 'client.js ' + clientJs.length + ' B';
 });
 
 /* ── 7. 文档成对 ──────────────────────────────────────────────────────── */

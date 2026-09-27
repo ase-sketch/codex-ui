@@ -1,19 +1,27 @@
 /**
  * codex-ui — Browser half（唯一样式源是 skins/codex-ink，经 src/build.mjs 生成；本文件是模板，勿手改）。
  *
- * 职责：把 <workbench>/skins/codex-ink 的整套 Codex 化样式（L1/L2 令牌 + L3 组件层）
- * 以作用域 html[data-codex-ui] 注入到文档，并在卸载时完整收回。
+ * 职责三件：
+ *   1. 把 <workbench>/skins/codex-ink 的整套 Codex 化样式（L1/L2 令牌 + L3 组件层 + 设置页层）
+ *      以作用域 html[data-codex-ui] 注入到文档，并在卸载时完整收回；
+ *   2. 把设置页的取值渲染成一层覆盖（多一个属性 ⇒ 特异性压过皮肤，源样式一个字不动）；
+ *   3. 在官方插件管理的组合包页（座位 plugins.bundle.config）注册那张配置卡。
  * 不依赖 skin-center / dsh-web-all：样式文本随本文件一起下发，无外部请求。
  */
 window.__ModuleLoader__.load({
   id: 'codex-ui',
   factory: (require) => {
-    /** 插件 id：style 标签归属标记。 */
+    /** 插件 id：style 标签归属标记，同时也是组合包座位的键。 */
     const PLUGIN_ID = 'codex-ui';
     /** 作用域根属性：所有规则都挂在它下面，卸载即整层失效。 */
     const ROOT_ATTR = 'data-codex-ui';
     /** 生成期注入的样式表文本。 */
     const CSS = /*__CODEX_UI_CSS__*/ null;
+    /** 生成期注入的覆盖层模块（源：src/override.js）。 */
+    const __override = /*__CODEX_UI_OVERRIDE__*/ null;
+    /* 生成期注入的设置卡片（源：src/settings-card.js）。 */
+    /*__CODEX_UI_SETTINGS__*/ null
+
     /**
      * 这里导出的是 cordis **服务名**，与 package.json 的 dsh.client.inject 不是一回事：
      *   · package.json 的 dsh.client.inject 列**包名**，只用于客户端模块图排序；
@@ -25,9 +33,11 @@ window.__ModuleLoader__.load({
      * 提供），于是 entry 卡死、桌面端白屏报错。对照官方与第三方插件（dshmarket、
      * dsh-chatgpt-subscription、dsh-client-ui-model-capabilities）：导出的 inject
      * 一律是 ["slots", "locale", "remote", …] 这种短服务名。
-     * 本插件只注入样式表、不读 ctx.slots，声明它是为了保留「等 slots 就绪再上皮肤」的意图。
+     *
+     * `configForms` 由 @deepseek-ai/dsh-client-ui-settings 提供（其构造器里 super(ctx, "configForms")），
+     * 是组合包页那张配置卡的读写通道；本插件的 engines 锁定了带它的宿主版本，故直接声明。
      */
-    const inject = ['slots'];
+    const inject = ['slots', 'configForms'];
 
     /**
      * 注入样式表并打上作用域根属性。
@@ -53,9 +63,53 @@ window.__ModuleLoader__.load({
       };
       if (typeof ctx.effect === 'function') {
         ctx.effect(() => dispose, 'codex-ui: stylesheet');
+      } else {
+        console.warn('[codex-ui] ctx.effect 不可用：样式已注入，但不会随 fiber 卸载回收。');
+      }
+      /* 设置页那一半：任何一步失败都只降级，不能连皮肤一起拖下水。 */
+      try {
+        installSettings(ctx, root);
+      } catch (error) {
+        console.warn('[codex-ui] 设置页挂载失败，皮肤照常：', error);
+      }
+    }
+
+    /**
+     * 挂上覆盖层与组合包页的配置卡。
+     * @param ctx - 客户端上下文。
+     * @param root - <html>。
+     */
+    function installSettings(ctx, root) {
+      const forms = ctx.configForms === undefined || ctx.configForms === null ? null : ctx.configForms;
+      const scope = forms === null ? null : forms.get(__override.SETTINGS_ENTRY_ID);
+      if (scope === null || scope === undefined) {
+        /* 没有设置服务：不注册座位、不加覆盖层，皮肤照常。 */
+        console.warn('[codex-ui] 没有 configForms 服务：设置页不可用，皮肤照常。');
         return;
       }
-      console.warn('[codex-ui] ctx.effect 不可用：样式已注入，但不会随 fiber 卸载回收。');
+      const tag = document.createElement('style');
+      tag.dataset.plugin = PLUGIN_ID;
+      tag.dataset.pluginCss = PLUGIN_ID + '/settings-override.css';
+      document.head.appendChild(tag);
+      const render = () => {
+        const snapshot = scope.getSnapshot();
+        const values = snapshot === undefined || snapshot === null || snapshot.value === undefined || snapshot.value === null ? {} : snapshot.value;
+        const css = __override.themeOverrideCss(values);
+        tag.textContent = css;
+        /* 没有覆盖时连属性一起摘掉：默认态与「没装设置页」逐字节相同。 */
+        if (css === '') root.removeAttribute(__override.OVERRIDE_ATTR);
+        else root.setAttribute(__override.OVERRIDE_ATTR, '');
+      };
+      render();
+      const off = typeof scope.subscribe === 'function' ? scope.subscribe(render) : null;
+      if (typeof ctx.effect === 'function') {
+        ctx.effect(() => () => {
+          if (typeof off === 'function') off();
+          tag.remove();
+          root.removeAttribute(__override.OVERRIDE_ATTR);
+        }, 'codex-ui: settings override');
+      }
+      registerSettingsCard(ctx, CodexUiSettingsCard);
     }
 
     return { apply, inject, PLUGIN_ID };

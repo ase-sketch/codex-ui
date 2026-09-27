@@ -7,7 +7,7 @@
   "version": "1.0.0",
   "author": "Agent-Evo RSI",
   "tagline": "零彩色 chrome · 墨白灰阶即层级 · 等宽元信息 · 终端状态色",
-  "description": "Codex / ChatGPT 方向的 dsh web GUI 皮肤。chrome 无彩色；浅色底 #FFFFFF、前景 #1A1C1F，深色底 #111111、前景 #FCFCFC；强调色浅 #339CFF、深 #0169CC 用于链接与焦点环。灰阶层级：浅 #FFFFFF → #F1F1EF → #E5E5E5，深 #111111 → #171717 → #1f1f1f → #2a2a2a → #353535。等宽字体承担元信息。卡片用 0.5px 描边代替投影，动效 100/160/240ms。彩色限于 state 三色、diff 红绿与语法高亮。不改 shell 源码，纯 Skin v2 资产目录。",
+  "description": "Codex / ChatGPT 方向的 dsh web GUI 皮肤。chrome 无彩色；浅色底 #FFFFFF、前景 #1A1C1F，深色底 #181818、前景 #FFFFFF；强调色浅 #339CFF、深 #0169CC 用于链接与焦点环。灰阶层级：浅 #FFFFFF → #F1F1EF → #E5E5E5，深 #181818 → #212121 → #282828 → #303030。等宽字体承担元信息。卡片用 0.5px 描边代替投影，动效 150/200/300ms。彩色限于 state 三色、diff 红绿与语法高亮。不改 shell 源码，纯 Skin v2 资产目录。",
   "tags": [
     "codex",
     "ink",
