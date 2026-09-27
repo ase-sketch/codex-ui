@@ -21,6 +21,10 @@
 /* ── 亮色主题 ────────────────────────────────────────────────────────────── */html[data-codex-ui],html[data-codex-ui] body{
   color-scheme: light;
 
+  /* 画布自持：底色由本皮肤自己画在 html 与 body 上，不指望宿主那一帧是否已把 token 换好。
+     主题切换时的闪，十有八九是「某一帧没人画底」—— 那时露出的是 UA/宿主的默认画布色。 */
+  background-color: #ffffff;
+
   /* 底色：白 → #F9F9F9 → #F1F1EF → #E5E5E5 四档灰阶即层级 */
   --dsw-alias-bg-base: #ffffff;
   --dsw-alias-bg-sidebar: #eef4f9; /* Codex 亮色侧栏实测取样（350×1377 截图点采样 = #EEF4F9） */
@@ -155,6 +159,15 @@
   --dsw-linear-think-select: linear-gradient(180deg, #f1f1ef 20.19%, rgba(241, 241, 239, 0) 100%);
 }
 
+/* 切主题的那一两帧关掉全部过渡：交叉淡出（元素一半旧色一半新色）看起来就是「闪」。
+   属性由浏览器半在 ctx.on('theme/change') 时打上，两个 rAF 后摘掉。 */html[data-codex-ui-switching] *,html[data-codex-ui-switching] *::before,html[data-codex-ui-switching] *::after{
+  transition: none !important;
+}
+
+/* html 在最外层，读不到 body 上那份深色令牌，只能用 :has() 自己取一次。 */html[data-codex-ui] :root:has(body[data-ds-dark-theme]){
+  background-color: #181818;
+}
+
 /* ── 暗色主题 ─────────────────────────────────────────────────────────────
    基准 = Codex 应用自身的深色默认值（app.asar 的 jdi）：surface #181818 / ink #ffffff /
    accent #339CFF。0.1.2 及以前用的是取色面板那三值（#111111 / #FCFCFC / #0169CC），
@@ -163,6 +176,10 @@
    层1 #212121 → 层2 #282828 → 层3 #303030。alpha 家族随之由 252 抬到 255
    （Codex 深色 --alpha-base = #fff）。 */html[data-codex-ui] body[data-ds-dark-theme]{
   color-scheme: dark;
+
+  /* 画布自持（深色）：宿主只把 data-ds-dark-theme 打在 body 上，所以 html 那一份用 :has() 跟上。
+     这里重复一次字面值而不是引用令牌 —— 令牌就定义在 body 上，html 自己读不到它的深色值。 */
+  background-color: #181818;
 
   /* 背景/侧栏同取 jdi.dark.surface #181818 —— Codex 深色里侧栏与内容同一个面。 */
   --dsw-alias-bg-base: #181818;

@@ -33,6 +33,12 @@
   以及把「每次返回新对象」的读数交给 `useSyncExternalStore` —— React 报 #185（最大更新深度），
   宿主只留一行 `slot entry crashed in 'plugins.bundle.config'`，整个座位条目不渲染。
 
+- 防闪加固：画布改由皮肤自持（`html`/`body` 两个主题的底色都自己画，`html` 用 `:has()` 跟上 body 上的主题标记），
+  并在 `theme/change` 后两帧内关掉全部过渡（`html[data-codex-ui-switching]`）。实测深色画布从宿主的
+  `rgb(16,22,36)` 变成皮肤的 `#181818`。
+- 新增 `scripts/theme-flash-probe.mjs`：按帧采样切换过程中的「有效底色」（沿祖先找第一个不透明底色），
+  9 段约 720 帧、当前 0 个中间态帧 —— 这类闪屏在无头 Chromium 里复现不出来，探针留着做回归。
+
 ### 深色基面
 
 - 背景 `#111111 → #181818`、前景 `#FCFCFC → #FFFFFF`、侧栏 `#171717 → #181818`（与 surface 同面）、

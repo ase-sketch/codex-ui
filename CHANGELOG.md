@@ -39,6 +39,14 @@ A settings page inside the plugin manager, plus the dark base re-anchored on the
   throws #185 (maximum update depth) and the host only leaves `slot entry crashed in 'plugins.bundle.config'`, so the
   whole seat entry never renders.
 
+- Flash hardening: the skin now paints the canvas itself (`html` and `body` carry this skin's base colour in both
+  themes; `html` follows via `:has()` on the body marker) and transitions are suppressed for two frames after
+  `theme/change` (`html[data-codex-ui-switching]`). Measured: the dark canvas went from the host's `rgb(16,22,36)`
+  to this skin's `#181818`.
+- New `scripts/theme-flash-probe.mjs`: per-frame sampling of the effective backdrop during switches (first opaque
+  ancestor background) — 9 windows, ~720 frames, currently 0 intermediate frames. This kind of flash does not
+  reproduce in headless Chromium, so the probe stays as a regression detector.
+
 ### Dark base
 
 - Background `#111111 → #181818`, foreground `#FCFCFC → #FFFFFF`, sidebar `#171717 → #181818` (same face as the

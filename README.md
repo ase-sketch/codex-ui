@@ -123,6 +123,7 @@ node scripts/install-skin.mjs --write  # overwrite on drift
 | `node scripts/hero-verify.mjs` | ⑬ ⑭ ⑰ and the focus ring, 8 assertions | none |
 | `node scripts/live-gui-probe.mjs --url <token URL>` | Real GUI: 10 assertions on shadows, both dividers, the model menu pending window | a running `dsh web` |
 | `node scripts/settings-page-verify.mjs --url <token URL>` | Real GUI: the card on the bundle page, its 8 rows, no override at defaults, switch and accent writes, survival across a reload — 20 assertions | a running `dsh web` with the plugin manager enabled |
+| `node scripts/theme-flash-probe.mjs --url <token URL>` | Per-frame sampling of the effective backdrop during theme and page switches (first opaque ancestor background); reports frames belonging to neither end of the transition (measured: 9 windows, ~720 frames, 0 anomalies) | same as above |
 
 `npm run check` needs no host. The five fixture suites run locally: they need shipped CSS from `app.asar` plus a DOM
 rebuilt from the render code, read with `getComputedStyle`. Fixtures have no title bar, no real AppFrame grid and no
@@ -187,6 +188,11 @@ dark default, 60):
   (clamped to 0.5×–2×). Colored state and diff fills are excluded so the palette never leaks into the override layer.
 - The translucent sidebar has no window layer to reveal on the web, and in dark the sidebar shares the surface colour,
   so it is invisible there — the switch therefore also turns the sidebar row fills translucent, otherwise it would be
+- The skin paints the canvas itself: `html` and `body` both carry this skin's base colour in either theme (`html` follows
+  through `:has(body[data-ds-dark-theme])`, because the host stamps the theme marker on `body` only). Transitions are
+  suppressed for the two frames after a theme change (`html[data-codex-ui-switching] *`, set by the browser half on
+  `ctx.on('theme/change')`). Both prevent a flash: the first closes the "nobody painted the canvas this frame" hole that
+  would reveal the host's default backdrop, the second stops the whole page from cross-fading.
   completely silent in dark. Recorded as a gap, not presented as an equivalent.
 
 ## Measurements

@@ -119,6 +119,7 @@ node scripts/install-skin.mjs --write  # 有漂移则覆盖
 | `node scripts/hero-verify.mjs` | ⑬⑭⑰ 与焦点环，8 项 | 无 |
 | `node scripts/live-gui-probe.mjs --url <带 token 的 URL>` | 真 GUI：阴影、两条分界线、模型菜单 pending 窗口共 10 项断言 | `dsh web` 实例 |
 | `node scripts/settings-page-verify.mjs --url <带 token 的 URL>` | 真 GUI：组合包页的设置卡、8 行结构、默认不覆盖、开关与强调色写入、刷新后仍在，共 20 项断言 | `dsh web` 实例（profile 需启用插件管理） |
+| `node scripts/theme-flash-probe.mjs --url <带 token 的 URL>` | 按帧采样主题/页面切换时的「有效底色」（沿祖先找第一个不透明底色），看切换过程中是否出现既不属于起点也不属于终点的中间帧（实测 9 段约 720 帧、0 异常） | 同上 |
 
 `npm run check` 不需要宿主。五支夹具验证在本机跑：取 `app.asar` 的 shipped CSS 加按渲染代码复刻的 DOM，
 用 `getComputedStyle` 读值。夹具没有标题栏条、真实 AppFrame 网格与真 RPC，阴影层、分界线悬停与 pending
@@ -180,6 +181,9 @@ node scripts/live-gui-probe.mjs --url "http://127.0.0.1:3099/?token=..." --dpr 1
   免得把调色板搬进覆盖层。
 - 半透明侧边栏在 Web 上没有窗口层，只能透出页面底色；深色下侧栏与内容同面，开了看不出差别 ——
   所以开关同时把侧栏行填充转半透明，否则整个开关在深色下完全无声。这是如实记录的差距，不是等价实现。
+- 画布由皮肤自己画：`html` 与 `body` 在两个主题下都取本皮肤的底色（`html` 那一份用 `:has(body[data-ds-dark-theme])` 跟上 ——
+  宿主只把主题标记打在 `body` 上）。切主题后的两帧内关掉全部过渡（`html[data-codex-ui-switching] *`，属性由浏览器半在
+  `ctx.on('theme/change')` 时打上）。这两条都是防「闪」：前者堵住「某一帧没人画底」而露出宿主默认画布，后者堵住整页交叉淡出。
 
 ## 实测值
 

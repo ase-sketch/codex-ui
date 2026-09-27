@@ -15,6 +15,12 @@ window.__ModuleLoader__.load({
     const PLUGIN_ID = 'codex-ui';
     /** 作用域根属性：所有规则都挂在它下面，卸载即整层失效。 */
     const ROOT_ATTR = 'data-codex-ui';
+    /**
+     * 切主题时临时打的属性：皮肤里有一条 `html[data-codex-ui-switching] * { transition: none }`。
+     * 主题切换会让整个页面的 token 同时换值，若各处还有 background/color 过渡，就是一次交叉淡出 ——
+     * 元素半旧半新的那几帧看起来就是「闪」。打上它、过两个 rAF 摘掉，切换变成一次到位。
+     */
+    const SWITCH_ATTR = 'data-codex-ui-switching';
     /** 生成期注入的样式表文本。 */
     const CSS = /*__CODEX_UI_CSS__*/ null;
     /** 生成期注入的覆盖层模块（源：src/override.js）。 */
@@ -112,6 +118,13 @@ window.__ModuleLoader__.load({
           tag.remove();
           root.removeAttribute(__override.OVERRIDE_ATTR);
         }, 'codex-ui: settings override');
+      }
+      /* 切主题的两帧内关掉过渡（见 SWITCH_ATTR 的注释）。宿主事件与卡片用的是同一个口子。 */
+      if (typeof ctx.on === 'function' && typeof ctx.effect === 'function') {
+        ctx.effect(() => ctx.on('theme/change', () => {
+          root.setAttribute(SWITCH_ATTR, '');
+          requestAnimationFrame(() => requestAnimationFrame(() => root.removeAttribute(SWITCH_ATTR)));
+        }), 'codex-ui: theme switch guard');
       }
       registerSettingsCard(ctx, CodexUiSettingsCard, {
         theme: ctx.theme,
