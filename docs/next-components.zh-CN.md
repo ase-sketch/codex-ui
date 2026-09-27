@@ -88,8 +88,9 @@ usage 统计、About 里装更新配套插件、命令面板、工作区切换�
 ## 4. 工程优化
 
 ### 4.1 显式锚点漂移检查（建议入库）
-皮肤引用的哈希类名锚点由 `node scripts/build.mjs` 自报：`patches.css` 12 + `composer.css` 18
-（其余四个样式文件 0；README「边界」记作 21 处，计数口径不同）。宿主升级
+皮肤引用的哈希类名锚点由 `node scripts/build.mjs` 自报。0.4.0 现场读数：`patches.css` 11 +
+`sidebar-surface.css` 2 + `composer.css` 18，其余五份 0（README「边界」另有记法，计数口径不同；
+本文档早先写的 patches 12 是 0.3.0 之前的读数，已按现跑值更正）。宿主升级
 （本机同时存在 `0.1.7-rc.1` 与 `rc.2`，仓库根还躺着三份升级计划）时，这些锚点消失只会表现成
 「某个角突然不圆了」，不会报错。做法：从 `app.asar` 抽全量类名清单，比对皮肤引用的
 哈希锚点 + `data-*` 锚点，缺失即 FAIL。代价小、收益是**把静默视觉回归变成一条红色断言**。
@@ -145,8 +146,27 @@ node D:\codex-ref\focus-mimic-probe.mjs   --url "<URL>" --chrome "<Chromium>"
 | `--dsw-codex-focus` / `--dsw-alias-state-business-primary` | `#339cff` / `#0d0d0d` |
 | `--dsw-alias-bg-base` / `--dsw-alias-label-primary` | `#ffffff` / `#1a1c1f`（light 模式） |
 | `--dsw-alias-bg-document-preview` | `#43454a`（偏蓝的暗色值出现在 light 模式下 → 令牌作用域不是 body，§1.4 待定点） |
-| 皮肤构建自报哈希锚点 | patches.css 12 + composer.css 18 |
+| 皮肤构建自报哈希锚点 | patches.css 11 + sidebar-surface.css 2 + composer.css 18 |
 
 **被证伪的假设要留档**：我最初从「宿主 96 处消费 `--dsw-focus-ring-color` + 皮肤把
 `--dsw-alias-state-business-primary` 重锚成墨色」推出「未补丁面板是墨色环」，静态推理成立、
 **级联结果不成立**——因为皮肤 ① 带属性作用域，特异性高于宿主所有 class 级规则。这类结论只能实测。
+## 8. 本轮已做：侧栏「面」（0.4.0）
+
+清单 §1 的「侧栏」一行写的是「侧栏面与折叠触发」。清点下来：
+
+| 项 | 结论 |
+|---|---|
+| 折叠触发 | **不动**。宿主 `data-dsh-responsive-part="sidebar-toggle"` 就是一个 28px ghost 图标按钮，hover 有底色，折叠态 36px；与 Codex 的 `size=toolbar color=ghost` 同形，没有可补的差。 |
+| 侧栏行几何 | **不动**（会改现有观感，见 §3 的边界纪律）。宿主实测：新会话/面板行 36px、工作区行 34px、会话行 32px，圆角 12px；Codex 参考图约 42px 行高。要做必须先拍板。 |
+| 侧栏面 = 滚动渐隐 | **已做**（⑱ `skins/codex-ink/sidebar-surface.css`）。 |
+
+**这一项的诚实结论（可复跑：`node scripts/sidebar-surface-verify.mjs`）**：宿主那 24px 覆盖层
+与 Codex 的 40px mask 斜坡前 24px **逐点差 ≤0.122**，底边亮度差 8.0/255 —— 按外观判据它**不值得做**。
+做它的理由是机制：覆盖层靠不透明底色成立，而本皮肤有 `translucentSidebar` 开关
+（`--dsw-specific-sidebar-fill` 变 `rgba(…,0.72)`）；夹具四列并排实测，半透明底下
+**底边亮度 原生 176.4 / codex-ui 240.3**，覆盖层留下 63.9 的墨色残留，mask 完全免疫。
+另外 `[data-platform=darwin]` 下宿主整条覆盖层 `display:none`，mask 不挑平台。
+
+下一步的候选顺序（都需要先拍板，因为都动现有观感）：行几何（36/34/32 → 42）→ 工作区行的选中胶囊
+（宿主 `Rows.module.css` 里只有 `sessionRow._selected`，`projectRow` 没有选中态，需查 ui-workspace 是否发状态）。

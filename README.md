@@ -100,7 +100,7 @@ node scripts/install-skin.mjs --write  # overwrite on drift
 | `src/settings-card.js` | The config card on the bundle page (inlined into `client.js` at build time) |
 | `src/build.mjs` | Scoping and artifact generation; the only implementation |
 | `theme.css` `client.js` | Generated from `skins/codex-ink/` by `src/build.mjs` |
-| `skins/codex-ink/` | Stylesheet sources (skin.css / patches.css / sidebar-align.css / window-shadow.css / composer.css / settings.css) |
+| `skins/codex-ink/` | Stylesheet sources (skin.css / patches.css / sidebar-align.css / sidebar-surface.css / window-shadow.css / composer.css / settings.css) |
 | `docs/` | Plans and decisions |
 | `scripts/build.mjs` | Regenerate the artifacts; `--check` compares without writing |
 | `scripts/check-repo.mjs` | Host-free repository checks; the CI entry point |
@@ -121,12 +121,13 @@ node scripts/install-skin.mjs --write  # overwrite on drift
 | `node scripts/model-picker-verify.mjs` | ⑫ and the pending indicator, 18 assertions | none |
 | `node scripts/rightbar-verify.mjs` | Shadow layer, right panel, both dividers, 42 assertions | none |
 | `node scripts/sidebar-align-verify.mjs` | Sidebar column alignment, 6 assertions | none |
+| `node scripts/sidebar-surface-verify.mjs` | Sidebar scroll fade (the Codex mask ramp): mechanism plus pixels, four states side by side, 13 assertions | none |
 | `node scripts/hero-verify.mjs` | ⑬ ⑭ ⑰, the focus ring and the released header slots, 17 assertions | none |
 | `node scripts/live-gui-probe.mjs --url <token URL>` | Real GUI: 10 assertions on shadows, both dividers, the model menu pending window | a running `dsh web` |
 | `node scripts/settings-page-verify.mjs --url <token URL>` | Real GUI: the card on the bundle page, its 8 rows, no override at defaults, switch and accent writes, survival across a reload — 22 assertions | a running `dsh web` with the plugin manager enabled |
 | `node scripts/theme-flash-probe.mjs --url <token URL>` | Per-frame sampling of the effective backdrop during theme and page switches (first opaque ancestor background); reports frames belonging to neither end of the transition (measured: 9 windows, ~720 frames, 0 anomalies) | same as above |
 
-`npm run check` needs no host. The five fixture suites run locally: they need shipped CSS from `app.asar` plus a DOM
+`npm run check` needs no host. The fixture suites run locally: they need shipped CSS from `app.asar` plus a DOM
 rebuilt from the render code, read with `getComputedStyle`. Fixtures have no title bar, no real AppFrame grid and no
 real RPC, so the shadow layer, divider hover and pending feedback are verified by the live probe.
 

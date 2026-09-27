@@ -2,6 +2,32 @@
 
 [English](CHANGELOG.md)
 
+## 0.4.0 - 2026-09-27
+
+侧栏「面」：滚动渐隐从宿主那条 24px 覆盖层换成 Codex 的 40px 四段 mask 斜坡。
+
+### 侧栏面（⑱）
+
+- 宿主对同一件事有自己的做法：滚动容器旁边放一条 24px 的绝对定位覆盖层，底色是
+  `linear-gradient(transparent → var(--dsw-specific-sidebar-fill))`。Codex 用的是
+  `_headerFadeMask_n9nga_1` 的 `--sidebar-scroll-mask-image` —— 直接对内容做 alpha 遮罩。
+- **这条改动的理由不是外观**，夹具把话说清楚了：四列并排、逐像素还原遮罩 alpha 曲线，
+  不透明底下原生 A 与 codex-ui B 前 24px 逐点差 **≤0.122**、底边亮度差 **8.0/255** —— 两者几乎等价。
+  真正的差在半透明侧栏底（设置卡的 `translucentSidebar`）：
+  **底边亮度 原生 176.4 / codex-ui 240.3**，宿主那条覆盖层挡不住内容，留下 63.9 的墨色残留，
+  mask 则完全免疫（B ↔ Bt 差 3.5）。
+- 两处按 DSH 现场的改写都给了依据：① 斜坡的 `footer-edge` 取 100%，因为 DSH 的滚动容器底边
+  就是底部固定区的顶边（真 GUI 实测 `listRect.bottom = regionRect.bottom = footRect.y = 844`），
+  不像 Codex 那样把 footer 压在滚动内容上；② 不做顶部 8px 渐入，DSH 的分组标题不在滚动容器里，
+  滚动视口顶上没有覆盖层，照抄只会让列表首行永远发虚。
+- 两层 mask：第一层是斜坡本体、横向只铺 `100% − 12px`；第二层把那 12px 补回不透明。
+  `mask-repeat: no-repeat` 下没铺到的区域 mask 值是 0（隐藏），不补第二层会把宿主的滚动条槽整条抹掉。
+- 锚点：作用域根用语义锚点 `div:has(> [data-slot="sidebar.workspaces"])`（唯一命中 regionArea）；
+  滚动容器与覆盖层没有语义锚点（真 GUI 实测整个 `[data-slot]` 集合里没有它们），
+  只能加两个**后缀**锚点 `[class$="_list"]` / `[class$="_fade"]` —— build 报的 hash 锚点数因此 +2。
+- `scripts/sidebar-surface-verify.mjs`：13 项断言，含「原生列 mask 为 none」「宿主覆盖层已让位」
+  「渐变里有 Codex 的四段 alpha 停点」「第 2 层宽 12px」，以及两条像素级判据。
+
 ## 0.3.0 - 2026-09-27
 
 顶栏两格**放开**：槽里的条目恢复渲染 —— 在此之前，派出去的子代理在界面上完全看不见在跑。

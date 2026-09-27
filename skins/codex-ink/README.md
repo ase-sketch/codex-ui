@@ -13,6 +13,7 @@ up by a skin loader on its own.
 | `skin.css` | L1 tokens and L2 typography | `--dsw-alias-*` remapping; spacing, radius, type scale, motion and elevation token layers |
 | `patches.css` | L3 components | Focus ring, links, card contract, mono pills, tag tone normalization, reduced motion, ⑫ model picker, ⑬ composer header and card, ⑯ right panel guide entries, ⑰ composer control hover |
 | `sidebar-align.css` | L3 sidebar alignment | New session and plugin rows land on the same two columns as the workspace list (icon column 20px, text column 42px); selectors cover both the rc.1 flat DOM and the rc.2 nested DOM |
+| `sidebar-surface.css` | L3 sidebar surface | Sidebar scroll fade: the host's 24px overlay steps aside for Codex's 40px four-stop mask ramp, applied to the scroller with the rightmost 12px left unmasked for the scrollbar. Verified by `scripts/sidebar-surface-verify.mjs` |
 | `window-shadow.css` | L3 window edges | Conversation window 0.5px hairline plus a 24px ambient shadow; right panel keeps a hairline on its left edge only and bleeds upward; right divider handle hover gradient |
 | `composer.css` | L3 composer | Card geometry and surface, 44px editor area, 28px bottom control row, suggestion menu, hero layout. This layer is allowed to use `[class*=…]` suffix anchors |
 | `preview/` | Assets | Light and dark previews |

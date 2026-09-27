@@ -2,6 +2,35 @@
 
 [简体中文](CHANGELOG.zh-CN.md)
 
+## 0.4.0 - 2026-09-27
+
+The sidebar **surface**: the scroll fade moves from the host's 24px overlay to Codex's 40px four-stop mask ramp.
+
+### Sidebar surface (⑱)
+
+- The host already has its own take: a 24px absolutely positioned overlay next to the scroller, painted with
+  `linear-gradient(transparent → var(--dsw-specific-sidebar-fill))`. Codex uses `_headerFadeMask_n9nga_1`'s
+  `--sidebar-scroll-mask-image` — an alpha mask over the content itself.
+- **This change is not about looks**, and the fixture says so plainly: four states side by side with the mask alpha
+  curve recovered pixel by pixel. Under an opaque sidebar fill the native A and codex-ui B curves differ by
+  **≤0.122** in the first 24px and by **8.0/255** at the bottom edge — effectively equivalent. The real gap is under a
+  translucent sidebar fill (the card's `translucentSidebar`): bottom-edge luminance **176.4 native vs 240.3
+  codex-ui**, because the overlay cannot hide content through a 72%-alpha fill, while the mask is immune
+  (B ↔ Bt differ by 3.5).
+- Both DSH-specific deviations carry their evidence: ① the ramp's `footer-edge` is 100%, because the scroller's
+  bottom edge *is* the top edge of the fixed footer here (live GUI: `listRect.bottom = regionRect.bottom =
+  footRect.y = 844`), unlike Codex where the footer sits on top of the scrolling content; ② no 8px top fade, since
+  DSH's group header is not inside the scroller and nothing overlays the top of the scroll viewport.
+- Two mask layers: the first paints the ramp over `100% − 12px` horizontally, the second restores the remaining
+  12px to opaque. With `mask-repeat: no-repeat` the unpainted region masks to 0 (hidden), so without the second
+  layer the host's scrollbar gutter would be erased.
+- Anchors: the scope root uses the semantic `div:has(> [data-slot="sidebar.workspaces"])` (a unique hit on
+  regionArea). The scroller and the overlay have no semantic anchor — none of them appear in the live
+  `[data-slot]` set — so this layer adds two **suffix** anchors, `[class$="_list"]` and `[class$="_fade"]`;
+  the build's hash-anchor count therefore grows by 2.
+- `scripts/sidebar-surface-verify.mjs`: 13 assertions, including "no mask natively", "host overlay stepped aside",
+  "the four Codex alpha stops are present" and "the second layer is 12px wide", plus two pixel-level checks.
+
 ## 0.3.0 - 2026-09-27
 
 Both header slots are **released**: the entries registered in them render again. Before this, a dispatched subagent

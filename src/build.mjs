@@ -47,6 +47,7 @@ export const SKIN_PARTS = [
   ['skin.css', 'L1/L2 令牌与排版层'],
   ['patches.css', 'L3 组件层'],
   ['sidebar-align.css', 'L3 侧栏对齐层'],
+  ['sidebar-surface.css', 'L3 侧栏面层'],
   ['window-shadow.css', 'L3 窗口边缘阴影层'],
   ['composer.css', 'L3 输入区完整层'],
   ['settings.css', 'L3 插件设置页层'],
