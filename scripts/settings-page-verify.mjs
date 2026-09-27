@@ -54,7 +54,19 @@ if (!info) { console.error('Chromium 没起来：' + CHROME); process.exit(2); }
 const ws = new WebSocket(info.webSocketDebuggerUrl);
 await new Promise((res, rej) => { ws.onopen = res; ws.onerror = rej; });
 let seq = 0; const waiting = new Map();
-ws.onmessage = (ev) => { const m = JSON.parse(ev.data); const fn = waiting.get(m.id); if (fn) { waiting.delete(m.id); fn(m); } };
+/** 页面控制台与未捕获异常：座位注册失败只留一条 warn，不抓就什么都看不见。 */
+const pageLogs = [];
+ws.onmessage = (ev) => {
+  const m = JSON.parse(ev.data);
+  if (m.method === 'Runtime.consoleAPICalled' && (m.params.type === 'error' || m.params.type === 'warning')) {
+    pageLogs.push('console.' + m.params.type + ': ' + m.params.args.map((a) => String(a.value ?? a.description ?? '')).join(' ').slice(0, 300));
+  }
+  if (m.method === 'Runtime.exceptionThrown') {
+    pageLogs.push('exception: ' + String(m.params.exceptionDetails.exception?.description ?? m.params.exceptionDetails.text).slice(0, 300));
+  }
+  const fn = waiting.get(m.id);
+  if (fn) { waiting.delete(m.id); fn(m); }
+};
 const send = (method, params = {}, sessionId) => new Promise((res, rej) => {
   const id = ++seq;
   waiting.set(id, (m) => (m.error ? rej(new Error(method + ': ' + JSON.stringify(m.error))) : res(m.result)));
@@ -95,14 +107,17 @@ const candidates = await evaluate('(() => [...document.querySelectorAll("button,
   + '.slice(0, 80))()', sessionId);
 console.log('BOOT candidates: ' + JSON.stringify(candidates));
 
-/* ── 关掉启动时的引导弹层：内测声明 → 配置 API Key，逐个点掉（有才点）── */
-for (let round = 0; round < 5; round += 1) {
-  const dismiss = await clickByText('^(继续|稍后配置|跳过|知道了)$', sessionId);
-  if (dismiss === null) break;
-  await click(dismiss.x, dismiss.y, sessionId);
-  await sleep(1200);
-  console.log('DISMISS ' + dismiss.text);
-}
+/** 关掉启动时的引导弹层：内测声明 → 配置 API Key。刷新后它们会再出现一次，所以抽成函数。 */
+const dismissOnboarding = async () => {
+  for (let round = 0; round < 5; round += 1) {
+    const dismiss = await clickByText('^(继续|稍后配置|跳过|知道了)$', sessionId);
+    if (dismiss === null) return;
+    await click(dismiss.x, dismiss.y, sessionId);
+    await sleep(1200);
+    console.log('DISMISS ' + dismiss.text);
+  }
+};
+await dismissOnboarding();
 
 /* ── 进插件管理页 ─────────────────────────────────────────────────────── */
 const entry = await clickByText('^插件$', sessionId);
@@ -156,20 +171,35 @@ if (flag('dump')) {
   ws.close(); child.kill();
   process.exit(0);
 }
-/** 清掉所有已有覆盖，让每次运行都从默认态开始（幂等）。 */
+/** 有没有残留覆盖：覆盖层打了属性就说明用户层还有东西。 */
+const overridden = () => evaluate('document.documentElement.hasAttribute("data-codex-ui-theme")', sessionId);
+/** 清掉所有已有覆盖，让每次运行都从默认态开始（幂等：反复点「重置」直到属性消失）。 */
 const resetAll = async () => {
-  for (let i = 0; i < 14; i += 1) {
-    const hit = await evaluate('(() => {'
+  for (let round = 0; round < 20; round += 1) {
+    if ((await overridden()) === false) return round;
+    const box = await evaluate('(() => {'
       + 'const b = [...document.querySelectorAll("button")].find((x) => x.textContent.trim() === "重置" && x.offsetParent !== null);'
       + 'if (!b) return null; const r = b.getBoundingClientRect();'
       + 'return { x: Math.round(r.left + r.width / 2), y: Math.round(r.top + r.height / 2) }; })()', sessionId);
-    if (hit === null) break;
-    await click(hit.x, hit.y, sessionId);
-    await sleep(700);
+    if (box === null) return round;
+    await click(box.x, box.y, sessionId);
+    await sleep(800);
   }
+  return 20;
 };
-const before = await evaluate('document.querySelectorAll("button") !== null && [...document.querySelectorAll("button")].filter((x) => x.textContent.trim() === "重置").length', sessionId);
-if (before > 0) { console.log('RESET 清掉 ' + before + ' 处上次留下的覆盖'); await resetAll(); await sleep(800); }
+/* 等宿主把设置文档送达：覆盖层要等 scope 有值才打属性，早读会把「还没到」当成「没有覆盖」。 */
+await sleep(4000);
+if (await overridden()) {
+  const rounds = await resetAll();
+  await sleep(600);
+  console.log('RESET 清了 ' + rounds + ' 轮，残留覆盖=' + (await overridden()));
+}
+/* 起始态固定为亮色：主题控件就在这一页上，先摆平它再断言默认值。 */
+const segmentNow = await evaluate('(() => { const t = document.querySelector("[role=tab][aria-selected=true]"); return t === null ? null : t.textContent.trim(); })()', sessionId);
+if (segmentNow !== null && segmentNow !== '亮色') {
+  const box = await clickByText('^亮色$', sessionId);
+  if (box !== null) { await click(box.x, box.y, sessionId); await sleep(1200); console.log('RESET 主题回亮色（原 ' + segmentNow + '）'); }
+}
 
 const shape = JSON.parse(await evaluate('(() => {'
   + 'const rows = [...document.querySelectorAll(".cx-row")];'
@@ -184,7 +214,9 @@ const shape = JSON.parse(await evaluate('(() => {'
 check('组合包页上有配置卡', shape.form === 1, JSON.stringify(shape));
 check('八行：主题/强调色/背景/前景/UI 字体/代码字体/半透明侧边栏/对比度', shape.rows === 8 && shape.labels.length === 8, JSON.stringify(shape.labels));
 check('默认值下不产生覆盖（无 data-codex-ui-theme）', shape.overrideAttr === false, 'attr=' + shape.overrideAttr);
-check('默认强调色仍是皮肤的 #339cff', shape.link.toLowerCase() === '#339cff', 'link=' + shape.link);
+/* 读 body 上的生效值：深色的链接默认是 #0169cc，与亮色不同，读 html 会永远看到亮色那一份。 */
+const bodyLink = await evaluate('getComputedStyle(document.body).getPropertyValue("--dsw-alias-link").trim()', sessionId);
+check('默认强调色仍是皮肤给的那一支（亮 #339cff / 暗 #0169cc）', ['#339cff', '#0169cc'].includes(bodyLink.toLowerCase()), 'link=' + bodyLink);
 await shot(OUT.replace(/\.png$/, '-default.png'));
 
 /* 拨「半透明侧边栏」 */
@@ -218,6 +250,38 @@ if (hexBox !== null) {
   await shot(OUT.replace(/\.png$/, '-accent.png'));
 }
 
+/* ── 主题那一行：写的是宿主主题偏好，整个应用一起变 ───────────────────── */
+/** 读分段控件当前选中的那一段文本。 */
+const selectedSegment = () => evaluate('(() => {'
+  + 'const tab = document.querySelector("[role=tab][aria-selected=true]");'
+  + 'return tab === null ? null : tab.textContent.trim(); })()', sessionId);
+/** 读 body 上的令牌：深色令牌落在 body 上，不在 html。 */
+const bodyVar = (name) => evaluate('getComputedStyle(document.body).getPropertyValue(' + JSON.stringify(name) + ').trim()', sessionId);
+
+const beforeTheme = { segment: await selectedSegment(), base: await bodyVar('--dsw-alias-bg-base'), dark: await evaluate('document.body.hasAttribute("data-ds-dark-theme")', sessionId) };
+console.log('THEME 切换前 ' + JSON.stringify(beforeTheme));
+check('主题行存在且显示了当前偏好', beforeTheme.segment !== null, 'segment=' + beforeTheme.segment);
+
+const toDark = await clickByText('^深色$', sessionId);
+check('找到「深色」分段', toDark !== null, JSON.stringify(toDark));
+if (toDark !== null) {
+  await click(toDark.x, toDark.y, sessionId);
+  await sleep(1500);
+  const swatchExpr = '(() => { const el = [...document.querySelectorAll(".cx-swatch")].find((x) => x.getAttribute("aria-label") === "背景"); return el === undefined ? null : el.value; })()';
+  const dark = {
+    dark: await evaluate('document.body.hasAttribute("data-ds-dark-theme")', sessionId),
+    base: await bodyVar('--dsw-alias-bg-base'),
+    segment: await selectedSegment(),
+    swatch: await evaluate(swatchExpr, sessionId),
+  };
+  console.log('THEME 切到深色 ' + JSON.stringify(dark));
+  check('切深色后整个应用进了深色（body[data-ds-dark-theme]）', dark.dark === true, JSON.stringify(dark));
+  check('深色底色生效 #181818', String(dark.base).toLowerCase() === '#181818', 'base=' + dark.base);
+  check('分段显示深色', dark.segment === '深色', 'segment=' + dark.segment);
+  check('下面三行改为编辑深色那一套（背景色块 = #181818）', String(dark.swatch).toLowerCase() === '#181818', 'swatch=' + dark.swatch);
+  await shot(OUT.replace(/\.png$/, '-dark.png'));
+}
+
 /* 刷新后覆盖仍在（设置是持久化的，不是页面内存） */
 await send('Page.navigate', { url: origin + '/' }, sessionId);
 await sleep(11000);
@@ -232,7 +296,24 @@ const afterReload = JSON.parse(await evaluate('(() => {'
 check('刷新后皮肤仍生效', afterReload.skin === true, JSON.stringify(afterReload));
 check('刷新后覆盖仍在（强调色 #ff0000）', afterReload.link.toLowerCase() === '#ff0000', 'link=' + afterReload.link);
 check('刷新后侧栏半透明仍在', afterReload.sidebar.replace(/\s/g, '') === 'rgba(255,255,255,0.72)', 'sidebar=' + afterReload.sidebar);
+check('刷新后主题仍是深色（写的是宿主偏好，不是页面状态）', await evaluate('document.body.hasAttribute("data-ds-dark-theme")', sessionId) === true, JSON.stringify(afterReload));
 
+/* 收工把主题还给亮色：刷新后已经在首页，先走回组合包页，别留下深色现场。 */
+const onCard = async () => (await evaluate('document.querySelectorAll(".cx-form").length', sessionId)) > 0;
+await dismissOnboarding();
+if (!(await onCard())) {
+  const back = await clickByText('^插件$', sessionId);
+  if (back !== null) { await click(back.x, back.y, sessionId); await sleep(2200); }
+  const reopen = await clickByText('^查看 codex-ui$', sessionId);
+  if (reopen !== null) { await click(reopen.x, reopen.y, sessionId); await sleep(2500); }
+}
+const toLight = await clickByText('^亮色$', sessionId);
+if (toLight !== null) { await click(toLight.x, toLight.y, sessionId); await sleep(1500); }
+const restored = { segment: await selectedSegment(), base: await bodyVar('--dsw-alias-bg-base') };
+console.log('THEME 复位 ' + JSON.stringify(restored));
+check('收工复位回亮色', String(restored.base).toLowerCase() === '#ffffff' && restored.segment === '亮色', JSON.stringify(restored));
+
+if (pageLogs.length > 0) console.log('\nPAGE LOGS:\n  ' + pageLogs.slice(0, 12).join('\n  '));
 console.log('\n' + (failed === 0 ? 'PASS：全部通过' : 'FAIL：' + failed + ' 项未通过'));
 ws.close(); child.kill();
 process.exit(failed === 0 ? 0 : 1);

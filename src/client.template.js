@@ -36,8 +36,12 @@ window.__ModuleLoader__.load({
      *
      * `configForms` 由 @deepseek-ai/dsh-client-ui-settings 提供（其构造器里 super(ctx, "configForms")），
      * 是组合包页那张配置卡的读写通道；本插件的 engines 锁定了带它的宿主版本，故直接声明。
+     *
+     * `theme` 由 @deepseek-ai/dsh-client-ui-theme 提供（`ctx.provide("theme", …)`），是宿主主题偏好的
+     * **唯一写入口**：卡片上那一行「主题」写的就是它，与「设置 → 通用 → 外观」同一处，
+     * 所以切完整个应用一起变，不是卡片自己的界面状态。
      */
-    const inject = ['slots', 'configForms'];
+    const inject = ['slots', 'configForms', 'theme'];
 
     /**
      * 注入样式表并打上作用域根属性。
@@ -109,7 +113,11 @@ window.__ModuleLoader__.load({
           root.removeAttribute(__override.OVERRIDE_ATTR);
         }, 'codex-ui: settings override');
       }
-      registerSettingsCard(ctx, CodexUiSettingsCard);
+      registerSettingsCard(ctx, CodexUiSettingsCard, {
+        theme: ctx.theme,
+        /* 主题变更走宿主事件：layout 侧也是 ctx.on("theme/change", …) 这一个口子。 */
+        watchTheme: (listener) => (typeof ctx.on === 'function' ? ctx.on('theme/change', listener) : () => {}),
+      });
     }
 
     return { apply, inject, PLUGIN_ID };

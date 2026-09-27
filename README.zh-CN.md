@@ -102,6 +102,7 @@ node scripts/install-skin.mjs --write  # 有漂移则覆盖
 | `scripts/host-paths.mjs` | 解析 `app.asar`、全局 `@deepseek-ai` 包与 Chromium |
 | `scripts/install-plugin.mjs` `scripts/install-skin.mjs` | 安装器 |
 | `scripts/*-verify.mjs` `scripts/live-gui-probe.mjs` `scripts/settings-page-verify.mjs` | 夹具验收与真 GUI 探针 |
+| `scripts/make-verify-profile.mjs` | 造一次性验证 profile：插件管理页开着、只挂本插件、不碰现有 profile |
 | `assets/reference/` | Codex 实机参考图 |
 | `assets/screenshots/` | 验收出图 |
 | `.github/workflows/ci.yml` | CI |
@@ -117,7 +118,7 @@ node scripts/install-skin.mjs --write  # 有漂移则覆盖
 | `node scripts/sidebar-align-verify.mjs` | 侧栏列对齐，6 项 | 无 |
 | `node scripts/hero-verify.mjs` | ⑬⑭⑰ 与焦点环，8 项 | 无 |
 | `node scripts/live-gui-probe.mjs --url <带 token 的 URL>` | 真 GUI：阴影、两条分界线、模型菜单 pending 窗口共 10 项断言 | `dsh web` 实例 |
-| `node scripts/settings-page-verify.mjs --url <带 token 的 URL>` | 真 GUI：组合包页的设置卡、8 行结构、默认不覆盖、开关与强调色写入、刷新后仍在，共 13 项断言 | `dsh web` 实例（profile 需启用插件管理） |
+| `node scripts/settings-page-verify.mjs --url <带 token 的 URL>` | 真 GUI：组合包页的设置卡、8 行结构、默认不覆盖、开关与强调色写入、刷新后仍在，共 20 项断言 | `dsh web` 实例（profile 需启用插件管理） |
 
 `npm run check` 不需要宿主。五支夹具验证在本机跑：取 `app.asar` 的 shipped CSS 加按渲染代码复刻的 DOM，
 用 `getComputedStyle` 读值。夹具没有标题栏条、真实 AppFrame 网格与真 RPC，阴影层、分界线悬停与 pending
@@ -149,9 +150,13 @@ node scripts/live-gui-probe.mjs --url "http://127.0.0.1:3099/?token=..." --dpr 1
 
 ![设置页](assets/screenshots/settings-page-accent.png)
 
+深色下同一张卡（主题切到深色后，下面三行自动改为编辑深色那一套，对比度显示深色默认档 60）：
+
+![设置页 · 深色](assets/screenshots/settings-page-dark.png)
+
 | 面板行 | Config 字段 | 默认 | 落点 |
 |---|---|---|---|
-| 主题 | —（界面状态） | 亮色 | 切换下面三行编辑哪一组 |
+| 主题 | —（写宿主 `ui-theme` 的 `preference`） | 跟随系统 | `ctx.theme.setTheme()`：整个应用一起切，与「设置 → 通用 → 外观」同一处 |
 | 强调色 | `accentLight` / `accentDark` | 空 = 跟随皮肤 | `--dsw-alias-link`、`--dsw-codex-focus` |
 | 背景 | `surfaceLight` / `surfaceDark` | 空 | `--dsw-alias-bg-base` |
 | 前景 | `inkLight` / `inkDark` | 空 | `--dsw-alias-label-primary` |
@@ -160,6 +165,9 @@ node scripts/live-gui-probe.mjs --url "http://127.0.0.1:3099/?token=..." --dpr 1
 | 半透明侧边栏 | `translucentSidebar` | 关 | 侧栏填充与行填充转半透明 |
 | 对比度 | `contrastLight` / `contrastDark` | 45 / 60 | 文本档位与中性 alpha 阶梯 |
 
+- **主题那一行不是卡片自己的界面状态**：它走宿主 `theme` 服务的唯一写入口（`ctx.theme.setTheme(id)`，
+  `id ∈ light/dark/system`），写的是 `ui-theme` 的 `preference`，与「设置 → 通用 → 外观」是同一处 ——
+  切完整应用一起变，刷新后还在。下面三行颜色编辑的是**当前生效的那一套**（`active.colorScheme`）。
 - 11 个字段全部 `.volatile()`：设置服务只投影标了它的字段，插件管理页也正是靠这一点认得这个条目 ——
   没有 `Config` 就没有这张卡。
 - **空值 = 不覆盖**：默认值下覆盖层输出空串、`data-codex-ui-theme` 属性不出现，所以装上不动一个字时，

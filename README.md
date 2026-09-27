@@ -106,6 +106,7 @@ node scripts/install-skin.mjs --write  # overwrite on drift
 | `scripts/host-paths.mjs` | Resolves `app.asar`, the global `@deepseek-ai` modules and Chromium |
 | `scripts/install-plugin.mjs` `scripts/install-skin.mjs` | Installers |
 | `scripts/*-verify.mjs` `scripts/live-gui-probe.mjs` `scripts/settings-page-verify.mjs` | Fixture verification and live probing |
+| `scripts/make-verify-profile.mjs` | Builds a throwaway verification profile: plugin manager enabled, only this plugin, no existing profile touched |
 | `assets/reference/` | Codex reference images |
 | `assets/screenshots/` | Verification output |
 | `.github/workflows/ci.yml` | CI |
@@ -121,7 +122,7 @@ node scripts/install-skin.mjs --write  # overwrite on drift
 | `node scripts/sidebar-align-verify.mjs` | Sidebar column alignment, 6 assertions | none |
 | `node scripts/hero-verify.mjs` | ⑬ ⑭ ⑰ and the focus ring, 8 assertions | none |
 | `node scripts/live-gui-probe.mjs --url <token URL>` | Real GUI: 10 assertions on shadows, both dividers, the model menu pending window | a running `dsh web` |
-| `node scripts/settings-page-verify.mjs --url <token URL>` | Real GUI: the card on the bundle page, its 8 rows, no override at defaults, switch and accent writes, survival across a reload — 13 assertions | a running `dsh web` with the plugin manager enabled |
+| `node scripts/settings-page-verify.mjs --url <token URL>` | Real GUI: the card on the bundle page, its 8 rows, no override at defaults, switch and accent writes, survival across a reload — 20 assertions | a running `dsh web` with the plugin manager enabled |
 
 `npm run check` needs no host. The five fixture suites run locally: they need shipped CSS from `app.asar` plus a DOM
 rebuilt from the render code, read with `getComputedStyle`. Fixtures have no title bar, no real AppFrame grid and no
@@ -153,9 +154,14 @@ Changes apply immediately; no restart needed.
 
 ![Settings page](assets/screenshots/settings-page-accent.png)
 
+The same card in dark (after switching the theme the three colour rows edit the dark variant, and contrast shows the
+dark default, 60):
+
+![Settings page · dark](assets/screenshots/settings-page-dark.png)
+
 | Row | Config field | Default | Lands on |
 |---|---|---|---|
-| Theme | — (view state) | Light | which of the next three rows you edit |
+| Theme | — (writes the host `ui-theme` `preference`) | System | `ctx.theme.setTheme()`: switches the whole app, the same setting as Settings → General → Appearance |
 | Accent | `accentLight` / `accentDark` | empty = follow skin | `--dsw-alias-link`, `--dsw-codex-focus` |
 | Background | `surfaceLight` / `surfaceDark` | empty | `--dsw-alias-bg-base` |
 | Foreground | `inkLight` / `inkDark` | empty | `--dsw-alias-label-primary` |
@@ -164,6 +170,10 @@ Changes apply immediately; no restart needed.
 | Translucent sidebar | `translucentSidebar` | off | sidebar fill and row fills become translucent |
 | Contrast | `contrastLight` / `contrastDark` | 45 / 60 | text tiers and the neutral alpha ladder |
 
+- **The theme row is not card-local view state**: it goes through the host `theme` service's only preference write
+  entry (`ctx.theme.setTheme(id)`, `id ∈ light/dark/system`), writing `ui-theme`'s `preference` — the same setting as
+  Settings → General → Appearance, so the whole app switches and it survives a reload. The three colour rows below edit
+  the variant currently in effect (`active.colorScheme`).
 - All 11 fields are `.volatile()`: the settings service only projects volatile fields, and that is exactly how the
   plugin manager knows the entry — no `Config`, no card.
 - **Empty means no override**: at the defaults the override layer emits an empty string and `data-codex-ui-theme` never

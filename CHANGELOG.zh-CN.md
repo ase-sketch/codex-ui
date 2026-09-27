@@ -23,6 +23,16 @@
 - 新增 `skins/codex-ink/settings.css`（只取 `--dsw-alias-*` 令牌，零彩色）与 `scripts/settings-page-verify.mjs`
   （真 GUI 13 项断言）。
 
+- 主题行接上宿主主题服务（`ctx.theme`，由 @deepseek-ai/dsh-client-ui-theme 提供）：三档 亮色/深色/跟随系统，
+  写的是 `ui-theme` 的 `preference`，与「设置 → 通用 → 外观」同一处 —— 切完整应用一起变、刷新后还在；
+  下面三行颜色随之编辑当前生效的那一套。`inject` 增加服务名 `theme`。
+- 新增 `scripts/make-verify-profile.mjs`：造一次性验证 profile（插件管理页开着、只挂本插件），
+  让 `settings-page-verify` 在任意机器上可复跑。真 GUI 断言 13 → 20 项（补主题切换、深色生效、
+  刷新后偏好仍在、收工复位），并改为幂等：每次先清掉上轮残留的覆盖与主题。
+- 修两个真 bug，都是真 GUI 断言抓到的：`jsxs(type, props, children)` 的第三参是 **key**（配置卡渲染成空 div）；
+  以及把「每次返回新对象」的读数交给 `useSyncExternalStore` —— React 报 #185（最大更新深度），
+  宿主只留一行 `slot entry crashed in 'plugins.bundle.config'`，整个座位条目不渲染。
+
 ### 深色基面
 
 - 背景 `#111111 → #181818`、前景 `#FCFCFC → #FFFFFF`、侧栏 `#171717 → #181818`（与 surface 同面）、

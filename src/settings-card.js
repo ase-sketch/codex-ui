@@ -9,6 +9,10 @@
      · 改一下即写、没有保存按钮；文本框回车或失焦提交；写后回读确认落地；
      · 「已覆盖」= 用户层含该字段；「重置」= unset 掉用户层那一格；
      · view === 'summary' 时只回一行摘要（组合包页折叠态用）。
+     · 「主题」那一行写的是**宿主主题偏好**，走 ctx.theme 服务（@deepseek-ai/dsh-client-ui-theme
+       用 ctx.provide("theme", …) 提供）：getTheme() → { preference, active:{ colorScheme }, themes }，
+       setTheme(id) 是唯一用户偏好写入口（id ∈ light/dark/system），变更经 ctx.on('theme/change') 广播。
+       下面三行颜色编辑的是**当前生效的那一套**（active.colorScheme），不是另一套的暂存。
    ========================================================================== */
 
 const REACT = (() => {
@@ -32,8 +36,10 @@ const COLOR_ROWS = [
 const COPY_ZH = {
   intro: '这里的值只覆盖本皮肤（codex-ink）的默认外观，空值即跟随皮肤。',
   theme: '主题',
+  themeDesc: '切换应用外观：写的是宿主的主题偏好，与「设置 → 通用 → 外观」同一处',
   light: '亮色',
   dark: '深色',
+  system: '跟随系统',
   accent: '强调色',
   accentDesc: '链接与焦点环',
   surface: '背景',
@@ -60,8 +66,10 @@ const COPY_ZH = {
 const COPY_EN = {
   intro: 'These values only override the codex-ink skin defaults. Empty means follow the skin.',
   theme: 'Theme',
+  themeDesc: 'Switches the app appearance: the host theme preference, the same one as Settings → General → Appearance',
   light: 'Light',
   dark: 'Dark',
+  system: 'System',
   accent: 'Accent',
   accentDesc: 'Links and focus ring',
   surface: 'Background',
@@ -107,11 +115,30 @@ function pickCopy(locale) {
 }
 
 /**
+ * 读宿主主题快照的**原始对象**。
+ * 必须是稳定引用：useSyncExternalStore 按引用比较快照，每次 new 一个对象会把它推进
+ * 「getSnapshot 每次都在变」的死循环（React 直接抛错、卡片整个不渲染）。
+ * 宿主自己的 getTheme() 在两次变更之间就返回同一个冻结对象，所以直接透传；
+ * 读失败时回落到下面这个模块级常量（也是稳定引用）。
+ * @param service - ctx.theme。
+ * @returns 宿主快照，或固定的回落对象。
+ */
+const THEME_FALLBACK = Object.freeze({ preference: null, active: Object.freeze({ colorScheme: null }) });
+function themeSnapshotOf(service) {
+  try {
+    const snap = service.getTheme();
+    return snap === undefined || snap === null ? THEME_FALLBACK : snap;
+  } catch {
+    return THEME_FALLBACK;
+  }
+}
+
+/**
  * 渲染 codex-ui 的配置。
- * @param props - 座位注入的 scope / locale，以及宿主给的视图。
+ * @param props - 座位注入的 scope / theme / watchTheme / locale，以及宿主给的视图。
  * @returns 表单，或组合包页要的一行摘要。
  */
-function CodexUiSettingsCard({ scope, locale, view }) {
+function CodexUiSettingsCard({ scope, theme, watchTheme, locale, view }) {
   if (REACT === null || JSX === null) {
     return JSX === null && REACT === null ? null : null;
   }
@@ -121,13 +148,33 @@ function CodexUiSettingsCard({ scope, locale, view }) {
     useCallback((listener) => scope.subscribe(listener), [scope]),
     () => scope.getSnapshot(),
   );
+  /* 订阅走宿主事件；快照用宿主的稳定对象，派生值在渲染里算（见 themeSnapshotOf 的注释）。 */
+  const themeSnapshot = useSyncExternalStore(
+    useCallback((listener) => {
+      if (typeof watchTheme !== 'function') return () => {};
+      return watchTheme(() => listener());
+    }, [watchTheme]),
+    useCallback(() => themeSnapshotOf(theme), [theme]),
+  );
   const copy = useMemo(() => pickCopy(locale), [locale]);
-  const [theme, setTheme] = useState(() => (typeof document !== 'undefined' && document.body !== null && document.body.hasAttribute('data-ds-dark-theme') ? 'dark' : 'light'));
+  /* preference 是偏好档（light/dark/system）；variant 是它当前解析出的那一套。 */
+  const preference = themeSnapshot.preference;
+  const scheme = themeSnapshot.active === undefined || themeSnapshot.active === null ? null : themeSnapshot.active.colorScheme;
+  const onBody = typeof document !== 'undefined' && document.body !== null && document.body.hasAttribute('data-ds-dark-theme') ? 'dark' : 'light';
+  const variant = scheme === 'dark' || scheme === 'light' ? scheme : onBody;
   const [drafts, setDrafts] = useState({});
   const [saving, setSaving] = useState(false);
   const [failed, setFailed] = useState(false);
 
-  const fieldOf = useCallback((base) => base + (theme === 'light' ? 'Light' : 'Dark'), [theme]);
+  const fieldOf = useCallback((base) => base + (variant === 'light' ? 'Light' : 'Dark'), [variant]);
+  /** 切主题：走宿主服务的唯一写入口，成功与否都靠快照回读判定。 */
+  const switchTheme = useCallback((id) => {
+    try {
+      theme.setTheme(id);
+    } catch (error) {
+      console.warn('[codex-ui] 切主题失败：', error);
+    }
+  }, [theme]);
   const unavailable = snapshot.status === 'unavailable';
   const readOnly = snapshot.writable === false;
   const disabled = saving || unavailable || readOnly;
@@ -175,7 +222,7 @@ function CodexUiSettingsCard({ scope, locale, view }) {
     const contrast = fieldValue(snapshot, fieldOf('contrast'));
     const parts = [];
     if (__override.isHex(accent)) parts.push(accent);
-    parts.push(copy.contrast + ' ' + String(contrast ?? __override.DEFAULT_CONTRAST[theme]));
+    parts.push(copy.contrast + ' ' + String(contrast ?? __override.DEFAULT_CONTRAST[variant]));
     return jsx('span', { children: copy.summary(parts) });
   }
   if (unavailable) {
@@ -228,7 +275,7 @@ function CodexUiSettingsCard({ scope, locale, view }) {
         type: 'color',
         disabled,
         'aria-label': label,
-        value: __override.isHex(current) ? current : __override.SKIN_DEFAULTS[theme][base],
+        value: __override.isHex(current) ? current : __override.SKIN_DEFAULTS[variant][base],
         onChange: (event) => write(field, event.target.value),
       }),
       jsx('input', {
@@ -270,7 +317,7 @@ function CodexUiSettingsCard({ scope, locale, view }) {
   const contrastRow = () => {
     const field = fieldOf('contrast');
     const current = fieldValue(snapshot, field);
-    const base = current === undefined || current === null ? __override.DEFAULT_CONTRAST[theme] : current;
+    const base = current === undefined || current === null ? __override.DEFAULT_CONTRAST[variant] : current;
     const draft = draftOf(field);
     const shown = draft !== undefined ? draft : base;
     return row('contrast', copy.contrast, copy.contrastDesc, [
@@ -299,13 +346,17 @@ function CodexUiSettingsCard({ scope, locale, view }) {
     className: 'cx-form',
     children: [
     jsx('p', { className: 'cx-note', children: copy.intro }),
-    row('theme', copy.theme, null, jsx(SegmentedControl, {
+    row('theme', copy.theme, copy.themeDesc, jsx(SegmentedControl, {
       id: 'codex-ui-theme',
-      value: theme,
+      value: preference,
       label: copy.theme,
       disabled,
-      options: [{ value: 'light', label: copy.light }, { value: 'dark', label: copy.dark }],
-      onChange: setTheme,
+      options: [
+        { value: 'light', label: copy.light },
+        { value: 'dark', label: copy.dark },
+        { value: 'system', label: copy.system },
+      ],
+      onChange: switchTheme,
     })),
     colorRow('accent', copy.accent, copy.accentDesc),
     colorRow('surface', copy.surface, copy.surfaceDesc),
@@ -325,13 +376,21 @@ function CodexUiSettingsCard({ scope, locale, view }) {
   }, 'form');
 }
 
-/** 把卡片挂到组合包页的座位上。 */
-function registerSettingsCard(ctx, Card) {
+/**
+ * 把卡片挂到组合包页的座位上。
+ * @param ctx - 客户端上下文。
+ * @param Card - 卡片组件。
+ * @param extras - 额外的注入面（宿主 theme 服务与它的变更订阅）。
+ */
+function registerSettingsCard(ctx, Card, extras = {}) {
   ctx.slots.inject('plugins.bundle.config', () => ctx.slots.register({
     name: 'plugins.bundle.config',
     key: PLUGIN_ID,
     inject: () => ({
       scope: ctx.configForms.get(__override.SETTINGS_ENTRY_ID),
+      /* 宿主主题服务与变更订阅：卡片上「主题」那一行的读写通道。 */
+      theme: extras.theme,
+      watchTheme: extras.watchTheme,
       /* locale 缺席时 inject 会给 undefined，卡片自己回落到浏览器语言。 */
       locale: ctx.reflect.get('locale'),
     }),

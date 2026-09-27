@@ -26,6 +26,19 @@ A settings page inside the plugin manager, plus the dark base re-anchored on the
 - New `skins/codex-ink/settings.css` (tokens only, zero colors) and `scripts/settings-page-verify.mjs`
   (13 assertions against a real GUI).
 
+- The theme row now drives the host theme service (`ctx.theme`, provided by
+  @deepseek-ai/dsh-client-ui-theme): three segments light/dark/system, writing `ui-theme`'s `preference` — the same
+  setting as Settings → General → Appearance, so the whole app switches and it survives a reload, and the three colour
+  rows follow the variant in effect. `inject` gained the service name `theme`.
+- New `scripts/make-verify-profile.mjs`: builds a throwaway verification profile (plugin manager enabled, only this
+  plugin) so `settings-page-verify` is reproducible on any machine. Live-GUI assertions went from 13 to 20 (theme
+  switch, dark taking effect, preference surviving a reload, clean-up at the end) and the script is now idempotent:
+  it clears overrides and the theme left by a previous run first.
+- Two real bugs fixed, both caught by live-GUI assertions: `jsxs(type, props, children)` takes a **key** as its third
+  argument (the card rendered an empty div); and handing a freshly-allocated object to `useSyncExternalStore` — React
+  throws #185 (maximum update depth) and the host only leaves `slot entry crashed in 'plugins.bundle.config'`, so the
+  whole seat entry never renders.
+
 ### Dark base
 
 - Background `#111111 → #181818`, foreground `#FCFCFC → #FFFFFF`, sidebar `#171717 → #181818` (same face as the
