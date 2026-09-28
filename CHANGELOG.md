@@ -48,10 +48,12 @@ old flat scripts was re-expressed in the new ones.
   token cannot express both.
 - `scripts/live/settings-modal.mjs` and `scripts/live/settings-sweep.mjs` are the live-GUI checks for the modal. The
   sweep treats "found zero settings pages" as a hard failure — it used to report PASS while scanning nothing.
+- 0.6.4's sidebar-colour verification comes across as the `sidebar-color` fixture spec (16 assertions: both themes on
+  one page, measured pixels, the hierarchy direction, plus a per-theme negative control).
 
 ### Verification
 
-`npm run check` 67/67 · `node scripts/verify.mjs` 208/208 (8 specs).
+`npm run check` 67/67 · `node scripts/verify.mjs` 224/224 (9 specs).
 
 ## 0.6.4 - 2026-09-28
 

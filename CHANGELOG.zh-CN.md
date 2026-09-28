@@ -44,10 +44,11 @@
   亮色那支拟合对暗色不成立，一个令牌表达不了两档。
 - `scripts/live/settings-modal.mjs` 与 `scripts/live/settings-sweep.mjs` 是模态框的真 GUI 验收。
   扫掠脚本把「一个设置页都没扫到」当硬故障 —— 旧版在这种情况下报 PASS。
+- 0.6.4 的侧栏底色验收搬成 `sidebar-color` 夹具 spec（16 项：亮暗同页、实测像素、层级方向，外加每套一条反例对照）。
 
 ### 验收
 
-`npm run check` 67/67 · `node scripts/verify.mjs` 208/208（8 个 spec）。
+`npm run check` 67/67 · `node scripts/verify.mjs` 224/224（9 个 spec）。
 
 ## 0.6.4 - 2026-09-28
 

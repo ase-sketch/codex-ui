@@ -152,7 +152,7 @@ ones go through a `ctx.inject([...], cb)` child scope, as the model picker does.
 | Command | Coverage | Requirement |
 |---|---|---|
 | `npm run check` | Syntax, JSON, manifest and `peerDependencies`, artifacts in sync with sources, the DSH client plugin contract of `client.js` (executed once in isolation), scoping, override-layer and power-rail pure functions, 36 WCAG pairs, color whitelist, encoding, docs pairing, machine-specific paths, the settings-modal contract (sources / scoping / host-first anchor / assembly) — 67 checks | none |
-| `npm run verify` | All fixtures, 208 assertions (table below) | host packages + Chromium |
+| `npm run verify` | All fixtures, 224 assertions (table below) | host packages + Chromium |
 | `node scripts/live/gui.mjs --url <token URL>` | Real GUI: shadows and both dividers, plus the model seat — 14 assertions with face B on (takeover, geometry, a keyboard change written into the host store and reverted), 10 with it off (the face A pending window; `--latency` adds 800ms to that round trip by default, since locally it takes <60ms and cannot be sampled) | a running `dsh web` |
 | `node scripts/live/settings.mjs --url <…>` | Real GUI: the card on the bundle page, its 9 rows, no override at defaults, switch and accent writes, the host seat coming back when the model picker is off, survival across a reload, no intermediate frame while switching theme; resets everything at the end — 30 assertions | same, with the plugin manager enabled |
 | `node scripts/live/settings-modal.mjs --url <…>` | Real GUI: the ㉑ structure layer and its visual layer together — the grouped sidebar, the "← Back to app" row, the search filter, group headers, host node identity (nothing moved or cloned), and the attribute-first hiding that survives the host rewriting `className`. Needs a live `dsh web` with the plugin manager enabled; `--explore` dumps the structure without asserting | same |
@@ -168,6 +168,7 @@ Fixtures: `node scripts/verify.mjs [spec…]`; without a spec, all of them run.
 | `model-picker` | host-menu · power-rail | ⑫ face A (the host menu) and the pending indicator; ⑳ face B: seat takeover and hand-back, geometry, no commit while dragging / one snapped commit on release, no snap-back and a spinner during a slow round trip, **the top-rung violet dot matrix** (5 rows, 8 tone buckets, hash-scattered phases, feathering, both reduced-motion switches), the four keys, focus ring, Escape, model change carrying its default effort, failure notice, reduced motion, dark, the switch. The fake directory is shaped like the **installed** host (no `pending` in the snapshot) | 20 + 62 |
 | `rightbar` | rightbar | Shadow layer, right panel, both dividers | 42 |
 | `sidebar` | align · surface | Sidebar column alignment; the sidebar scroll fade (Codex mask ramp), mechanism plus per-pixel alpha | 6 + 13 |
+| `sidebar-color` | sidebar-color | The sidebar base against Codex's **measured** pixels, both themes on one page: light 246/233/255 and dark 15/31/17 (all neutral, R=G=B), the sidebar-to-content step in each, the hierarchy direction, plus a per-theme negative control | 16 |
 
 Options: `--host <app.asar | node_modules>` picks the host, `--shots <dir>` the screenshot directory (default
 `codex-ui-shots/` under the system temp directory), `--verbose` prints the readings. Fixtures read the shipped host CSS

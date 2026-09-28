@@ -143,7 +143,7 @@ node scripts/build.mjs --check   # 只比对产物是否过期，不落盘
 | 命令 | 覆盖 | 前置 |
 |---|---|---|
 | `npm run check` | 语法、JSON、清单与 `peerDependencies`、产物与源码同源、`client.js` 的 DSH 插件契约（隔离执行一遍）、作用域化、覆盖层与功率轨纯函数、36 组 WCAG、彩色白名单、编码、双语文档成对、机器专属路径，60 项 | 无 |
-| `npm run verify` | 全部夹具，195 项（见下表） | 宿主包 + Chromium |
+| `npm run verify` | 全部夹具，224 项（见下表） | 宿主包 + Chromium |
 | `node scripts/live/gui.mjs --url <带 token 的 URL>` | 真 GUI：阴影与两条分界线，加模型位 —— B 面开着时 14 项（顶替、几何、键盘改档写进宿主 store 并改回），关着时 10 项（A 面 pending 窗口；`--latency` 默认给往返加 800ms，本机往返 <60ms 采不到） | `dsh web` 实例 |
 | `node scripts/live/settings.mjs --url <…>` | 真 GUI：组合包页设置卡、9 行结构、默认不覆盖、开关与强调色写入、模型选择器关掉后宿主那一格复原、刷新后仍在、主题切换逐帧无中间帧；结束时全部重置，30 项 | 同上（profile 需启用插件管理） |
 | `node scripts/live/parity.mjs snap --url <…> --out <目录>`<br>`node scripts/live/parity.mjs diff <改前> <改后>` | 14 个界面状态逐元素存下全部计算样式再逐项比，0 差异时退出码 0；重构靠它证明外观没变。`--ignore` 可跳过指定属性或新加的 `--变量` | 同上 |
@@ -157,6 +157,7 @@ node scripts/build.mjs --check   # 只比对产物是否过期，不落盘
 | `model-picker` | host-menu · power-rail | ⑫ A 面宿主菜单与 pending 指示器；⑳ B 面：席位顶替与复原、几何、拖动中不提交 / 松手对齐提交一次、慢往返不回弹且转圈、键盘四键、焦点环、Escape、换模型带默认档、失败提示、**顶档紫色点阵**（5 行、8 档色调桶、相位 hash 散开、羽化、两条关动效口子）、reduced-motion、深色、开关。假目录按**安装中的**宿主形状写（快照里没有 `pending`） | 20 + 62 |
 | `rightbar` | rightbar | 阴影层、右栏三件套、两条分界线 | 42 |
 | `sidebar` | align · surface | 侧栏列对齐；侧栏滚动渐隐（Codex mask 斜坡）的机制与逐像素 alpha | 6 + 13 |
+| `sidebar-color` | sidebar-color | 侧栏底色对 Codex **实测**像素，亮暗同页：亮 246/233/255、暗 15/31/17（全中性，R=G=B）、各自与主区的档差、层级方向，外加每套一条反例对照 | 16 |
 
 选项：`--host <app.asar | node_modules>` 指定宿主，`--shots <目录>` 指定截图位置（默认系统临时目录下的 `codex-ui-shots/`），
 `--verbose` 打印读数。夹具取宿主 shipped CSS 加按渲染代码复刻的 DOM，用 `getComputedStyle` 读值；它没有标题栏条、真实
