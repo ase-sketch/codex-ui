@@ -1845,9 +1845,6 @@ html[data-codex-ui] {
   }
 }
 
-
-
-
 html[data-codex-ui] div[data-cx-sm-panel] {
   --cx-sm-surface-backdrop: var(--dsw-alias-bg-sidebar);
 
@@ -1856,7 +1853,6 @@ html[data-codex-ui] div[data-cx-sm-panel] {
   --dsw-alias-bg-layer-2: var(--dsw-alias-bg-layer-1);
   --dsw-alias-bg-layer-3: var(--dsw-alias-bg-layer-1);
 }
-
 
 html[data-codex-ui] body[data-ds-dark-theme] div[data-cx-sm-panel] {
   --cx-sm-card-edge: var(--dsw-alias-border-l1);
@@ -1877,19 +1873,15 @@ html[data-codex-ui] div[data-cx-sm-panel] {
   background: var(--cx-sm-surface-backdrop);
 }
 
-
 html[data-codex-ui][data-windows-titlebar] div[data-cx-sm-panel] {
   padding-top: var(--dsh-windows-titlebar-height, 40px);
 }
-
 
 html[data-codex-ui][data-windows-titlebar] div[data-cx-sm-panel] button,
 html[data-codex-ui][data-windows-titlebar] div[data-cx-sm-panel] input,
 html[data-codex-ui][data-windows-titlebar] div[data-cx-sm-panel] a {
   -webkit-app-region: no-drag;
 }
-
-
 
 html[data-codex-ui] div[data-cx-sm-panel] > nav {
   position: relative;
@@ -1903,7 +1895,6 @@ html[data-codex-ui] div[data-cx-sm-panel] > nav {
   overflow: hidden;
 }
 
-
 html[data-codex-ui] div[data-cx-sm-panel] > nav > div:not([data-codex-ui-injected]):not(:has(> button)) {
   position: absolute;
   width: 1px;
@@ -1915,7 +1906,6 @@ html[data-codex-ui] div[data-cx-sm-panel] > nav > div:not([data-codex-ui-injecte
   white-space: nowrap;
 }
 
-
 html[data-codex-ui] div[data-cx-sm-panel] > nav > div:has(> button),
 html[data-codex-ui] div[data-cx-sm-panel] > nav > div:last-child {
   box-sizing: border-box;
@@ -1923,7 +1913,6 @@ html[data-codex-ui] div[data-cx-sm-panel] > nav > div:last-child {
   flex: 1 1 auto;
   gap: 2px;
 }
-
 
 html[data-codex-ui] div[data-cx-sm-panel] > nav > div:has(> button) > button {
   box-sizing: border-box;
@@ -1940,12 +1929,10 @@ html[data-codex-ui] div[data-cx-sm-panel] > nav > div:has(> button) > button {
   text-align: left;
 }
 
-
 html[data-codex-ui] div[data-cx-sm-panel] > nav > div:has(> button) > button:hover {
   background: var(--dsw-alias-interactive-bg-hover);
   color: var(--dsw-alias-label-primary);
 }
-
 
 html[data-codex-ui] div[data-cx-sm-panel] > nav > div:has(> button) > button[aria-current="true"] {
   background: var(--dsw-alias-interactive-bg-active);
@@ -1961,7 +1948,6 @@ html[data-codex-ui] div[data-cx-sm-panel] > nav > div:has(> button) > button:foc
   outline-offset: -2px;
 }
 
-
 html[data-codex-ui] div[data-cx-sm-panel] > nav > div:has(> button) > button svg {
   width: 16px;
   height: 16px;
@@ -1974,7 +1960,6 @@ html[data-codex-ui] div[data-cx-sm-panel] > nav > div:has(> button) > button:hov
 html[data-codex-ui] div[data-cx-sm-panel] > nav > div:has(> button) > button[aria-current="true"] svg {
   opacity: 1;
 }
-
 
 html[data-codex-ui] .cx-sm-group {
   margin: 12px 0 4px;
@@ -1991,11 +1976,9 @@ html[data-codex-ui] :lang(zh) .cx-sm-group {
   letter-spacing: 0;
 }
 
-
 html[data-codex-ui] .cx-sm-search + .cx-sm-group {
   margin-top: 4px;
 }
-
 
 html[data-codex-ui] .cx-sm-back {
   display: flex;
@@ -2025,8 +2008,6 @@ html[data-codex-ui] .cx-sm-back svg {
   stroke-width: 1.6;
   opacity: 0.8;
 }
-
-
 
 html[data-codex-ui] .cx-sm-search {
   display: flex;
@@ -2074,9 +2055,6 @@ html[data-codex-ui] .cx-sm-search input::placeholder {
   color: var(--dsw-alias-label-caption);
 }
 
-
-
-
 html[data-codex-ui] div[data-cx-sm-panel] > div:last-child {
   box-sizing: border-box;
   flex: 1 1 auto;
@@ -2088,7 +2066,6 @@ html[data-codex-ui] div[data-cx-sm-panel] > div:last-child {
   overflow: hidden;
 }
 
-
 html[data-codex-ui] div[data-cx-sm-panel] > div:last-child > div:first-child {
   box-sizing: border-box;
   flex: 0 0 auto;
@@ -2097,19 +2074,12 @@ html[data-codex-ui] div[data-cx-sm-panel] > div:last-child > div:first-child {
   padding: 12px var(--cx-sm-gutter) 8px;
 }
 
-
-
-
-
-
-
 html[data-codex-ui] div[data-cx-sm-panel] > div:last-child > div:last-child {
   box-sizing: border-box;
   flex: 1 1 auto;
   min-height: 0;
   padding: 2px var(--cx-sm-gutter) 0;
 }
-
 
 html[data-codex-ui] div[data-cx-sm-panel] > div:last-child > div:last-child [data-slot="settings.section"] > * {
   box-sizing: border-box;
@@ -2120,7 +2090,6 @@ html[data-codex-ui] div[data-cx-sm-panel] > div:last-child > div:last-child [dat
 
   padding-bottom: 40px;
 }
-
 
 html[data-codex-ui] div[data-cx-sm-panel] [data-slot="settings.action"] button {
   box-sizing: border-box;
@@ -2142,11 +2111,9 @@ html[data-codex-ui] div[data-cx-sm-panel] [data-slot="settings.action"] button:h
   border-color: var(--dsw-alias-border-l3);
 }
 
-
 html[data-codex-ui] div[data-cx-sm-panel] button:has([data-slot="settings.close"]) {
   display: none;
 }
-
 
 html[data-codex-ui] .cx-sm-pagehead {
   display: flex;
@@ -2178,18 +2145,12 @@ html[data-codex-ui] :lang(zh) .cx-sm-pagehead > h2 {
   letter-spacing: 0;
 }
 
-
-
-
-
 html[data-codex-ui] div[data-cx-sm-panel] [data-slot="settings.section"] > * {
   box-sizing: border-box;
   width: 100%;
   gap: 0;
   padding-top: 2px;
 }
-
-
 
 html[data-codex-ui] div[data-cx-sm-panel] [data-slot="settings.general.item"] > * {
   box-sizing: border-box;
@@ -2203,7 +2164,6 @@ html[data-codex-ui] div[data-cx-sm-panel] [data-slot="settings.general.item"] > 
   transition: background-color var(--dsw-motion-fast, 150ms) var(--dsw-ease, ease);
 }
 
-
 html[data-codex-ui] div[data-cx-sm-panel] [data-slot="settings.section"] > :first-child > [data-slot="settings.general.item"] > *:first-child {
   border-top-width: 0.5px;
   border-left-width: 0.5px;
@@ -2211,14 +2171,12 @@ html[data-codex-ui] div[data-cx-sm-panel] [data-slot="settings.section"] > :firs
   border-radius: var(--cx-sm-radius-card) var(--cx-sm-radius-card) 0 0;
 }
 
-
 html[data-codex-ui] div[data-cx-sm-panel] [data-slot="settings.section"] > :first-child > [data-slot="settings.general.item"] > *:last-child {
   border-bottom-width: 0.5px;
   border-left-width: 0.5px;
   border-right-width: 0.5px;
   border-radius: 0 0 var(--cx-sm-radius-card) var(--cx-sm-radius-card);
 }
-
 
      html[data-codex-ui] .<hash>_card { background: var(--dsw-alias-settings-card-fill) }
      html[data-codex-ui] .<hash>_cardActive { background: var(--dsw-alias-bg-module-platform) }
@@ -2254,23 +2212,17 @@ html[data-codex-ui] body），
    这条路径由 scripts/settings-modal-verify.mjs 的两条集成断言把守
    （未选中卡 == var(--dsw-alias-bg-layer-1) 的计算值；选中卡背景 ≠ 未选中卡背景）。 */
 
-
 html[data-codex-ui] div[data-cx-sm-panel] [data-slot="settings.section"] > :first-child > [data-slot="settings.general.item"] > *:not(:first-child):not(:last-child) {
   border-radius: 0;
 }
-
 
 html[data-codex-ui] div[data-cx-sm-panel] [data-slot="settings.general.item"] > *:hover {
   background: var(--dsw-alias-interactive-bg-hover);
 }
 
-
 html[data-codex-ui] div[data-cx-sm-panel] [data-slot="settings.general.item"] > * > :first-child > div:not(:first-child) {
   color: var(--dsw-alias-label-caption);
 }
-
-
-
 
 html[data-codex-ui] [data-cx-sm-hidden],
 html[data-codex-ui] .cx-sm-hidden {
@@ -2285,8 +2237,6 @@ html[data-codex-ui] .cx-sm-empty {
   line-height: 20px;
   text-align: center;
 }
-
-
 
 html[data-codex-ui] [data-codex-ui-injected="settings-modal"],
 html[data-codex-ui] [data-codex-ui-injected="settings-modal"] * {
