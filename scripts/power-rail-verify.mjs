@@ -2,7 +2,7 @@
 /**
  * power-rail-verify.mjs — 模型选择器 B 面（src/model-picker.js + model-picker.css）的夹具验收。
  *
- * 不需要宿主：真实的 theme.css + 真实的组件模块（构建期同一条 stripExports 路径包成 IIFE），
+ * 不需要宿主：真实的 theme.css + 真实的组件模块（与 client.js 同一个打包器包成 IIFE），
  * 配一个按宿主契约写的假 modelDirectories —— select() 的往返**故意放慢到 600ms**，
  * 本机真宿主往返不到 60ms，pending 期间的行为在真 GUI 上根本来不及量。
  * 指针与键盘都走 CDP 的真输入事件（setPointerCapture 只认真指针）。
@@ -19,15 +19,15 @@ import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { chromePath, tempDir } from './host-paths.mjs';
-import { MODEL_PICKER_EXPORTS, MODEL_PICKER_FILE, stripExports } from '../src/build.mjs';
+import { bundle } from './build.mjs';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const WB = dirname(HERE);
 const EVID = join(WB, 'assets', 'screenshots');
 const SHOT = !process.argv.includes('--no-shot');
 const theme = fs.readFileSync(join(WB, 'theme.css'), 'utf8');
-const pickerIife = '(() => {\n' + stripExports(fs.readFileSync(MODEL_PICKER_FILE, 'utf8'), 'model-picker.js')
-  + '\nreturn { ' + MODEL_PICKER_EXPORTS.join(', ') + ' };\n})()';
+const picker = bundle(join(WB, 'src', 'client', 'model-picker', 'component.js'));
+const pickerIife = '(() => {\n' + picker.code + '\nreturn ' + picker.entryVar + ';\n})()';
 
 /* 假目录：字段、状态机与返回值照 dsh-client-ui-model-selection 0.1.7-rc.2 的 ModelDirectory.select()。 */
 const fake = `
@@ -61,7 +61,7 @@ const dir = {
   },
 };
 window.__dir = dir;
-window.__picker = __mp.installModelPicker({
+window.__picker = __mp.mountModelPicker({
   models: { directoryFor: (id) => { if (id !== 'session-a') throw new Error('ui-model-selection: session "' + id + '" resolved no scope'); return dir; } },
   sessionFallback: () => null,
   locale: null,

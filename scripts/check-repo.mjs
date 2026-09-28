@@ -10,14 +10,13 @@
  * 它们读 DSH_ASAR / DSH_GLOBAL_MODULES / DSH_CHROME，本文件不碰。
  */
 import fs from 'node:fs';
+import vm from 'node:vm';
 import { execFileSync } from 'node:child_process';
-import { dirname, join, relative } from 'node:path';
-import { fileURLToPath } from 'node:url';
-import { build, ATTR, PLUGIN_DIR, SKIN_DIR, OVERRIDE_FILE, SETTINGS_FILE, stripExports } from '../src/build.mjs';
-import * as override from '../src/override.js';
-import * as picker from '../src/model-picker.js';
+import { join, relative } from 'node:path';
+import { build, ROOT as PLUGIN_DIR, SCOPE, SKIN_DIR } from './build.mjs';
+import * as override from '../src/client/override.js';
+import * as picker from '../src/client/model-picker/view.js';
 
-const HERE = dirname(fileURLToPath(import.meta.url));
 let failed = 0;
 const ok = (name, extra = '') => console.log('ok   ' + name + (extra ? '  ' + extra : ''));
 const bad = (name, detail) => { failed += 1; console.error('FAIL ' + name + '\n     ' + detail); };
@@ -84,29 +83,42 @@ const built = build();
 check('theme.css 与源样式一致', () => {
   const committed = fs.readFileSync(join(PLUGIN_DIR, 'theme.css'), 'utf8');
   assert(committed === built.themeCss, '过期：先跑 node scripts/build.mjs');
-  return built.scopedBytes + ' B';
+  return built.themeCss.length + ' B';
 });
-check('client.js 与源样式一致', () => {
+check('client.js 与源码一致', () => {
   const committed = fs.readFileSync(join(PLUGIN_DIR, 'client.js'), 'utf8');
   assert(committed === built.clientJs, '过期：先跑 node scripts/build.mjs');
   return built.clientJs.length + ' B';
 });
-check('client.js 内嵌的就是 theme.css', () => {
-  const clientJs = fs.readFileSync(join(PLUGIN_DIR, 'client.js'), 'utf8');
-  const m = /const CSS = (".*?");\n/s.exec(clientJs);
-  assert(m, 'client.js 里找不到 CSS 字面量');
-  assert(JSON.parse(m[1]) === built.themeCss, 'client.js 内嵌 CSS 与 theme.css 不同');
+/* DSH 真正消费的是这个：经典脚本调用一次 __ModuleLoader__.load，id = 包名，factory 返回 { apply, inject }。
+   在隔离环境里执行一遍（包导入给空对象；模块顶层不碰 DOM），直接断言契约。 */
+const plugin = (() => {
+  let loaded = null;
+  const window = { __ModuleLoader__: { load: ({ id, factory }) => { loaded = { id, ...factory(() => ({})) }; } } };
+  vm.runInNewContext(built.clientJs, { window, console });
+  return loaded;
+})();
+check('client.js 符合 DSH 客户端插件契约', () => {
+  assert(plugin !== null, '没有调用 window.__ModuleLoader__.load');
+  assert(plugin.id === pkg.name, 'loader id 应等于包名 ' + pkg.name + '，实为 ' + plugin.id);
+  assert(typeof plugin.apply === 'function', 'factory 没有返回 apply');
+  /* inject 里的名字全是必需服务，缺一个整个插件就不激活；modelDirectories 必须走 ctx.inject 子作用域。 */
+  assert(JSON.stringify(plugin.inject) === JSON.stringify(['slots', 'configForms', 'theme']), 'inject 应为 slots / configForms / theme，实为 ' + JSON.stringify(plugin.inject));
+  assert(built.clientJs.includes("ctx.inject(['modelDirectories']"), '模型选择器不再经 ctx.inject 等服务');
+  assert(built.clientJs.includes(JSON.stringify(built.themeCss)), 'client.js 内嵌的样式与 theme.css 不同');
+  return 'id ' + plugin.id + ' · inject ' + plugin.inject.join(' ');
 });
 
 /* ── 6. 样式表卫生 ────────────────────────────────────────────────────── */
 const themeCss = built.themeCss;
 check('theme.css 全部作用域化', () => {
-  assert(themeCss.includes(ATTR), '缺少作用域根 ' + ATTR);
-  const bare = themeCss.match(/(^|\n)\s*:root\s*[,{]/g);
-  assert(bare === null, '残留未作用域的 :root：' + (bare ? bare.length : 0) + ' 处');
-  assert(!/@import\s+url\(\s*['"]?https?:/.test(themeCss), '不允许远程 @import');
-  assert(!themeCss.includes('__CODEX_UI_CSS__'), '残留模板占位符');
-  return themeCss.length + ' B';
+  const selectors = [...themeCss.matchAll(/([^{}]+)\{/g)].map((m) => m[1].trim())
+    .filter((s) => s !== '' && !s.startsWith('@') && !/^(from|to|[\d.]+%)$/.test(s))
+    .flatMap((s) => s.split(/,\s*\n/));
+  const bare = selectors.filter((s) => !s.startsWith('html[data-codex-ui'));
+  assert(bare.length === 0, '没挂在 ' + SCOPE + ' 下的选择器：' + bare.slice(0, 5).join(' | '));
+  assert(!/@import|url\(/.test(themeCss), '样式里不允许 @import / url()');
+  return selectors.length + ' 条选择器';
 });
 check('theme.css 花括号配平', () => {
   let depth = 0;
@@ -214,16 +226,16 @@ check('覆盖层与皮肤对账：文本档位与 alpha 阶梯逐条一致', () 
     + Object.keys(override.ALPHA_LADDER.light).length + Object.keys(override.ALPHA_LADDER.dark).length;
   return count + ' 条';
 });
-check('产物里确实带上了设置页与覆盖层', () => {
-  const clientJs = fs.readFileSync(join(PLUGIN_DIR, 'client.js'), 'utf8');
-  for (const need of ['plugins.bundle.config', 'CodexUiSettingsCard', 'registerSettingsCard', '__override', 'data-codex-ui-theme']) {
-    assert(clientJs.includes(need), 'client.js 里缺 ' + need);
-  }
-  const stripped = stripExports(fs.readFileSync(OVERRIDE_FILE, 'utf8'));
-  assert(stripped.includes('function themeOverrideCss'), 'override.js 去掉 export 后丢了函数');
-  const card = fs.readFileSync(SETTINGS_FILE, 'utf8');
-  assert(!/jsxs\('[a-z]+', \{[^}]*\}, \[/.test(card) && !/jsxs\('[a-z]+', \{ className: '[^']*', key \}, \[/.test(card), 'settings-card.js 又把 children 传成了第三个参数（jsx 运行时那里是 key）');
-  return 'client.js ' + clientJs.length + ' B';
+check('设置卡没把 children 传成 jsx 的第三个参数（那里是 key）', () => {
+  const card = fs.readFileSync(join(PLUGIN_DIR, 'src', 'client', 'settings-card.js'), 'utf8');
+  assert(!/jsxs\('[a-z]+', \{[^}]*\}, \[/.test(card) && !/jsxs\('[a-z]+', \{ className: '[^']*', key \}, \[/.test(card), '第三个参数是数组');
+});
+check('宿主半与覆盖层的默认对比度一致', () => {
+  const host = fs.readFileSync(join(PLUGIN_DIR, 'index.js'), 'utf8');
+  const light = Number(/DEFAULT_CONTRAST_LIGHT = (\d+)/.exec(host)?.[1]);
+  const dark = Number(/DEFAULT_CONTRAST_DARK = (\d+)/.exec(host)?.[1]);
+  assert(light === override.DEFAULT_CONTRAST.light && dark === override.DEFAULT_CONTRAST.dark, 'index.js ' + light + '/' + dark + ' ≠ override.js ' + JSON.stringify(override.DEFAULT_CONTRAST));
+  return light + ' / ' + dark;
 });
 
 /* ── 6c. 模型选择器（纯函数 + 样式纪律）────────────────────────────────── */
@@ -271,15 +283,6 @@ check('模型选择器样式只画自建节点，不碰宿主菜单', () => {
   assert(hasCount === 1, ':has() 应只有席位那一条，实有 ' + hasCount);
   return selectors.length + ' 组选择器';
 });
-check('产物里带上了模型选择器，且模板经 ctx.inject 等服务', () => {
-  const clientJs = fs.readFileSync(join(PLUGIN_DIR, 'client.js'), 'utf8');
-  for (const need of ['__modelPicker', 'function installModelPicker', "ctx.inject(['modelDirectories']", 'codex-mp-trigger']) {
-    assert(clientJs.includes(need), 'client.js 里缺 ' + need);
-  }
-  assert(!/const inject = \[[^\]]*modelDirectories/.test(clientJs), 'modelDirectories 进了插件的硬依赖列表：缺这个服务时整个皮肤都不激活');
-  return 'ok';
-});
-
 /* ── 7. 文档成对 ──────────────────────────────────────────────────────── */
 check('双语文档成对', () => {
   const pairs = [['README.md', 'README.zh-CN.md'], ['CHANGELOG.md', 'CHANGELOG.zh-CN.md']];

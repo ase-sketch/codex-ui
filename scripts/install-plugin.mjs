@@ -3,7 +3,7 @@
  * install-plugin.mjs — 把 <workbench>/plugin/codex-ui 安装进某个 profile（默认 web）。
  *
  * 做四件事（默认只读体检，--write 才落盘）：
- *   1. 调 src/build.mjs，把 skins/codex-ink 的五份样式作用域化到 html[data-codex-ui]，
+ *   1. 调 scripts/build.mjs，把 skins/codex-ink 的样式作用域化到 html[data-codex-ui]，
  *      写成 plugin/codex-ui/theme.css；
  *   2. 把同一份 CSS 内嵌进 client.template.js，写成 plugin/codex-ui/client.js；
  *   3. 在 profiles/<name>/node_modules 建立指向插件目录的 junction，使其可按包名解析；
@@ -24,7 +24,7 @@ import { execFileSync } from 'node:child_process';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { homedir } from 'node:os';
-import { build, SKIN_PARTS } from '../src/build.mjs';
+import { build } from './build.mjs';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const WB = dirname(HERE);
@@ -104,16 +104,13 @@ if (wantBundle) {
 }
 
 /* ── 生成 ──────────────────────────────────────────────────────────────── */
-/* 作用域化与拼装只有一份实现，在 src/build.mjs；安装产物与 CI 校验同源。 */
-const { themeCss, clientJs, sources, scopedBytes, hashAnchors } = build();
-const sourceBytes = Object.values(sources).reduce((a, b) => a + b, 0);
+/* 作用域化与打包只有一份实现，在 scripts/build.mjs；安装产物与 CI 校验同源。 */
+const { themeCss, clientJs } = build();
 
 /* ── 报告 ──────────────────────────────────────────────────────────────── */
 console.log('profile  : ' + PROFILE);
 console.log('plugin   : ' + PLUGIN_DIR);
-console.log('css      : 源 ' + sourceBytes + ' B → 作用域化 ' + scopedBytes + ' B');
-/* 哈希类名计数：patches.css 禁 [class*=…]，本层按上游移植放行——把账摊开，不藏着。 */
-console.log('hash 锚点: ' + SKIN_PARTS.map(([f]) => f.replace('.css', '') + '=' + hashAnchors[f]).join(' '));
+console.log('theme.css: ' + themeCss.length + ' B');
 console.log('client.js: ' + clientJs.length + ' B');
 console.log('link     : ' + LINK);
 console.log('patch    : ' + PATCH);
