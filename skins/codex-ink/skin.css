@@ -1,34 +1,17 @@
-/* ============================================================================
-   codex-ink（墨白终端）· L1 令牌层 + L2 排版层
-   ----------------------------------------------------------------------------
-   设计母题：OpenAI Codex / ChatGPT 系 —— 界面消失，只剩内容与光标。
-   黑白灰是 chrome，彩色只配给状态。
+/* codex-ink · L1 令牌 + L2 排版
+   把宿主的 --dsw-alias-* / --dsw-specific-* 语义令牌重映射到墨白灰阶，并补齐间距 / 圆角 / 字阶 / 动效 / elevation。
+   黑白灰是 chrome，彩色只给 state 三色、diff 红绿与强调色。取值依据见 README「实测值」「与 Codex 源码对账」。
+   亮色令牌同时落 :root 与 body：宿主把令牌声明在 body 上，只写 :root 会被 body 自身声明盖掉。 */
 
-   本文件只做两件事：
-     1) 把官方 --dsw-alias-* / --dsw-specific-* 语义令牌重映射到墨白灰阶；
-     2) 补齐官方缺失的 spacing / radius / typography-scale / motion / elevation 令牌层。
-
-   纪律：
-     · 不出现任何 url()、@import、远程地址、内联 JS（skin-center 安全管线白名单）；
-     · 亮色令牌同时落在 :root 与 body —— 官方亮色令牌声明在 body 上，
-       只写 :root 会被 body 自身声明盖掉（加载器会把本文件强制限定在
-       html[data-dsh-skin="codex-ink"] 之下，从而取得高于官方的特异性）；
-     · 彩色白名单：state 三色 + diff 红绿 + 徽标底色 + 焦点环（Codex --color-border-focus 蓝 #339CFF），
-      其余一律墨/灰。
-   ========================================================================== */
-
-/* ── 亮色主题 ────────────────────────────────────────────────────────────── */
+/* ── 亮色 ── */
 :root,
 body {
   color-scheme: light;
-
-  /* 画布自持：底色由本皮肤自己画在 html 与 body 上，不指望宿主那一帧是否已把 token 换好。
-     主题切换时的闪，十有八九是「某一帧没人画底」—— 那时露出的是 UA/宿主的默认画布色。 */
+  /* 画布自持：底色自己画在 html 与 body 上，不指望宿主那一帧已换好令牌（露出默认画布就是闪）。 */
   background-color: #ffffff;
 
-  /* 底色：白 → #F9F9F9 → #F1F1EF → #E5E5E5 四档灰阶即层级 */
   --dsw-alias-bg-base: #ffffff;
-  --dsw-alias-bg-sidebar: #eef4f9; /* Codex 亮色侧栏实测取样（350×1377 截图点采样 = #EEF4F9） */
+  --dsw-alias-bg-sidebar: #eef4f9; /* codex-sidebar-reference.png 点采样 */
   --dsw-alias-bg-layer-1: #ffffff;
   --dsw-alias-bg-layer-2: #f1f1ef;
   --dsw-alias-bg-layer-3: #e5e5e5;
@@ -37,16 +20,13 @@ body {
   --dsw-alias-bg-multi-select: #e5e5e5;
   --dsw-alias-bg-skeleton: rgba(13, 13, 13, 0.05);
 
-  /* 描边：发丝即层级 */
   --dsw-alias-border-l1: rgba(13, 13, 13, 0.07);
   --dsw-alias-border-l2: rgba(13, 13, 13, 0.12);
   --dsw-alias-border-l3: rgba(13, 13, 13, 0.18);
   --dsw-alias-border-l4: rgba(13, 13, 13, 0.24);
   --dsw-alias-border-l2-darkmode-thin: rgba(13, 13, 13, 0.09);
 
-  /* 文字：墨 / 次墨 / 辅墨。前景取 Codex 浅色主题的「前景」实测值 #1A1C1F
-     （冷调，不是纯黑；取色面板截图 assets/reference/codex-theme-light.png）。 */
-  --dsw-alias-label-primary: #1a1c1f;
+  --dsw-alias-label-primary: #1a1c1f; /* Codex 前景（codex-theme-light.png；源码 --color-text-foreground） */
   --dsw-alias-label-primary-dimmed: #5d5d5d;
   --dsw-alias-label-primary-inverted: #ffffff;
   --dsw-alias-label-primary-foreground: #ffffff;
@@ -56,14 +36,12 @@ body {
   --dsw-alias-label-caption: #767676;
   --dsw-alias-label-dimmed: #c9c9c9;
 
-  /* 主行动 = 墨块（全界面视觉重量最高的元素，无需任何品牌色） */
+  /* 主行动是墨色胶囊；强调色只上链接与焦点环 */
   --dsw-alias-brand-primary: #0d0d0d;
   --dsw-alias-brand-primary-invert: #ffffff;
   --dsw-alias-brand-text: #ffffff;
   --dsw-alias-brand-primary-new-colorprimary-new-color: #0d0d0d;
-  /* 强调色 = Codex 浅色主题「强调色」实测值 #339CFF，只上链接；
-     主行动按钮在 Codex 里仍是墨色胶囊，故 brand-primary 不动。 */
-  --dsw-alias-link: #339cff;
+  --dsw-alias-link: #339cff; /* Codex 强调色（codex-theme-light.png） */
 
   --dsw-alias-button-primary-fill: #0d0d0d;
   --dsw-alias-button-primary-hover: #2a2a2a;
@@ -81,24 +59,14 @@ body {
   --dsw-alias-button-tool-bar-fill-invisible: rgba(13, 13, 13, 0.18);
   --dsw-alias-button-tool-bar-hover: rgba(13, 13, 13, 0.36);
 
-  /* 交互底色：背景升一档，无位移无阴影 */
+  /* hover 只把背景升一档，不加投影 */
   --dsw-alias-interactive-bg-hover: rgba(13, 13, 13, 0.04);
-  /* composer 控件悬停底：Codex 实测 #F2F2F3（冷中性，不是本层灰阶的暖 #F1F1EF）。 */
-  --dsw-codex-hover-fill: #f2f2f3;
-  /* 焦点环：Codex --color-border-focus = --blue-300 = #339cff（亮色直接取色） */
-  --dsw-codex-focus: #339cff;
-  /* 宿主的焦点环令牌接到 Codex 焦点色上。宿主 ui-theme 的 :focus-visible 与 10 条用
-     box-shadow 画环的组件规则都读 var(--dsw-focus-ring-color, 墨色回落)，而宿主从不在根上
-     声明它 —— 不接的话那 10 处聚焦时是墨色内环。宿主在指针操作时会把它就地置成 transparent
-     （html[data-input-modality=pointer] … :focus-visible），本皮肤的环也读这个令牌，
-     所以同一条「鼠标点击不出环」的宿主约定对皮肤一样生效。
-     var() 在声明它的元素上解析：body 上读到的是 body 自己的 --dsw-codex-focus，
-     深色那一档（70%）因此不需要再写一遍。 */
+  --dsw-codex-hover-fill: #f2f2f3; /* composer 控件悬停底（codex-composer-chip-hover.png 实测，冷中性） */
+  --dsw-codex-focus: #339cff; /* Codex --color-border-focus = --blue-300 */
+  /* 宿主的焦点环令牌接到 Codex 焦点色：宿主 :focus-visible 与 box-shadow 画环的组件都读它；宿主在指针
+     操作时就地把它置成 transparent，皮肤的环也读它，于是同样「鼠标点击不出环」。在 body 上解析，深色自动跟随。 */
   --dsw-focus-ring-color: var(--dsw-codex-focus);
-  /* Codex 的两条中性描边（app.asar 令牌，CHANGELOG 0.5.9 / 0.5.10 取证）：
-       --color-border        = --alpha-10（亮）/ --alpha-12（暗）
-       --color-border-strong = 15%（亮）/ 20%（暗）
-     输入卡环与功率轨描边用前者，功率轨拇指用后者。 */
+  /* Codex --color-border（--alpha-10 / 暗 12%）与 --color-border-strong（15% / 暗 20%） */
   --dsw-codex-border: rgba(13, 13, 13, 0.1);
   --dsw-codex-border-strong: rgba(13, 13, 13, 0.15);
   --dsw-alias-interactive-bg-active: rgba(13, 13, 13, 0.08);
@@ -106,7 +74,6 @@ body {
   --dsw-alias-interactive-bg-hover-accent: rgba(13, 13, 13, 0.06);
   --dsw-alias-interactive-bg-hover-danger: rgba(209, 36, 47, 0.08);
 
-  /* Markdown / 代码 */
   --dsw-alias-markdown-code-block: #f1f1ef;
   --dsw-alias-markdown-code-block-banner: #e5e5e5;
   --dsw-alias-markdown-inline-code: #f1f1ef;
@@ -116,7 +83,6 @@ body {
   --dsw-alias-markdown-placeholder: #e5e5e5;
   --dsw-alias-markdown-tag: #f1f1ef;
 
-  /* 状态：彩色白名单的唯一合法来源 */
   --dsw-alias-state-success-primary: #1a7f37;
   --dsw-alias-state-success-secondary: #2e9e4c;
   --dsw-alias-state-success-tertiary: rgba(26, 127, 55, 0.08);
@@ -131,7 +97,6 @@ body {
   --dsw-alias-state-business-tertiary: rgba(13, 13, 13, 0.08);
   --dsw-alias-state-idle-primary: #767676;
 
-  /* diff：白名单内的红绿 */
   --dsw-alias-code-diff-added: rgba(26, 127, 55, 0.1);
   --dsw-alias-code-diff-deleted: rgba(209, 36, 47, 0.1);
   --dsw-alias-file-diff-added-bg: #e6f4e7;
@@ -141,28 +106,23 @@ body {
   --dsw-alias-file-diff-deleted-gutter: #fdece9;
   --dsw-alias-file-diff-deleted-marker: #d1242f;
 
-  /* 浮层 / 提示 */
   --dsw-alias-bg-mask-drop: rgba(255, 255, 255, 0.7);
   --dsw-alias-toast-bg: #1e1e1e;
   --dsw-alias-tooltip-bg: #1e1e1e;
   --dsw-alias-tooltip-fg: #ffffff;
   --dsw-alias-hovercard-bg: #ffffff;
 
-  /* 滚动条：thumb = label-tertiary 30% / 50% */
   --dsw-alias-scrollbar-bg-l1: rgba(118, 118, 118, 0.3);
   --dsw-alias-scrollbar-bg-l2: rgba(118, 118, 118, 0.5);
   --dsw-alias-scrollbar-hover-l1: rgba(13, 13, 13, 0.35);
   --dsw-alias-scrollbar-hover-l2: rgba(13, 13, 13, 0.5);
 
-  /* 具体面 */
-  --dsw-specific-sidebar-fill: #eef4f9; /* 与 --dsw-alias-bg-sidebar 同源：Codex 亮色侧栏实测 */
-  --dsw-specific-sidebar-nav-item-hover: #e8eef3; /* 侧栏底 ↔ 选中行的中点（推导值，非取样） */
-  --dsw-specific-sidebar-nav-item-active: #e2e9ed; /* Codex 选中行（PROJIECT）实测取样 */
+  --dsw-specific-sidebar-fill: #eef4f9;
+  --dsw-specific-sidebar-nav-item-hover: #e8eef3; /* 侧栏底与选中行的中点（推导值） */
+  --dsw-specific-sidebar-nav-item-active: #e2e9ed; /* codex-sidebar-reference.png 选中行采样 */
   --dsw-specific-sidebar-nav-item-active-accent: rgba(13, 13, 13, 0.1);
   --dsw-specific-input-major: #ffffff;
-  /* 输入卡所坐的「表面色」。卡片底 = 5% 前景叠这个色（Codex 的 --card 公式）。
-     亮色 = 5% 墨叠白 = 243.55（参考图 codex-composer-reference.png 实测 240~246）。 */
-  --dsw-composer-surface: #ffffff;
+  --dsw-composer-surface: #ffffff; /* 输入卡所坐的表面 */
   --dsw-specific-login-input: #f9f9f9;
   --dsw-specific-menu: rgba(255, 255, 255, 0.88);
   --dsw-specific-selector: #f1f1ef;
@@ -175,41 +135,34 @@ body {
   --dsw-shadow-lv3: 0 8px 24px rgba(13, 13, 13, 0.1);
   --dsw-linear-gradient-think: linear-gradient(180deg, #ffffff 20.19%, rgba(255, 255, 255, 0) 100%);
   --dsw-linear-think-select: linear-gradient(180deg, #f1f1ef 20.19%, rgba(241, 241, 239, 0) 100%);
+
+  /* 组件阴影的明暗两档都在这里定，组件层只引用（复刻规格 §3.2 / §3.6） */
+  --dsw-codex-ambient: rgba(13, 13, 13, 0.05); /* 窗口 24px 环境影、右栏上沿 */
+  --dsw-codex-menu-shadow: 0 8px 32px rgba(13, 13, 13, 0.13), 0 0 0 1px rgba(13, 13, 13, 0.04); /* 菜单面板、模型选择器弹层 */
+  --dsw-codex-suggest-shadow: 0 8px 32px #0002, 0 0 0 1px #0000000a; /* 输入区 @ / 指令建议菜单 */
+  --dsw-codex-suggest-fill: #fff;
 }
 
-/* 切主题的那一两帧关掉全部过渡：交叉淡出（元素一半旧色一半新色）看起来就是「闪」。
-   属性由浏览器半在 ctx.on('theme/change') 时打上，两个 rAF 后摘掉。 */
+/* 切主题的两帧关掉全部过渡：整页交叉淡出看起来就是闪（属性由 src/client/theme-preview.js 打）。 */
 html[data-codex-ui-switching] *,
 html[data-codex-ui-switching] *::before,
 html[data-codex-ui-switching] *::after {
   transition: none !important;
 }
 
-/* html 在最外层，读不到 body 上那份深色令牌，只能用 :has() 自己取一次。 */
+/* html 读不到 body 上的深色令牌，用 :has() 自取一次，字面值照抄。 */
 :root:has(body[data-ds-dark-theme]) {
   background-color: #111111;
 }
 
-/* ── 暗色主题 ─────────────────────────────────────────────────────────────
-   两个来源各管一半，别再把它们合成一个（0.1.2~0.5.5 就是合错了）：
-     · 窗口**背景** = 主题取色面板（assets/reference/codex-theme-dark.png）里写的
-       「背景 #111111 / 前景 #FCFCFC / 强调色 #0169CC」；
-     · **表面** = app.asar 的 jdi.dark.surface #181818（卡片、侧栏这类抬起来的面）。
-   实测对账：用户给的 Codex 截图里，输入卡四周的背景恒为 17 = #111111 ✓，
-   卡片内部 35 = 5% 前景叠 #181818 ✓ —— 两个值同时成立，只有「背景/表面分层」能解释。
-   0.5.5 及以前把背景也写成 #181818，于是卡片与背景只差 12 级（Codex 差 18 级），
-   层次感就是这么丢的。
-   层级：背景 #111111 → 侧栏/表面 #181818 → 层1 #212121 → 层2 #282828 → 层3 #303030。
-   alpha 家族由 252 抬到 255（Codex 深色 --alpha-base = #fff）。 */
+/* ── 暗色：两个来源分层，不能合并 ──
+   窗口背景 #111111 = Codex 主题取色面板（codex-theme-dark.png）；表面 #181818 = app.asar 的 jdi.dark.surface。
+   只有这样才同时对上实测的「卡外 17、卡内 35」。层级 #111111 → #181818 → #212121 → #282828 → #303030；
+   alpha 家族取 255（Codex 深色 --alpha-base = #fff）。 */
 body[data-ds-dark-theme] {
   color-scheme: dark;
-
-  /* 画布自持（深色）：宿主只把 data-ds-dark-theme 打在 body 上，所以 html 那一份用 :has() 跟上。
-     这里重复一次字面值而不是引用令牌 —— 令牌就定义在 body 上，html 自己读不到它的深色值。 */
   background-color: #111111;
 
-  /* 窗口背景取主题面板的 #111111；侧栏/表面取 jdi.dark.surface #181818。
-     输入卡坐在**表面**上（--dsw-composer-surface），不是坐在窗口背景上 —— 见下。 */
   --dsw-alias-bg-base: #111111;
   --dsw-alias-bg-sidebar: #181818;
   --dsw-alias-bg-layer-1: #212121;
@@ -240,7 +193,7 @@ body[data-ds-dark-theme] {
   --dsw-alias-brand-primary-invert: #0d0d0d;
   --dsw-alias-brand-text: #0d0d0d;
   --dsw-alias-brand-primary-new-colorprimary-new-color: #ffffff;
-  --dsw-alias-link: #0169cc; /* Codex 深色主题「强调色」实测值 */
+  --dsw-alias-link: #0169cc; /* Codex 深色强调色（codex-theme-dark.png） */
 
   --dsw-alias-button-primary-fill: #ffffff;
   --dsw-alias-button-primary-hover: #d9d9d9;
@@ -259,10 +212,8 @@ body[data-ds-dark-theme] {
   --dsw-alias-button-tool-bar-hover: rgba(255, 255, 255, 0.28);
 
   --dsw-alias-interactive-bg-hover: rgba(255, 255, 255, 0.06);
-  /* 深色悬停底：Codex --color-background-button-secondary-hover = --gray-0 8% = #ffffff14。 */
-  --dsw-codex-hover-fill: rgba(255, 255, 255, 0.08);
-  /* 焦点环：Codex 深色 --color-border-focus = --blue-300 70%，即 #339cffb3。 */
-  --dsw-codex-focus: rgba(51, 156, 255, 0.7);
+  --dsw-codex-hover-fill: rgba(255, 255, 255, 0.08); /* Codex --color-background-button-secondary-hover */
+  --dsw-codex-focus: rgba(51, 156, 255, 0.7); /* Codex 深色 --color-border-focus = --blue-300 70% */
   --dsw-codex-border: rgba(255, 255, 255, 0.12);
   --dsw-codex-border-strong: rgba(255, 255, 255, 0.2);
   --dsw-alias-interactive-bg-active: rgba(255, 255, 255, 0.1);
@@ -318,9 +269,7 @@ body[data-ds-dark-theme] {
   --dsw-specific-sidebar-nav-item-active: #282828;
   --dsw-specific-sidebar-nav-item-active-accent: rgba(255, 255, 255, 0.14);
   --dsw-specific-input-major: #212121;
-  /* 深色表面 = jdi.dark.surface #181818（**不是**窗口背景 #111111）：
-     5% 白叠 #181818 = 35.55 → 36，实测 Codex 卡片内部 35 ✓。 */
-  --dsw-composer-surface: #181818;
+  --dsw-composer-surface: #181818; /* 表面，不是窗口背景：5% 白叠它 = 36，实测卡内 35 */
   --dsw-specific-login-input: #1f1f1f;
   --dsw-specific-menu: rgba(24, 24, 24, 0.88);
   --dsw-specific-selector: #282828;
@@ -333,12 +282,16 @@ body[data-ds-dark-theme] {
   --dsw-shadow-lv3: 0 8px 24px rgba(0, 0, 0, 0.6);
   --dsw-linear-gradient-think: linear-gradient(180deg, #212121 20.19%, rgba(33, 33, 33, 0) 100%);
   --dsw-linear-think-select: linear-gradient(180deg, #1f1f1f 20.19%, rgba(40, 40, 40, 0) 100%);
+
+  --dsw-codex-ambient: rgba(0, 0, 0, 0.5);
+  --dsw-codex-menu-shadow: 0 8px 32px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(236, 236, 236, 0.05);
+  --dsw-codex-suggest-shadow: 0 8px 32px #0003, 0 0 0 1px #ffffff08;
+  --dsw-codex-suggest-fill: #292929;
 }
 
-/* ── 官方缺失的令牌层：空间 / 圆角 / 字阶 / 动效 ─────────────────────────── */
+/* ── 间距 / 圆角 / 字阶 / 动效（宿主没有的刻度层） ── */
 :root,
 body {
-  /* 4px 网格（新增 12/20 密档，比 Claude 方向紧一档） */
   --dsw-space-1: 4px;
   --dsw-space-2: 8px;
   --dsw-space-3: 12px;
@@ -347,26 +300,9 @@ body {
   --dsw-space-6: 24px;
   --dsw-space-8: 32px;
 
-  /* 圆角刻度（唯一真源）：所有可见边框的圆角都从这里取，各层只准引用、不准再写 px。
-     角色 → 刻度：
-       xs   行内小片 / 菜单项
-       s    控件（按钮 / 列表行 / 页签）
-       m    卡片 / 浮层（菜单、下拉、tooltip）
-       l    面板 / 模态（取 16px，与宿主窗口内容块同值 —— dsh-client-ui-layout 的
-            --dsh-windows-content-radius: 16px）
-       xl   输入卡（无 corner-shape 时的回退值）
-       2xl  输入卡（corner-shape: superellipse 版；超椭圆要更大数值才视觉等圆）
-       menu 浮层菜单（模型菜单 / 触发菜单：参考仓库 composer-tool-menus 实测 18px，
-            比输入卡基准 20px 小 2px —— 与 Codex 自身 18/20 的关系一致）
-       pill 徽标 / 圆形按钮
-
-     同心纪律（2026-09-27 定，改圆角前先读这一段）：
-       嵌套圆角 = 外圆角 − 内衬。浮层菜单内衬 5px ⇒ 行圆角取
-       calc(var(--dsw-radius-menu) - 5px) = 13px。宿主原生菜单本来就是同心的
-       （MenuSurface 16px − 列表内衬 4px = 行 12px），本层不得再把它改散。
-       卡片内控件（模型 / 权限 chip）到卡片边的内衬是 8px，20/25 − 8 = 12~17，
-       大于控件高（28px）的一半 ⇒ 按同心规则控件必须取全圆角（pill），
-       与 assets/reference/codex-composer-chip-hover.png 实测 R = h/2 一致。 */
+  /* 圆角刻度是唯一真源，各层只引用。xs 行内小片 / s 控件 / m 卡片与浮层 / l 面板与模态（= 宿主窗口内容块 16px）/
+     xl 输入卡 / 2xl 输入卡超椭圆版 / menu 浮层菜单（参考仓库实测 18）/ pill 徽标与圆形按钮。
+     同心：嵌套圆角 = 外圆角 − 内衬（菜单 18 − 5 = 行 13）；卡内控件到卡边 8px，20/25 − 8 大于控件高的一半 ⇒ 控件取 pill。 */
   --dsw-radius-xs: 4px;
   --dsw-radius-s: 8px;
   --dsw-radius-m: 12px;
@@ -374,25 +310,13 @@ body {
   --dsw-radius-xl: 20px;
   --dsw-radius-2xl: 25px;
   --dsw-radius-menu: 18px;
-  /* 输入卡圆角（单一真源）：卡片本体与它的上栏条共用这一个令牌，谁都不许再自己写数。 */
+  /* 输入卡与它的上栏条共用这一个令牌（条与卡同心叠放，取卡片圆角本身）。不另立 --dsw-radius-bar 别名：
+     var() 在声明处解析，中层再改写 --dsw-radius-card 时别名不会跟着变。 */
   --dsw-radius-card: var(--dsw-radius-xl);
-  /* 上栏条（⑬·2 filebar / ⑭ hero 工作区行）只有上面两角是圆角，它探出在卡片背后，
-     与卡片同心叠放 —— 所以它取的是卡片的圆角本身，不是「卡片 − 4」。
-
-     2026-09-28 复核（用户提供的 DSH / Codex 同屏对照图，两块同一缩放）：
-     用合成真值标定过的角弧曲线法（±0.4px）+ 角亏损面积法逐像素量四条角弧，
-     Codex 条/卡 = 1.03（条 29 / 卡 28），本皮肤旧值 条/卡 = 0.79（条 16 / 卡 20）。
-     旧的「卡片 − 4」来自另一张参考图上的目视弧长，量错了：条并不比卡片紧，
-     它和卡片一样圆。比值 0.79 就是用户看到的那两条对不上的角弧。 */
-  /* 条不另立令牌：⑬·2 filebar 与 ⑭ hero 工作区行直接引用 --dsw-radius-card。
-     若写成 --dsw-radius-bar: var(--dsw-radius-card) 这种别名，var() 会在声明它的
-     body 上就解析完，之后再有人在中层元素上改写 --dsw-radius-card，条不会跟着变
-     —— 实测（scripts 之外的靶场）能复现「条 25 / 卡 20」的分家。 */
   --dsw-radius-pill: 999px;
 
   --dsw-content-max-width: 768px;
 
-  /* 字阶（§3.2）：11 / 12.5 / 14 / 16 / 20 / 28 */
   --dsw-text-2xs: 11px;
   --dsw-text-xs: 12.5px;
   --dsw-text-sm: 13px;
@@ -407,32 +331,28 @@ body {
   --dsw-leading-xl: 1.35;
   --dsw-leading-2xl: 1.25;
 
-  /* 字体栈（原样照抄宿主 dsh-client-ui-theme 的 base_css_default，0.1.7-rc.2 逐字比对一致）。
-     本皮肤自己声明一次，外观就不随宿主版本漂：UI 栈系统字体优先 + 中文回退链，
-     代码栈等宽优先 + 中文回退，两条都保留中文回退。设置页 fontUi / fontCode 覆盖的就是这两个令牌。 */
+  /* 字体栈与宿主 dsh-client-ui-theme 的 base_css_default 逐字一致；自己声明一次，不随宿主版本漂。
+     设置页的 fontUi / fontCode 覆盖的就是这两个令牌。 */
   --dsw-font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC",
     "Hiragino Sans GB", "Microsoft YaHei", "Helvetica Neue", Helvetica, Arial, sans-serif;
   --ds-font-family-code: "SF Mono", "JetBrains Mono", "Fira Code", Consolas,
     "Liberation Mono", Menlo, Courier, "PingFang SC", "Microsoft YaHei";
 
-  /* 元信息 mono 规约：等宽 + 大写 + 加宽字距（Codex TUI 血统） */
+  /* 元信息：等宽 + 大写 + 加宽字距（中文豁免见 patches.css） */
   --dsw-font-meta: var(--ds-font-family-code);
   --dsw-meta-size: 11px;
   --dsw-meta-weight: 500;
   --dsw-meta-tracking: 0.08em;
   --dsw-meta-tracking-pill: 0.04em;
 
-  /* 动效：取 Codex 应用自身的时长与曲线（26.727.4816.0 的 app-*.css）
-     fast  ← --transition-duration-basic: .15s
-     base  ← DSH 自带 --ds-transition-duration: .2s（Codex 用 duration-200 工具类）
-     slow  ← --transition-duration-relaxed: .3s
-     ease  ← --ease-in-out 与 --default-transition-timing-function，两者同值 */
+  /* 动效取 Codex 自身：fast = --transition-duration-basic .15s，slow = --transition-duration-relaxed .3s，
+     base = duration-200，ease = --ease-in-out */
   --dsw-motion-fast: 150ms;
   --dsw-motion-base: 200ms;
   --dsw-motion-slow: 300ms;
   --dsw-ease: cubic-bezier(0.4, 0, 0.2, 1);
 
-  /* 输入区配件（skin-center 共享适配器消费的变量） */
+  /* 输入区配件（skin-center 共享适配器消费） */
   --dsh-composer-accessory-radius: var(--dsw-radius-l);
   --dsh-composer-accessory-bg: var(--dsw-alias-bg-layer-2);
   --dsh-composer-accessory-color: var(--dsw-alias-label-secondary);
@@ -441,8 +361,7 @@ body {
   --dsh-composer-accessory-blur: 0px;
 }
 
-/* corner-shape 分支：卡片升到 25px 超椭圆，上栏条因为引用的是同一个令牌而自动跟随，
-   不需要第二处数字。卡片那一条 @supports 在 composer.css ⑭·1，两条必须同开同关。 */
+/* 支持 corner-shape 时卡片升到 25px 超椭圆；条引用同一令牌自动跟随（卡片那条 @supports 在 composer.css，两条同开同关）。 */
 @supports (corner-shape: superellipse(1.5)) {
   :root,
   body {
@@ -450,56 +369,29 @@ body {
   }
 }
 
-/* ── elevation：描边即层级，阴影近零 ─────────────────────────────────────── */
-/* 官方把 --dsw-elevation-* 声明在 body, body * 上，因此必须同样覆盖到 body *，
-   否则每个后代元素都会用自身声明盖掉从 body 继承下来的值。 */
+/* ── elevation：描边即层级 ──
+   宿主把 --dsw-elevation-* 声明在 body 与 body * 上，所以这里也得落到 body *，否则后代元素用宿主那份盖掉继承值。
+   颜色单独一个令牌（stroke-color）也必须落 body *：宿主有 24 个组件就地改写它，本皮肤统一压回。 */
 body,
 body * {
   --dsw-elevation-stroke-color: rgba(13, 13, 13, 0.08);
-  /* 描边几何引用颜色令牌，而不是把同一个 rgba 再抄一遍：颜色只有上一行这一个真源，
-     亮暗两套各改一处即可（Codex 原文 --elevation-stroke 同样是「几何 + 颜色令牌」）。
-     同一元素上声明、同一元素上解析，所以 body * 上逐元素都取到本元素的颜色。 */
   --dsw-elevation-stroke: 0 0 0 0.5px var(--dsw-elevation-stroke-color);
   --dsw-elevation-panel: var(--dsw-elevation-stroke);
-  /* Codex --elevation-prominent 逐字（app.asar @67930856）：
-       var(--elevation-stroke), 0 3px 7.5px #0000000a, 0 0 20px #0000000d
-     旧值 0 4px 16px rgba(13,13,13,.08) 是自造单层，几何与层数都与 Codex 不同。
-     这个令牌是**宿主菜单与面板**的主阴影（.QsffPG_menu / ._7KE1Ra_menu / .JObwrW_panel
-     等 14 处消费），不是边角料。 */
+  /* Codex --elevation-prominent 逐字（app.asar @67930856），宿主菜单与面板的主阴影；Codex 没有暗色变体。
+     --dsw-elevation-soft 不覆盖：Codex 无同名令牌，交还宿主值。 */
   --dsw-elevation-prominent: var(--dsw-elevation-stroke), 0 3px 7.5px #0000000a, 0 0 20px #0000000d;
-  /* --dsw-elevation-soft **不覆盖**，交还宿主自己的值（stroke + 0 4px 16px #00000008 + 0 0 24px #00000008）。
-     Codex 没有同名令牌（只有 stroke / stroke-subtle / prominent / sidebar / composer / composer-dark），
-     0.5.10 及以前这里写的 0 8px 28px 10% 墨（暗色 55% 黑）既无截图读数也无源码锚点，
-     却落在宿主 SegmentedControl 的选中片上 —— 设置页每个分段控件都背着一团自造的大影。
-     宿主值里的第一层仍是 var(--dsw-elevation-stroke)，所以描边照样跟本皮肤走。 */
 }
 
 body[data-ds-dark-theme],
 body[data-ds-dark-theme] * {
   --dsw-elevation-stroke-color: rgba(255, 255, 255, 0.09);
-  --dsw-elevation-stroke: 0 0 0 0.5px var(--dsw-elevation-stroke-color);
-  --dsw-elevation-panel: var(--dsw-elevation-stroke);
-  /* 这里**不再覆盖** --dsw-elevation-prominent**：Codex 只在 :root 声明一次、没有暗色变体，
-     所以暗色沿用同一份字面值。后果是暗色菜单不再有 50% 黑的大外影，只剩发丝线 + 填充 ——
-     与 Codex 暗色的整体做法一致（0.5.7 已证输入卡暗色无外影，0.5.8 已证暗色靠填充分层）。
-     原先的 0 4px 16px rgba(0,0,0,.5) 无任何取证。 */
 }
 
-/* ── 排版层：标题字重 600 封顶 ───────────────────────────────────────────── */
-/* 官方 markdown 标题是 700；Codex 无衬线无重标题，层级靠灰阶 + 字号。
-   官方把字排令牌声明在 body 上，故同样写在 body 上（字号仍挂
-   --dsh-content-font-delta，用户调字号不破比例）。 */
+/* ── 排版：markdown 标题字重 600 封顶 ──
+   宿主是 700；Codex 无重标题，层级靠灰阶与字号。字号挂 --dsh-content-font-delta，调字号不破比例。
+   宿主只在 body 上声明这组令牌，亮色这份在暗色下同样胜出，不需要再写深色副本。 */
 :root,
 body {
-  --dsw-font-markdown-h1: 600 calc(21px + var(--dsh-content-font-delta)) / calc(30px + var(--dsh-content-font-delta)) var(--dsw-font-family);
-  --dsw-font-markdown-h1-font-weight: 600;
-  --dsw-font-markdown-h2: 600 calc(19px + var(--dsh-content-font-delta)) / calc(28px + var(--dsh-content-font-delta)) var(--dsw-font-family);
-  --dsw-font-markdown-h2-font-weight: 600;
-  --dsw-font-markdown-h3: 600 calc(18px + var(--dsh-content-font-delta)) / calc(26px + var(--dsh-content-font-delta)) var(--dsw-font-family);
-  --dsw-font-markdown-h3-font-weight: 600;
-}
-
-body[data-ds-dark-theme] {
   --dsw-font-markdown-h1: 600 calc(21px + var(--dsh-content-font-delta)) / calc(30px + var(--dsh-content-font-delta)) var(--dsw-font-family);
   --dsw-font-markdown-h1-font-weight: 600;
   --dsw-font-markdown-h2: 600 calc(19px + var(--dsh-content-font-delta)) / calc(28px + var(--dsh-content-font-delta)) var(--dsw-font-family);

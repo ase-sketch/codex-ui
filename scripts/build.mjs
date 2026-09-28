@@ -201,7 +201,7 @@ export function build() {
 
 /* ── CLI ──────────────────────────────────────────────────────────────── */
 
-if (import.meta.url === pathToFileURL(process.argv[1]).href) {
+if (process.argv[1] !== undefined && import.meta.url === pathToFileURL(process.argv[1]).href) {
   const check = process.argv.includes('--check');
   const { themeCss, clientJs } = build();
   let stale = 0;
