@@ -1,12 +1,13 @@
 /* codex-ink · L3 侧栏对齐：「新会话」与面板行（插件…）压成列表行，落到工作区列表行的两条竖线上
    （图标列 20px = 行左沿 12 + 内衬 8；文字列 42px = 20 + 图标 16 + 间距 6）。品牌行不动。
-   锚点：侧栏根 div = 孙辈里有 sidebar.workspaces 出口（根 > regionArea > 出口）的那个 div；
-   折叠态由 sidebar.toggle.badge 出口（根 > logoRow/topStrip > 按钮 > 出口）排除 —— 宿主只在折叠时渲染它。
-   用固定深度的子代 :has() 而不是后代 :has()：后者会让侧栏以上每一层 div 都去扫整棵子树，
-   且任何带 data-slot 的节点插入都触发重算；rc.1 与 rc.2 的渲染代码里这两个深度一致。 */
+   锚点：侧栏根 = sidebar 席位出口的子 div；折叠态排除用根上的 _collapsed 类（类名后缀写法）——
+   rc.1 / rc.2 的渲染代码里它与 sidebar.toggle.badge 出口是同一个条件（!wide）。
+   不用 :has()：:has 落在祖先位置时，会话区每插入一个带 data-slot 的节点，Chromium 都得把受影响
+   祖先下的全部 span 重新匹配一遍 —— 实测流式插入时整页样式重算从 ~60ms 涨到 ~900ms。
+   选择器特异性与旧写法相同（0,3,3 起），与宿主规则的先后关系不变。 */
 
 /* 新会话按钮：38px 居中主按钮 → 36px 左对齐列表行（rc.1 扁平结构） */
-div:has(> * > [data-slot="sidebar.workspaces"]):not(:has(> * > * > [data-slot="sidebar.toggle.badge"])) > button {
+[data-slot="sidebar"] > div:not([class*="_collapsed"]) > button {
   box-sizing: border-box;
   height: auto;
   min-height: 36px;
@@ -28,22 +29,22 @@ div:has(> * > [data-slot="sidebar.workspaces"]):not(:has(> * > * > [data-slot="s
   overflow: hidden;
 }
 
-div:has(> * > [data-slot="sidebar.workspaces"]):not(:has(> * > * > [data-slot="sidebar.toggle.badge"])) > button:hover {
+[data-slot="sidebar"] > div:not([class*="_collapsed"]) > button:hover {
   background: var(--dsw-alias-interactive-bg-hover);
 }
 
-div:has(> * > [data-slot="sidebar.workspaces"]):not(:has(> * > * > [data-slot="sidebar.toggle.badge"])) > button:focus-visible {
+[data-slot="sidebar"] > div:not([class*="_collapsed"]) > button:focus-visible {
   outline: 2px solid var(--dsw-focus-ring-color);
   outline-offset: -2px;
 }
 
-div:has(> * > [data-slot="sidebar.workspaces"]):not(:has(> * > * > [data-slot="sidebar.toggle.badge"])) > button > svg {
+[data-slot="sidebar"] > div:not([class*="_collapsed"]) > button > svg {
   width: 16px;
   height: 16px;
   flex: none;
 }
 
-div:has(> * > [data-slot="sidebar.workspaces"]):not(:has(> * > * > [data-slot="sidebar.toggle.badge"])) > button > span {
+[data-slot="sidebar"] > div:not([class*="_collapsed"]) > button > span {
   max-width: none;
   min-width: 0;
   overflow: hidden;
@@ -51,18 +52,18 @@ div:has(> * > [data-slot="sidebar.workspaces"]):not(:has(> * > * > [data-slot="s
 }
 
 /* rc.2 在按钮里多套了两层（labelMask > content，content 写死 width:100cqw + 居中），拉回左对齐 */
-div:has(> * > [data-slot="sidebar.workspaces"]):not(:has(> * > * > [data-slot="sidebar.toggle.badge"])) > button > span > span:has(> svg) {
+[data-slot="sidebar"] > div:not([class*="_collapsed"]) > button > span > span:has(> svg) {
   justify-content: flex-start;
   width: auto;
 }
 
-div:has(> * > [data-slot="sidebar.workspaces"]):not(:has(> * > * > [data-slot="sidebar.toggle.badge"])) > button > span > span > svg {
+[data-slot="sidebar"] > div:not([class*="_collapsed"]) > button > span > span > svg {
   width: 16px;
   height: 16px;
   flex: none;
 }
 
-div:has(> * > [data-slot="sidebar.workspaces"]):not(:has(> * > * > [data-slot="sidebar.toggle.badge"])) > button > span > span > span {
+[data-slot="sidebar"] > div:not([class*="_collapsed"]) > button > span > span > span {
   max-width: none;
   min-width: 0;
   overflow: hidden;
@@ -70,7 +71,7 @@ div:has(> * > [data-slot="sidebar.workspaces"]):not(:has(> * > * > [data-slot="s
 }
 
 /* 面板行（侧栏根 div 的直接 nav 里的按钮）：宿主 gap 8 / margin 0 2px 比列表行右移 2px / 4px */
-div:has(> * > [data-slot="sidebar.workspaces"]):not(:has(> * > * > [data-slot="sidebar.toggle.badge"])) > nav > button {
+[data-slot="sidebar"] > div:not([class*="_collapsed"]) > nav > button {
   gap: 6px;
   margin-left: 0;
 }

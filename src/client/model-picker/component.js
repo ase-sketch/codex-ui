@@ -2,8 +2,8 @@
  * 模型选择器 B 面的 DOM 组件：Codex 模型列表 + 推理等级功率轨，顶替 composer 的模型位。
  *
  * 顶替方式（不注册 slot、不动宿主的 React 树）：自己的触发器追加进 [data-slot="conversation.input.model"]，
- * 弹层挂 document.body；席位里有我们的触发器时，model-picker.css 用一条直接子代 :has() 把宿主那一格
- * display:none。不打标记属性 —— React 换掉宿主子节点时标记会丢、宿主控件闪回；摘掉触发器宿主立刻复原。
+ * 弹层挂 document.body；把触发器放进席位的同一步给席位出口打 SEATED_ATTR，model-picker.css 据此把宿主那一格
+ * display:none（标记打在出口上，宿主换掉自己的子节点也不丢）；撤走触发器时摘掉，宿主立刻复原。
  * 数据与提交只走宿主的 ModelDirectory（store 订阅 / load / select），本组件不缓存模型列表。
  * 宿主在整个 selectModel 往返里把目录标成 selecting：列表签名不含 status，改档时卡片不重画不清空；
  * 往返期间轨与触发器按 pending 那一档乐观显示并转圈。
@@ -12,6 +12,8 @@ import { isEnglish } from '../host.js';
 import { THUMB_SIZE, domSessionOf, indexRatio, listSignature, offsetRatio, sessionIdOf, snapIndex, viewOf } from './view.js';
 
 const SLOT_SELECTOR = '[data-slot="conversation.input.model"]';
+/** 我们的触发器在席时打在席位出口上（样式表据此隐藏宿主那一格）。 */
+const SEATED_ATTR = 'data-codex-ui-seated';
 /** 自建节点的类名根（样式表只画 .codex-mp-*，不碰宿主任何节点）。 */
 const TRIGGER_CLASS = 'codex-mp-trigger';
 const POPOVER_CLASS = 'codex-mp-popover';
@@ -193,19 +195,26 @@ export function mountModelPicker(env) {
     if (id !== seat.sessionId || seat.dir === null) bind(seat, id);
     const view = viewOf(snapshotOf(seat));
     if (!canSeat(seat, view)) {
-      if (seat.button.parentElement !== null) seat.button.remove();
+      unseat(seat);
       if (openSeat === seat) close(false);
       return view;
     }
     paintTrigger(seat, view);
     if (seat.button.parentElement !== slot) slot.appendChild(seat.button);
+    if (!slot.hasAttribute(SEATED_ATTR)) slot.setAttribute(SEATED_ATTR, '');
     return view;
+  }
+
+  /** 撤下触发器并摘掉席位标记：宿主那一格立刻复原。 */
+  function unseat(seat) {
+    if (seat.button.parentElement !== null) seat.button.remove();
+    seat.slot.removeAttribute(SEATED_ATTR);
   }
 
   function dropSeat(seat) {
     if (openSeat === seat) close(false);
     seat.off?.();
-    seat.button.remove();
+    unseat(seat);
     seats.delete(seat.slot);
   }
 

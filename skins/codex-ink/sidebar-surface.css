@@ -3,15 +3,16 @@
    为什么不用覆盖层：它刷的是不透明侧栏底色，侧栏开了半透明（设置页）就挡不住内容；mask 与底色是否透明无关。
    与 Codex 的两处差别：footer-edge 取 100%（DSH 的滚动区与底栏是上下两块，滚动区底边就是底栏顶边）；
    顶部不做渐入（DSH 的分组标题不在滚动容器里，照抄 8px 只会让第一行永远发虚）。
-   宿主没给滚动容器与覆盖层 data-*：作用域根用出口的父 div，容器按类名后缀 _list / _fade 取。 */
+   宿主没给滚动容器与覆盖层 data-*：从 sidebar.workspaces 出口往下按类名后缀 _list / _fade 取
+   （写成 div > 出口，特异性与旧的 div:has(> 出口) 相同；不用 :has，理由见 sidebar-align.css）。 */
 
-div:has(> [data-slot="sidebar.workspaces"]) [class$="_fade"] {
+div > [data-slot="sidebar.workspaces"] [class$="_fade"] {
   display: none;
 }
 
 /* 两层 mask：第一层是斜坡，横向只铺到列表右内边距为止；第二层把右侧滚动条槽补回不透明
    （no-repeat 的 mask 没铺到的地方 = 隐藏，只写第一层会把滚动条槽整条抹掉）。 */
-div:has(> [data-slot="sidebar.workspaces"]) [class$="_list"] {
+div > [data-slot="sidebar.workspaces"] [class$="_list"] {
   -webkit-mask-image:
     linear-gradient(
       to bottom,

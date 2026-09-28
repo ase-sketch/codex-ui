@@ -780,7 +780,7 @@ html[data-codex-ui] [data-composer-card] button[class$="_trigger"][aria-expanded
   background: var(--dsw-codex-hover-fill);
 }
 
-html[data-codex-ui] [data-slot="conversation.input.model"]:has(> .codex-mp-trigger) > :not(.codex-mp-trigger) {
+html[data-codex-ui] [data-slot="conversation.input.model"][data-codex-ui-seated] > :not(.codex-mp-trigger) {
   display: none;
 }
 
@@ -1184,7 +1184,7 @@ html[data-codex-ui] .codex-mp-root[data-unset] .codex-mp-range {
   visibility: hidden;
 }
 
-html[data-codex-ui] div:has(> * > [data-slot="sidebar.workspaces"]):not(:has(> * > * > [data-slot="sidebar.toggle.badge"])) > button {
+html[data-codex-ui] [data-slot="sidebar"] > div:not([class*="_collapsed"]) > button {
   box-sizing: border-box;
   height: auto;
   min-height: 36px;
@@ -1206,56 +1206,56 @@ html[data-codex-ui] div:has(> * > [data-slot="sidebar.workspaces"]):not(:has(> *
   overflow: hidden;
 }
 
-html[data-codex-ui] div:has(> * > [data-slot="sidebar.workspaces"]):not(:has(> * > * > [data-slot="sidebar.toggle.badge"])) > button:hover {
+html[data-codex-ui] [data-slot="sidebar"] > div:not([class*="_collapsed"]) > button:hover {
   background: var(--dsw-alias-interactive-bg-hover);
 }
 
-html[data-codex-ui] div:has(> * > [data-slot="sidebar.workspaces"]):not(:has(> * > * > [data-slot="sidebar.toggle.badge"])) > button:focus-visible {
+html[data-codex-ui] [data-slot="sidebar"] > div:not([class*="_collapsed"]) > button:focus-visible {
   outline: 2px solid var(--dsw-focus-ring-color);
   outline-offset: -2px;
 }
 
-html[data-codex-ui] div:has(> * > [data-slot="sidebar.workspaces"]):not(:has(> * > * > [data-slot="sidebar.toggle.badge"])) > button > svg {
+html[data-codex-ui] [data-slot="sidebar"] > div:not([class*="_collapsed"]) > button > svg {
   width: 16px;
   height: 16px;
   flex: none;
 }
 
-html[data-codex-ui] div:has(> * > [data-slot="sidebar.workspaces"]):not(:has(> * > * > [data-slot="sidebar.toggle.badge"])) > button > span {
+html[data-codex-ui] [data-slot="sidebar"] > div:not([class*="_collapsed"]) > button > span {
   max-width: none;
   min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
 }
 
-html[data-codex-ui] div:has(> * > [data-slot="sidebar.workspaces"]):not(:has(> * > * > [data-slot="sidebar.toggle.badge"])) > button > span > span:has(> svg) {
+html[data-codex-ui] [data-slot="sidebar"] > div:not([class*="_collapsed"]) > button > span > span:has(> svg) {
   justify-content: flex-start;
   width: auto;
 }
 
-html[data-codex-ui] div:has(> * > [data-slot="sidebar.workspaces"]):not(:has(> * > * > [data-slot="sidebar.toggle.badge"])) > button > span > span > svg {
+html[data-codex-ui] [data-slot="sidebar"] > div:not([class*="_collapsed"]) > button > span > span > svg {
   width: 16px;
   height: 16px;
   flex: none;
 }
 
-html[data-codex-ui] div:has(> * > [data-slot="sidebar.workspaces"]):not(:has(> * > * > [data-slot="sidebar.toggle.badge"])) > button > span > span > span {
+html[data-codex-ui] [data-slot="sidebar"] > div:not([class*="_collapsed"]) > button > span > span > span {
   max-width: none;
   min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
 }
 
-html[data-codex-ui] div:has(> * > [data-slot="sidebar.workspaces"]):not(:has(> * > * > [data-slot="sidebar.toggle.badge"])) > nav > button {
+html[data-codex-ui] [data-slot="sidebar"] > div:not([class*="_collapsed"]) > nav > button {
   gap: 6px;
   margin-left: 0;
 }
 
-html[data-codex-ui] div:has(> [data-slot="sidebar.workspaces"]) [class$="_fade"] {
+html[data-codex-ui] div > [data-slot="sidebar.workspaces"] [class$="_fade"] {
   display: none;
 }
 
-html[data-codex-ui] div:has(> [data-slot="sidebar.workspaces"]) [class$="_list"] {
+html[data-codex-ui] div > [data-slot="sidebar.workspaces"] [class$="_list"] {
   -webkit-mask-image:
     linear-gradient(
       to bottom,

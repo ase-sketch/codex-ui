@@ -280,7 +280,7 @@ check('模型选择器样式只画自建节点，不碰宿主菜单', () => {
   }
   assert(offenders.length === 0, offenders.join('\n     '));
   const hasCount = (css.match(/:has\(/g) ?? []).length;
-  assert(hasCount === 1, ':has() 应只有席位那一条，实有 ' + hasCount);
+  assert(hasCount === 0, 'model-picker.css 里不许有 :has()（落在祖先位置时，会话区每插入一个节点都会让整片子树重配样式），实有 ' + hasCount);
   return selectors.length + ' 组选择器';
 });
 /* ── 7. 文档成对 ──────────────────────────────────────────────────────── */

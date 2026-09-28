@@ -6,10 +6,11 @@
 
 
 /* ── ① 席位顶替 ─────────────────────────────────────────────────────────
-   我们的触发器在席时，宿主那一格隐藏（仍在 React 树里，生命周期不动）。
-   直接子代 :has() 的失效范围只有席位自己的几个子节点，不是 0.5.0 那种挂在
-   portal 菜单上的长链。触发器一摘（设置里关掉、或组件卸载），宿主那一格立刻复原。 */
-[data-slot="conversation.input.model"]:has(> .codex-mp-trigger) > :not(.codex-mp-trigger) {
+   我们的触发器在席时宿主那一格隐藏（仍在 React 树里）。组件在把触发器放进席位的同一步给席位出口打
+   data-codex-ui-seated，撤走触发器时摘掉 —— 宿主换掉自己的子节点也不影响。
+   不用 :has(> .codex-mp-trigger)：它落在祖先位置，会话区每插入一个带 data-slot 的节点都会让
+   Chromium 重配整片子树，实测流式插入时样式重算 ~50ms → ~1000ms。 */
+[data-slot="conversation.input.model"][data-codex-ui-seated] > :not(.codex-mp-trigger) {
   display: none;
 }
 
