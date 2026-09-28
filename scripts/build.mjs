@@ -74,10 +74,13 @@ function splitSelectors(text) {
   return out;
 }
 
-/** 单条选择器加作用域：`:root` 即根本身；已写明 `html[…]` 的原样；其余挂在根下。 */
+/**
+ * 单条选择器加作用域：`:root` 开头的就是根本身（`:root:has(…)` → `html[data-codex-ui]:has(…)`）；
+ * 已写明 `html[…]` 的原样；其余挂在根下。
+ */
 function scopeSelector(selector) {
   const s = selector.trim();
-  if (s === ':root') return SCOPE;
+  if (s.startsWith(':root')) return SCOPE + s.slice(':root'.length);
   if (s.startsWith('html[')) return s;
   return SCOPE + ' ' + s;
 }

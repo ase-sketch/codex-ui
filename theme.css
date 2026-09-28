@@ -139,7 +139,7 @@ html[data-codex-ui-switching] *::after {
   transition: none !important;
 }
 
-html[data-codex-ui] :root:has(body[data-ds-dark-theme]) {
+html[data-codex-ui]:has(body[data-ds-dark-theme]) {
   background-color: #111111;
 }
 
