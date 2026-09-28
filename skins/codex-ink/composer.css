@@ -67,22 +67,16 @@
      仍写成不透明实色、不用 transparent：DSH 的输入卡浮在会话滚动内容之上，
      留 transparent 会让身后的文件列表透出来（实测已复现）。 */
   --dcu-composer-bg: var(--dsw-composer-surface);
-  /* 阴影逐字取 Codex 的 --elevation-composer（app.asar @67930943）：
-       0 0 0 1px ...          环：源码里输入卡有**两条互斥路径** ——
-                                 路径A（默认/large/single-line）box-shadow: var(--elevation-composer)
-                                 路径B（[data-composer-radius-variant=compact]）
-                                   box-shadow: none; border: 1px solid var(--color-border) !important
-                               实测走的是 B。而 --color-border = --alpha-10（亮）/ --alpha-12（暗）。
-                               两种方法同时指向 10%：
-                                 · 同图内比较（DPR 无关）：Codex 环像素比页面低 26 级；
-                                   本皮肤 4% 环低 16 级 → 反推 α ≈ 10.4%；
-                                 · 标定渲染（DPR 1.25）：4% → Δ14、12% → Δ29 → 插值 α ≈ 10.4%。
-                               0.5.8 取 12% 偏重（渲成 Δ29~35）；0.5.10 按上两法收到 10%。
-                               0.5.7 曾按路径A 取 4%，那是只看了三层里的第一层。
-       0 2px 8px 0 #0000000a 近场：8px 模糊 / 2px 位移，墨压在这一层
-       0 4px 80px 8px #00000006 远场：80px 宽晕、仅 2.4%，负责"浮起来"的空气感
-     三层缺一不可：只有远场会糊，只有环会像贴纸（本皮肤此前正是后者）。 */
-  --dcu-composer-shadow: 0 0 0 1px rgba(13, 13, 13, 0.1), 0 2px 8px 0 #0000000a, 0 4px 80px 8px #00000006;
+  /* 阴影：0.6.3 起按**实测像素**拟合，不再照抄源码 token —— 源码 token 与真机像素对不上
+     （--elevation-composer 的 0 4px 80px 8px 远场在参考图里量不到，环的 1px 在 DPR 2 下也不是
+     参考图里的 1 个设备像素）。判据与拟合过程见 CHANGELOG 0.6.3 与 composer-shadow-verify。
+       Codex 参考 codex-composer-reference.png 与用户同屏截图同为 DPR 2，同一采样口径量到：
+         环   1 个设备像素（= 0.5 CSS px），最深 Δ33
+         卡下沿外沿 Δ13,12,11,10,9,8,7,6,5,4,4,4,2,2,2,2,2,1,1,1,1,1,1,0（24 个设备像素 = 12 CSS px 归零）
+       本皮肤旧值 0 0 0 1px + 8px + 80px 量到的是：环 2 个设备像素、Δ29，
+       卡下沿 Δ4 起、到 56 个设备像素才归零 —— 环偏粗一倍、近场偏弱、尾巴偏长。
+       现值为 headless Chrome 夹具里扫出来的最优拟合（环项与 Codex 完全相同）。 */
+  --dcu-composer-shadow: 0 0 0 0.5px rgba(13, 13, 13, 0.1), 0 2px 12px 0 rgba(0, 0, 0, 0.09);
 }
 
 /* 暗色：Codex 的 --elevation-composer-dark 是 inset 0 0 1px 0 #fff3 —— **完全外无投影**，
@@ -111,13 +105,6 @@ body[data-ds-dark-theme] [data-conversation-scroll] {
   [data-conversation-scroll] [data-composer-card] {
     border-radius: var(--dsw-radius-card);
     corner-shape: superellipse(1.5);
-  }
-}
-
-@media (max-width: 639px) {
-  [data-conversation-scroll] {
-    /* Codex 在 width<40rem 时把远场 80px 收到 40px（阈值同为 640，与本查询一致） */
-    --dcu-composer-shadow: 0 0 0 1px rgba(13, 13, 13, 0.1), 0 2px 8px 0 #0000000a, 0 4px 40px 8px #00000006;
   }
 }
 

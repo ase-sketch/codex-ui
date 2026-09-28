@@ -329,7 +329,10 @@ const checks = [
   ['面板顶沿贴标题栏条下沿', after.panelTop === 36],
   ['面板撑满列高(塌高即回归)', after.panelH === 720],
   ['中列 0.5px l2 发丝线', /rgba\(13, 13, 13, 0\.12\) 0px 0px 0px 0\.5px/.test(after.centerBox)],
-  ['中列全向环境影 24px', after.centerBox.includes('rgba(13, 13, 13, 0.05) 0px 0px 24px')],
+  /* 0.6.3 起环境影按 Codex 实测拟合（SSE 47 -> 22），判据随之改写：
+     旧值 0 0 24px @5% 是照抄源码 token 的那一支，实测偏散偏浅。 */
+  ['中列全向环境影 13px @7%（0.6.3 实测拟合；旧值 24px @5%）',
+    after.centerBox.includes('rgba(13, 13, 13, 0.07) 0px 0px 13px')],
   ['栏内 pane 的 1px l4 深边框被压掉', after.paneBorder === '0px rgb(0, 0, 0)' && before.paneBorder === '1px rgba(13, 13, 13, 0.24)'],
   ['右栏悬停线默认隐藏', idle.handleBefore.opacity === '0'],
   ['右栏悬停线出现', hovered.handleBefore.opacity === '1'],
@@ -363,7 +366,8 @@ const checks = [
 ];
 const web = await probe(sw);
 checks.push(
-  ['web 中列全向环境影', web.centerBox.includes('rgba(13, 13, 13, 0.05) 0px 0px 24px')],
+  ['web 中列全向环境影 13px @7%（与桌面壳同值）',
+    web.centerBox.includes('rgba(13, 13, 13, 0.07) 0px 0px 13px')],
   ['web 中列 0.5px l2 发丝线', /rgba\(13, 13, 13, 0\.12\) 0px 0px 0px 0\.5px/.test(web.centerBox)],
   ['web 侧栏边界 l1 细线', /rgba\(13, 13, 13, 0\.07\)\|(0\.5|1)px\|solid/.test(web.sidebarBorder)],
   ['web 面板上沿影（负 spread）', /rgba\(13, 13, 13, 0\.05\) 0px -12px 24px -12px/.test(web.panelBox)],

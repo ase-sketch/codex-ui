@@ -155,15 +155,14 @@ check('亮色画布 = #ffffff', light.canvasBase.toLowerCase() === '#ffffff', li
    0.5.7 及以前亮色也叠 5% 墨 = #f4f4f4，比 Codex 暗 11 级。 */
 check('亮色输入卡 = #ffffff（与页面同色，不叠罩）', light.bg === 'rgb(255, 255, 255)', light.bg);
 check('亮色输入卡 ≠ #f4f4f4（旧值，暗 11 级）', light.bg !== 'rgb(244, 244, 244)', light.bg);
-check('亮色阴影为三层', L.length === 3, L.length + ' 层');
-check('亮色三层皆非 inset', L.every((l) => !l.inset), L.map((l) => l.inset).join(','));
-if (L.length === 3) {
+check('亮色阴影为两层（环 + 近场；0.6.3 起无 80px 远场）', L.length === 2, L.length + ' 层');
+check('亮色两层皆非 inset', L.every((l) => !l.inset), L.map((l) => l.inset).join(','));
+if (L.length === 2) {
   /* 环取 12% 而非源码字面的 3.9%：实测边缘要 220~234，4% 只能渲到 241。见 composer.css 头注。 */
   /* 环取 10%（Codex --color-border = --alpha-10），不是源码路径A 的 3.9%、也不是 0.5.8 的 12%：
      同图内比较与标定渲染两法都指向 ~10.4%。见 composer.css 头注。 */
-  check('层1 环 = 0 0 0 1px @10%（Codex --color-border，双法标定）', !L[0].inset && L[0].nums.join(' ') === '0 0 0 1' && near(L[0].alpha, 0.1, 0.015), L[0].raw);
-  check('层2 近场 = 0 2px 8px 0 @4%', L[1].nums.join(' ') === '0 2 8 0' && near(L[1].alpha, 0.039), L[1].raw);
-  check('层3 远场 = 0 4px 80px 8px @2.4%（旧皮肤缺这一层）', L[2].nums.join(' ') === '0 4 80 8' && near(L[2].alpha, 0.024, 0.004), L[2].raw);
+  check('层1 环 = 0 0 0 0.5px @10%（DPR 2 下 1 个设备像素，= Codex 参考图实测）', !L[0].inset && L[0].nums.join(' ') === '0 0 0 0.5' && near(L[0].alpha, 0.1, 0.015), L[0].raw);
+  check('层2 近场 = 0 2px 12px 0 @9%（拟合 Codex 实测衰减）', L[1].nums.join(' ') === '0 2 12 0' && near(L[1].alpha, 0.09, 0.01), L[1].raw);
 }
 /* 渲染边缘：Codex 参考图与用户截图都落在 220~234，本皮肤必须也落进去。
    旧值 4% 渲出 241（偏亮），这正是 0.5.7 引入、0.5.8 修回的偏差。 */
@@ -188,7 +187,10 @@ const lightDev = lightScan.prof.map(([d, v]) => [d, lightScan.base - v]);
 const lightPeak1 = lightDev.find(([d]) => d === 1)?.[1] ?? 0;
 const lightExtent = lightDev.filter(([, v]) => v >= 1).map(([d]) => d).pop() ?? 0;
 console.log('LIGHT  1px处偏离 ' + lightPeak1.toFixed(1) + '   衰减半径 ' + lightExtent + 'px');
-check('亮色衰减半径 ≥ 35px（远场真的画出来了；旧皮肤仅 9px）', lightExtent >= 35, lightExtent + 'px');
+/* 0.6.3：判据从「衰减半径 ≥ 35px」改成「落进 Codex 参考图实测带」。旧口径奖励长尾巴，
+   而参考图（DPR 2）里卡下沿 24 个设备像素（= 12 CSS px）就归零了 —— 长尾巴正是要修的东西。
+   这里量的是卡**上沿**，近场 0 2px 12px 向下偏 2px，上沿比下沿短一档，带宽取 3~13 CSS px。 */
+check('亮色卡上沿衰减半径落在 Codex 实测带内（3~13px）', lightExtent >= 3 && lightExtent <= 13, lightExtent + 'px');
 /* 这条原先写「1px 处 ≤ 22」，是拿 DSF=1 + 4% 环标定的口径，量到的其实是**环本身**；
    Codex 实测的环像素是 220（偏离 35），所以旧口径把「环」和「环外一格」比成了同一件事。
    现在环的判据交给上面的显式边缘带断言（210~234），这里只留信息打印。 */
@@ -243,10 +245,10 @@ await sleep(500);
 check('窄屏段确实回到亮色（前提自检）', (await probe()).dark === false, 'body 无 data-ds-dark-theme');
 const narrow = await probe();
 const N = parseLayers(narrow.shadow);
-const nFar = N.find((l) => l.nums.length === 4 && l.nums[2] === 40);
 console.log('NARROW ' + narrow.shadow);
-check('窄屏（600px）远场收到 40px', nFar !== undefined, narrow.shadow);
-check('窄屏仍是三层', N.length === 3, N.length + ' 层');
+/* 0.6.3 起没有远场可收（参考图里量不到那层），窄屏与宽屏同值。
+   这一段留着是为了挡住「有人又把 80px 远场加回来」：宽窄不一致就是回退。 */
+check('窄屏（600px）阴影与宽屏逐字相同（无远场可收）', narrow.shadow === light.shadow, narrow.shadow);
 
 /* 证据图：把亮/暗两态并排出图 */
 await send('Emulation.setDeviceMetricsOverride', { width: 1100, height: 700, deviceScaleFactor: DSF, mobile: false }, sessionId);

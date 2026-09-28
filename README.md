@@ -28,13 +28,14 @@ images are in the sections below and in `assets/reference/`.
 
 Developed against DSH `0.1.7-rc.1` (npm global install) and `0.1.7-rc.2` (Windows desktop shell `app.asar`);
 the full 0.6.0 verification ran on the npm release `@deepseek-ai/dsh@0.1.7-rc.2` (a real `dsh web` instance plus an asar packed from it, see "Host paths").
+Since 0.6.1 the installed **0.1.7-rc.1** is reconciled as well — its directory snapshot has no `pending`, so the optimistic level now comes from the seat's own record (see below).
 The verification scripts read shipped CSS straight out of `app.asar`; a host upgrade that changes structure fails their assertions.
 
 ## Features
 
 | Id | Content |
 |---|---|
-| ⑳ | **Model picker, face B** (on by default): a component of our own takes over the composer model seat — model list (grouped by provider, with descriptions) plus the Codex reasoning **power rail** (24px track / 4px ticks / 28px white thumb, real drag, ←/→/Home/End, levels from the data); during the round trip it shows the new level optimistically with a spinner and never clears the list; the trigger cross-fades the effort label with blur. Can be switched off in settings |
+| ⑳ | **Model picker, face B** (on by default): a component of our own takes over the composer model seat — model list (grouped by provider, with descriptions) plus the Codex reasoning **power rail** (24px track / 4px ticks / 28px white thumb, real drag, ←/→/Home/End, levels from the data); during the round trip it shows the new level optimistically with a spinner and never clears the list (the optimistic value prefers the host's `pending` and falls back to the seat's own record — 0.1.7-rc.1 has no such field); **the slider's form follows dsh-claude-style** (a 26px groove with an 8px radius, a 26% ink fill, a 16×30 knob, and a Faster/Smarter row under the groove), and **the top rung swaps in a violet dot matrix** (5 rows of hash-scattered blocks, #8b7ad0 light / #9d8ce0 dark, stopped by both `prefers-reduced-motion` and the script's `data-reduced-motion`); the trigger cross-fades the effort label with blur. Can be switched off in settings |
 | ⑫ | Model picker, face A (the host menu when ⑳ is off): opaque white menu (18px radius), 28px rows with 13px radius (concentric: 18 − 5px inset), permanent check column, pending spinner |
 | ⑬ | Composer header turned blank, panel buttons keep the official icons |
 | ⑬c | Both header slots **released**: entries registered there render again (subagent descendant count / job roster / preset badge / open-in-app); the view tabs stay hidden. The entries are conditionally rendered, so the top bar is unchanged in the common case |
@@ -127,12 +128,13 @@ node scripts/install-skin.mjs --write  # overwrite on drift
 | `npm run check` | Syntax, JSON, manifest, artifact sync, encoding, docs pairing, machine-specific paths | none |
 | `node scripts/audit-codex-ink.mjs` | Skin structure, 36 WCAG pairs, color whitelist | none |
 | `node scripts/model-picker-verify.mjs` | ⑫ (face A, the host menu) and the pending indicator, 20 assertions | none |
-| `node scripts/power-rail-verify.mjs` | ⑳ face B: seat takeover and hand-back, trigger and popover geometry, Codex power rail geometry verbatim, no commit while dragging / one snapped commit on release, no snap-back and no list reset during a slow (600ms) round trip with a spinner, the four keys, focus ring, Escape, model change carrying its default effort, failure notice, reduced motion, dark, the switch — 47 assertions | none (Chromium only) |
+| `node scripts/power-rail-verify.mjs` | ⑳ face B: seat takeover and hand-back, trigger and popover geometry, Codex power rail geometry verbatim, no commit while dragging / one snapped commit on release, a slow (600ms) round trip where the rail does not snap back, the bottom trigger switches effort in step, the list is never reset and a spinner shows, the four keys, focus ring, Escape, model change carrying its default effort, failure notice, reduced motion, dark, the switch, **the form aligned to dsh-claude-style's slider (groove / fill / knob / end labels) plus the top-rung violet dot matrix** — 61 assertions. The fake directory is shaped like the **installed** host (no `pending` in the snapshot); against the pre-fix source it scores 44/47 | none (Chromium only) |
 | `node scripts/rightbar-verify.mjs` | Shadow layer, right panel, both dividers, 42 assertions | none |
 | `node scripts/sidebar-align-verify.mjs` | Sidebar column alignment, 6 assertions | none |
 | `node scripts/sidebar-surface-verify.mjs` | Sidebar scroll fade (the Codex mask ramp): mechanism plus pixels, four states side by side, 13 assertions | none |
+| `node scripts/sidebar-color-verify.mjs` | Sidebar base against Codex's **measured** pixels, both themes on one page: light 246/233/255 and dark 15/31/17 (all neutral, R=G=B), the sidebar-to-content step in each, the hierarchy direction, plus a per-theme negative control — 16 assertions | none |
 | `node scripts/hero-verify.mjs` | ⑬ ⑭ ⑰, the focus ring and the released header slots, 25 assertions | none |
-| `node scripts/composer-shadow-verify.mjs` | ⑱ Composer shadow aligned to Codex's `--elevation-composer`: per-layer geometry and alpha in light, the dark inset with zero outside shadow, the narrow-viewport 80→40px branch, plus rendered pixels (falloff radius, inside top edge) and one precondition self-check — 23 assertions | none |
+| `node scripts/composer-shadow-verify.mjs` | ⑱ Composer shadow fitted to **measured pixels** (0.6.3 no longer copies the source token): per-layer geometry and alpha in light, the dark inset with zero outside shadow, narrow and wide viewports agreeing (no far field left), plus rendered pixels (ring minimum, top-edge falloff inside Codex's measured band, inside top edge) and one precondition self-check — 21 assertions | none |
 | `node scripts/elevation-verify.mjs` | ⑲ The `--dsw-elevation-*` tokens against Codex's source: per-layer geometry and alpha, layer 1 tracking the stroke, layers 2–3 identical across themes (Codex declares no dark variant), and a rendered menu panel — 19 assertions | none |
 | `node scripts/live-gui-probe.mjs --url <token URL>` | Real GUI: 7 assertions on shadows and both dividers, plus the model seat — 7 on face B when it is on (takeover, geometry, a keyboard change written into the host store and reverted), or 3 on the face A pending window when it is off (`--latency` adds 800ms to that round trip by default; locally it takes <60ms and the window cannot be sampled) | a running `dsh web` |
 | `node scripts/settings-page-verify.mjs --url <token URL>` | Real GUI: the card on the bundle page, its 9 rows, no override at defaults, switch and accent writes, the host seat coming back when the model picker is off, survival across a reload — 29 assertions | a running `dsh web` with the plugin manager enabled |
@@ -277,14 +279,34 @@ layer 3 `#303030`; the alpha family moved from `rgba(252,252,252,·)` to
 
 ### Sidebar colors
 
-Source: point samples from `assets/reference/codex-sidebar-reference.png`.
+Source: the Codex app stylesheet, not a point sample. **Codex has no sidebar color token.** The left panel is a
+translucent scrim over the window base (`app-shared-*.css`, electron window, left panel whose appearance is not
+`content-surface`):
 
-| Token | Value |
-|---|---|
-| `--dsw-alias-bg-sidebar` | `#eef4f9` |
-| `--dsw-specific-sidebar-fill` | `#eef4f9` |
-| `--dsw-specific-sidebar-nav-item-active` | `#e2e9ed` |
-| `--dsw-specific-sidebar-nav-item-hover` | `#e8eef3` |
+```css
+.app-shell-left-panel:not([data-app-shell-left-panel-appearance=content-surface]) {
+  background: color-mix(in srgb, var(--color-surface-tertiary) 70%, transparent);
+}
+```
+
+Light `--color-surface-tertiary` is `--gray-75` = `#F3F3F3`; over a white base that composites to
+`0.7 x 243 + 0.3 x 255 = 246.6 -> #F6F6F6`, which is the 246 a Codex capture reads. Because 30% stays
+transparent, the *rendered* value tracks whatever is behind the window: the previous `#EEF4F9` was a reading
+taken over a blue backdrop, not the baseline.
+
+Measured away from text, one capture per theme: light sidebar **246** / selected row **233** / content **255**;
+dark sidebar **15** / selected row **31** / content **17**. In both themes the sidebar sits **one step below**
+the content — 255 -> 246 light, 17 -> 15 dark — which is the hierarchy, and it is the only difference.
+
+| Token | Light | Dark | Derivation |
+|---|---|---|---|
+| `--dsw-alias-bg-sidebar` | `#f6f6f6` | `#0f0f0f` | Codex sidebar, measured on the same sampling line |
+| `--dsw-specific-sidebar-fill` | `#f6f6f6` | `#0f0f0f` | same surface (also the app frame and titlebar strip) |
+| `--dsw-specific-sidebar-nav-item-active` | `#e9e9e9` | `#1f1f1f` | Codex selected row, measured 233 / 31 |
+| `--dsw-specific-sidebar-nav-item-hover` | `#f0f0f0` | `#171717` | midpoint of base and active row |
+
+The dark **surface** (what cards sit on) stays `#181818` — in Codex that is `jdi.dark.surface`, a different
+thing from the sidebar. The composer card over it measures 35, matching Codex.
 
 ## Limits
 

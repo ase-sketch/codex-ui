@@ -2,6 +2,277 @@
 
 [简体中文](CHANGELOG.zh-CN.md)
 
+## 0.6.4 - 2026-09-28
+
+Both sidebars were rebased. Codex has **no sidebar color token**; the left panel is painted with a translucent
+scrim, so its rendered color depends on what sits behind the window. Two consequences: the old light `#EEF4F9`
+was a reading taken over a blue backdrop, and the old dark `#181818` was the *surface* colour, not the sidebar —
+which made the dark sidebar 7 levels **lighter** than the window background, i.e. the hierarchy ran backwards.
+
+### Where the difference actually comes from
+
+`app-shared-fa3f1d5d5942.css` (Codex desktop 26.924.2738.0), electron window, left panel whose appearance is
+not `content-surface`:
+
+```css
+.app-shell-left-panel:not([data-app-shell-left-panel-appearance=content-surface]) {
+  background: color-mix(in srgb, var(--color-surface-tertiary) 70%, transparent);
+}
+```
+
+Light `--color-surface-tertiary` = `--gray-75` = `#F3F3F3`. Over a white base:
+`0.7 x 243 + 0.3 x 255 = 246.6 -> #F6F6F6`.
+
+`[data-app-shell-page-surface=true]` additionally gets `--color-surface-secondary` (`#F9F9F9`) at 85%, so the
+sidebar is always the darker of the two — that is the entire hierarchy; there is no extra token.
+
+### Measured (one capture per theme, sampled away from text)
+
+| Surface | Codex light | codex-ink before | now | Codex dark | codex-ink before | now |
+|---|---|---|---|---|---|---|
+| sidebar base | `#f6f6f6` (246) | `#eef4f9` (238,244,249) | **`#f6f6f6`** | `#0f0f0f` (15) | `#181818` (24) | **`#0f0f0f`** |
+| sidebar selected row | `#e9eaea` (233) | `#e2e9ed` | **`#e9e9e9`** | `#1f1f1f` (31) | `#282828` (40) | **`#1f1f1f`** |
+| content base | `#ffffff` | `#ffffff` | `#ffffff` | `#111111` (17) | `#111111` | `#111111` |
+| sidebar minus content | -9 | -17 | **-9** | -2 | **+7** | **-2** |
+
+Light: the old value was off by R -8 / G -2 / B +3 — a blue cast — so the step read as a hue shift rather than
+a grey step. Dark: the old value was the surface colour, so the sidebar sat 7 levels **above** the background —
+the direction was inverted. Both themes now put the sidebar below the content (255 -> 246, 17 -> 15).
+
+### What is not the source
+
+The screenshot that prompted this is Codex's own **Settings -> Appearance** panel: every visible label matches
+Codex's zh-CN locale keys (`settings.general.appearance.chromeTheme.accent / surface / ink / uiFontFamily /
+codeFontFamily / translucentSidebar / contrast`, plus `import` / `export`). But the code block it shows is not
+live Codex text. `themePreview`, `ThemeConfig` and `sidebar-elevated` have **zero occurrences** across all
+19,310 files of the Codex app bundle (raw byte search, no extension or size filter) and zero across 57,865
+files of this workspace. Codex ships `--color-surface-elevated` / `--color-surface-elevated-secondary`, never
+`sidebar-elevated`; the only `ThemeConfig` hits in the bundle are mermaid's `quadrantDiagram` / `xychartDiagram`
+builders. The colour mechanism is the CSS scrim quoted above, not that snippet.
+
+### Changed
+
+- `skins/codex-ink/skin.css`, light: `--dsw-alias-bg-sidebar` and `--dsw-specific-sidebar-fill` `#eef4f9` ->
+  `#f6f6f6`; `--dsw-specific-sidebar-nav-item-active` `#e2e9ed` -> `#e9e9e9`;
+  `--dsw-specific-sidebar-nav-item-hover` `#e8eef3` -> `#f0f0f0`.
+- `skins/codex-ink/skin.css`, dark: the same four tokens `#181818` -> `#0f0f0f`, `#282828` -> `#1f1f1f`,
+  `#212121` -> `#171717`. The dark **surface** tokens are untouched — `--dsw-composer-surface` stays `#181818`
+  so the composer card still measures 35, matching Codex.
+- `src/override.js`: `SKIN_DEFAULTS.light.sidebar` follows — the settings card shows this as the
+  "follow the skin" default and `check-repo.mjs` reconciles the two.
+- `scripts/model-picker-verify.mjs`: fixture backdrop follows.
+- New fixture `scripts/sidebar-color-verify.mjs` (16 assertions): the six surfaces rendered side by side at DPR 2
+  on one page, captured once per theme by toggling `body[data-ds-dark-theme]`, new values against old values at
+  the same sampling points, plus a negative control per theme proving the rig can tell the old reading from the
+  new one.
+
+### Boundaries
+
+- The skin writes the **composited** value `#f6f6f6`, not the literal
+  `color-mix(in srgb, #F3F3F3 70%, transparent)`. DSH paints the sidebar fill on more than one layer (the
+  titlebar strip and the sidebar both take `--dsw-specific-sidebar-fill`), so a literal 70% scrim would
+  compound into a different, layer-count-dependent result. The composite is what Codex shows on a white base,
+  which is the case this skin guarantees.
+- The dark **surface** chain is not part of this change: `#181818` / `#212121` / `#282828` / `#303030` were
+  not re-measured against Codex's dark capture beyond the composer card (35, matches).
+- The dark sidebar `#0f0f0f` is a *measured* value, not a derived one. Codex's dark scrim resolves through
+  `--color-surface-tertiary`, whose dark value has more than one declaration in the bundle; over a black window
+  base the arithmetic gives 13 with one candidate and 15 with the other, and the capture says 15.
+
+## 0.6.3 - 2026-09-28
+
+The composer shadow and the window-frame shadow are now **fitted to measured pixels** instead of copied from
+Codex's source tokens — the two disagree: the `0 4px 80px 8px` far field of `--elevation-composer` is not
+present in the reference capture, and the token's `1px` ring rasterises to 2 device pixels at DPR 2 where the
+capture shows 1.
+
+### Measurements (same sampling line on both sides, DPR 2, device pixels)
+
+Composer (outward from the card edge):
+
+| | before | after | Codex capture |
+|---|---|---|---|
+| ring device pixels | 2 | **1** | 1 |
+| ring minimum | 226 (Δ29) | **222 (Δ33)** | 222 (Δ33) |
+| bottom-edge Δ | 8,8,7,7,6,6,5,5,5,4,… | 13,12,11,11,10,9,8,8,7,6,6,5,4,4,3,3,2,2,2,1,1,1,1 | 13,12,11,10,9,8,7,6,5,4,4,4,2,2,2,2,2,1,1,1,1,1,1 |
+| distance to zero | 56 (= 28 CSS px) | **24 (= 12 CSS px)** | 24 |
+| total absolute error vs Codex | 147 | **55** | — |
+
+Window frame (from the hairline into the sidebar):
+
+| | before | after | Codex capture |
+|---|---|---|---|
+| sidebar-side Δ | 6,6,5,5,5,5,5,4,4,4,4,4,3,3,3,3,3,3,2,2,2,2,2,2 | 8,7,7,6,6,5,5,4,4,4,3,3,2,2,2,2,1,1,1,1,0,0,0,0 | 8,8,6,6,5,5,4,3,3,3,2,2,2,2,2,1,1,1,1,1,1,1,1,1 |
+| distance to zero | 32 (= 16 CSS px) | **21 (= 10.5 CSS px)** | 26 (= 13 CSS px) |
+| total absolute error vs Codex | 47 | **22** | — |
+
+### What changed
+
+- `skins/codex-ink/composer.css`: `--dcu-composer-shadow` goes from
+  `0 0 0 1px rgba(13,13,13,.1), 0 2px 8px 0 #0000000a, 0 4px 80px 8px #00000006` to
+  `0 0 0 0.5px rgba(13,13,13,.1), 0 2px 12px 0 rgba(0,0,0,.09)`; the narrow-viewport
+  (`max-width: 639px`) 80→40px override is deleted — there is no far field left to shrink.
+- `skins/codex-ink/window-shadow.css`: the centre column's ambient shadow tightens from
+  `0 0 24px rgba(13,13,13,.05)` to `0 0 13px rgba(13,13,13,.07)`; the hairline is untouched
+  (the measured gap is within ±4 levels, i.e. sampling noise).
+- `scripts/composer-shadow-verify.mjs`: four assertions were re-derived to the new criteria
+  (three layers → two, ring 1px → 0.5px, near field 8px@4% → 12px@9%, falloff "≥35px" →
+  "inside Codex's measured band of 3~13px"), 20 → 21 assertions.
+- `scripts/rightbar-verify.mjs`: two assertions still pinned the pre-fit centre-column halo
+  (`0 0 24px @5%`) and had been failing since the fit; they now pin the measured
+  `0 0 13px @7%` in both the desktop shell and the web form.
+
+### Boundaries
+
+- **The dark window-frame shadow is unchanged** (`0 0 24px rgba(0,0,0,.5)`): there is no dark reference
+  capture on hand, and changing it without a measurement would be eyeballing. Codex's `--shadow-card` has no
+  dark override and stays at 5.1% black — that item is still unmeasured.
+- The fitting fixture is headless Chrome plus the host's real CSS Modules plus this skin, not the live app;
+  it does reproduce the ring seen in the user's on-screen capture (fixture 226 before, live 226 / 223).
+- Only the skin side changed (`skins/codex-ink/*.css`); no DSH platform shadow or stroke definition was touched.
+
+## 0.6.2 - 2026-09-28
+
+Fixes the **release timing** of 0.6.1's local pending: switching back to the tier already in force dropped the
+optimistic value immediately, so the earlier in-flight commit then dragged the display back — the reported
+"during loading every drag rebounds, and you must wait it out".
+
+### Symptom (reproduced frame by frame)
+
+After high → max there is a round-trip window. Switching back to high inside it:
+
+```
+3:Max 3:Max 3:Max 3:Max 3:Max 3:Max 3:Max   <- switched back to Max inside the window, correct
+1:Low 1:Low                                  <- yanked back (the earlier commit landed)
+3:Max 3:Max 3:Max 3:Max ...                  <- only when the second commit lands
+```
+
+### Root cause
+
+- The host's `current` is the **durable next-request projection**
+  (`read:dsh-client-ui-model-selection/lib/types/client/directory.d.ts:14`) and therefore **trails** the commit:
+  between sending a selection and its landing, `current` still names the old tier.
+- 0.6.1's `settlePending` released the pending as soon as `current` equalled it. **Switching back to the tier
+  already in force makes those two equal by construction** (pending = old tier = the current `current`), so the
+  pending was dropped in the very same frame it was set and the optimistic cover vanished.
+- The earlier commit then landed, `current` became it, and the display was dragged along — the rebound. It only
+  returned to the target tier once the second commit landed too.
+- So this is neither the host's fault nor "slow loading" as such: the host **accepts the commits in order** (the
+  second one really is sent and does land). What was being pulled back was the **display**.
+
+### Fix
+
+- A pending may only be released **after the commit's RPC has settled** (`seat.pendingSettled`): on settle, mark
+  it, then check whether the host has caught up; if it has not, keep the pending and wait rather than dropping it
+  on the spot.
+- Safety valve: if the host never echoes (a dropped response, or a later commit superseding it), `PENDING_ECHO_MS
+  = 12s` force-clears it so the UI cannot be pinned to a tier that will never land. Failure paths (a throw or
+  `ok:false`) still clear immediately — a failure is a failure, and an optimistic value must not cover it.
+
+### Criteria
+
+- `power-rail-verify` 61 → **62 assertions**: a new "switching back to the original tier inside the round-trip
+  window keeps the target tier all the way (no rebound)" samples 22 frames across the fixture's 600ms round trip
+  and fails if any frame leaves the target. Pre-fix it measured `3:Max x7 -> 1:Low x2 -> 3:Max x13`; post-fix all
+  22 frames are `3:Max`.
+## 0.6.1 - 2026-09-28
+
+Fixes a **criterion mismatch** shipped in 0.6.0: the model picker's optimistic display was built on a field the real host
+does not provide.
+
+### Symptom
+
+Changing the reasoning effort made the rail **snap back to the old tier** on release, and the bottom trigger stayed on
+the old tier for the whole round trip (~1.1s measured) — i.e. "the slider moved, the thinking label did not".
+
+### Root cause
+
+- The installed `@deepseek-ai/dsh-client-ui-model-selection` is **0.1.7-rc.1**; its `ModelDirectoryState` carries
+  exactly six fields: `{ current, routable, groups, failures, status, error }` (`lib/types/client/directory.d.ts:13-32`).
+  **There is no `pending` and no `retainedEffort`** — neither word occurs once in that package's `client.js`.
+- 0.6.0's `viewOf()` read `snap.pending` to derive the optimistic tier; with the field absent `pendingEffort` was
+  always false, so `effective` always equalled the durable `current.reasoningEffort`.
+- The store's first notification (`status → selecting`) therefore repainted the rail from the **stale** current.
+  Frame by frame: the rail was back on the old tier at `t=234ms` and only reached the new tier at `t=252ms`;
+  `data-pending` and `.codex-mp-spinner` never appeared at all.
+- The fixture built its snapshot from the **documented rc.2 contract and supplied `pending` itself**, so those three
+  criteria proved nothing on the real host.
+
+### Fix (one source file; appearance and interaction shape unchanged)
+
+- `viewOf(snap, localPending)` takes an optional second argument: **the host's `pending` wins when present** (so a
+  future host that adds it is picked up automatically); only when it is missing does the seat's own record apply.
+- Seat-level `seat.pending`: `submit()` records the target selection and repaints **immediately**, so the rail, the
+  bottom trigger and the popover's effort label sit on the target tier from that frame on.
+- Three release points, all idempotent, each guarded so a late response cannot clear a newer submission: the host's
+  `current` catches up (`settlePending`, run on every store notification and every scan), the submission resolves ok,
+  or it fails / throws.
+
+### Criteria corrected (this matters more than the fix)
+
+- `scripts/power-rail-verify.mjs`'s fake directory **drops `pending`**, matching the installed host field for field.
+  Run against the pre-fix source that fixture scores **44/47**, failing exactly "rail stays on the new tier during the
+  round trip" / "trigger already shows the new tier during the round trip" / "model row spinner during a model change";
+  post-fix it is **47/47**. The fixture can now tell "genuinely optimistic" from "simply never measured".
+- `scripts/check-repo.mjs`'s power-rail view case gains six assertions: the seat's own record is used when the host
+  provides no `pending`; `null` / omitted arguments change nothing; a pending on another model does not hijack this
+  model's tier; the host's `pending` wins once it exists.
+- `src/model-picker.js`'s driver contract now states the measured shape (the six fields of 0.1.7-rc.1) instead of
+  copying fields that do not exist.
+
+### ㉑ The reasoning slider takes dsh-claude-style's form (form only)
+
+**This block only, form only**: the control stays in the popover, keeps the same seat and the same interaction
+(real drag / snap on release / four keys). Only the track's appearance follows the reference; every other region
+and control of the codex skin is untouched.
+
+- **The form baseline is dsh-claude-style's .dsh-claude-effort-* rules** (its own comments name Claude Desktop's
+  Effort slider as the reference). Every measurement is read from its source, not eyeballed: groove **26px tall,
+  8px radius** (a rounded rectangle, not a pill); fill = label ink at **26%**, square on the right, ending at the
+  knob's centre; ticks 4px in the same ink as the fill (passed ones are swallowed by the fill, so there is no
+  selected/unselected pair any more); knob **16×30, 5px radius**, white with a 0 1px 3px shadow (a rounded
+  rectangle, not a bead); and a new **Faster / Smarter** row under the groove (11px caption colour — it names the
+  axis, not a value).
+- **The top rung swaps in a violet dot matrix** (apex): fill and ticks step aside for a **5-row block grid**
+  (1 device-pixel gaps, 0.5 device-pixel margins, solved in whole device pixels — a fractional pitch rasterizes as
+  alternating gaps); each block's phase, cycle and tone are **hash-scattered** (nothing ordered, so it reads as a
+  field of particles rather than one sweeping bar); the left end dissolves back into the bare track by smoothstep
+  while the right end stays solid; the knob takes a violet tint and a 10px glow, and the level's name goes violet.
+  The violet comes in two sets, one per theme (light #8b7ad0 / dark #9d8ce0).
+- **The blue sweep ported last round is gone with the form** — it came from plugin-effort-slider, not from the
+  reference; the top rung is now the matrix alone, and the build carries no effect the reference does not have.
+- **Still triggered by the continuous ratio**: the matrix lights up at the far right *before* release, not only once
+  the committed level changes; a single-tier model has no "highest tier".
+- The level's name swaps the way the baseline does: the incoming one rises out of a blur while the outgoing ghost
+  blurs away upward, re-armed on every real change.
+- Both off switches as before: the system prefers-reduced-motion and the script's data-reduced-motion.
+
+### Criteria
+
+- power-rail-verify 53 → **61 assertions**: groove 26/8, hit area 30, fill 26% with 8px 0 0 8px, knob 16×30/5px/
+  white/shadow, the Faster-Smarter row, tick travel [8, width−8], knob centre = the level in force, fill ending at
+  the knob's centre, ticks sharing the fill's ink; seven for the apex (grid lit with 5×N cells, fill and ticks
+  yielding, scattered phases with 8 tone buckets, plume fading 0→1, flash cycle inside the 1.45s scatter band,
+  violet knob with glow, violet level name); three for dark (groove still 26/8, apex violet swapped to the dark set,
+  knob a violet tint rather than white).
+- check-repo's unit assertion moved from the sweep to the matrix: two keyframes, three mountable classes,
+  **no --codex-mp-pos in the block's declaration** (the hard condition for reusability), 8 tone buckets, both
+  theme sets of the apex violet, and both off switches.
+- Two fixture precision issues fixed along the way: keyframe selectors did not accept decimal percentages
+  (17.24%), and --codex-mp-apex-* was first defined on the rail where the level's name in the head could not
+  read it (moved to the card).
+
+
+- `power-rail-verify` 47 → **53 assertions**: the shimmer trio (animation-name / 1.8s / 250% gradient),
+  the thumb breathing on the same cycle, the accent genuinely coming from `--dsw-alias-link` (found inside the
+  gradient string), no glow at the far left, glowing before release at the far right, and both animations stopped
+  under reduced motion.
+- `check-repo` gains a structural assertion: both keyframes and both mountable classes exist, **the unit's declaration
+  block never mentions `--codex-mp-pos`** (the hard condition for reusability), the accent is a single source, and both
+  off switches are present.
+- Also fixed a fixture precision issue in `check-repo`: keyframe selectors were filtered only as single `0%`, so a
+  comma list like `0%, 100%` was misread as a CSS selector.
+
 ## 0.6.0 - 2026-09-28
 
 Face B of the model picker (the Codex reasoning power rail) lands, together with a full-repository review against the

@@ -7,7 +7,7 @@
    注释里禁止出现花括号 —— scopeCss 按「下一个左花括号」做括号配对。
 
    目标（三条，不多做）：
-     1. 会话窗口（AppFrame 中列）：0.5px 发丝线 + 24px 全向环境影（左沿糊到侧栏、上沿糊进标题栏条）；
+     1. 会话窗口（AppFrame 中列）：0.5px 发丝线 + 13px 全向环境影（左沿糊到侧栏、上沿糊进标题栏条；0.6.3 起按实测收窄）；
      2. 右栏面板：同样的顶沿，但**左边框只留发丝线、不带影**；
      3. 右栏分界线拖拽柄悬停时的中段渐变聚焦。
 
@@ -35,7 +35,14 @@
    切勿再叠 position: relative：会覆盖 absolute、面板塌成内容高度（已出过一次事故）。
    ============================================================================ */
 
-/* ── ① 会话窗口（中列）：0.5px 发丝线 + 24px 全向环境影 ─────────────────────
+/* 0.6.3：环境影由 0 0 24px @5% 收到 0 0 13px @7%（blur 24→13、alpha 5%→7%）。
+   依据是 codex-app-reference.png（DPR 2）与用户同屏截图按同一采样口径量出的侧栏侧衰减：
+     Codex  dev 8,8,6,6,5,5,4,3,3,3,2,2,2,2,2,1… 到第 26 个设备像素归零
+     旧皮肤 dev 6,6,5,5,5,5,5,4,4,4,4,4,3,3,3,3,3,3,2… 到第 32 个设备像素还没归零
+   —— 影摊得过开、近处又偏浅。现值为同一夹具里 SSE 最小的拟合（47 → 22）。
+   发丝线不动：实测差在 ±4 级以内，属于采样噪声。 */
+
+/* ── ① 会话窗口（中列）：0.5px 发丝线 + 13px 全向环境影 ─────────────────────
    范围：Windows 桌面壳（html[data-windows-titlebar]）与 win32 的浏览器形态。
    macOS 是 vibrancy 透底，加外投影会脏，不生效。 */
 html[data-codex-ui][data-windows-titlebar] div:has(> [data-slot="main"]),
@@ -45,7 +52,7 @@ html[data-codex-ui][data-platform="win32"]:not([data-windows-titlebar]) div:has(
   position: relative;
   box-shadow:
     0 0 0 0.5px var(--dsw-alias-border-l2),
-    0 0 24px rgba(13, 13, 13, 0.05);
+    0 0 13px rgba(13, 13, 13, 0.07);
 }
 
 html[data-codex-ui][data-windows-titlebar] body[data-ds-dark-theme] div:has(> [data-slot="main"]),

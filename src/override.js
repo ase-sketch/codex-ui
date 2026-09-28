@@ -34,8 +34,8 @@ export const DEFAULT_CONTRAST = { light: 45, dark: 60 };
  * 设置卡的背景色块因此显示错的默认值。check-repo 现在逐字段对账 skin.css，漂移即 FAIL。
  */
 export const SKIN_DEFAULTS = {
-  light: { accent: '#339cff', focus: '#339cff', surface: '#ffffff', ink: '#1a1c1f', sidebar: '#eef4f9' },
-  dark: { accent: '#0169cc', focus: '#339cff', surface: '#111111', ink: '#ffffff', sidebar: '#181818' },
+  light: { accent: '#339cff', focus: '#339cff', surface: '#ffffff', ink: '#1a1c1f', sidebar: '#f6f6f6' },
+  dark: { accent: '#0169cc', focus: '#339cff', surface: '#111111', ink: '#ffffff', sidebar: '#0f0f0f' },
 };
 
 /**

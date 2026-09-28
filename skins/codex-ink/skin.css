@@ -28,7 +28,14 @@ body {
 
   /* 底色：白 → #F9F9F9 → #F1F1EF → #E5E5E5 四档灰阶即层级 */
   --dsw-alias-bg-base: #ffffff;
-  --dsw-alias-bg-sidebar: #eef4f9; /* Codex 亮色侧栏实测取样（350×1377 截图点采样 = #EEF4F9） */
+  /* 侧栏底：Codex **没有**「侧栏专用色」令牌。侧栏 = --color-surface-tertiary(gray-75 #F3F3F3)
+     以 70% 不透明度叠在窗口底上 —— app-shared-*.css 原文（electron 窗口、左侧板外观非 content-surface）：
+       .app-shell-left-panel:not([data-app-shell-left-panel-appearance=content-surface])
+         { background: color-mix(in srgb, var(--color-surface-tertiary) 70%, transparent) }
+     叠白 = 0.7×243 + 0.3×255 = 246.6 → #F6F6F6，与 Codex 亮色同屏实测 246 同档。
+     那 30% 透明意味着**渲染值随窗口背后的底而变**：旧值 #EEF4F9 是某次蓝底下的读数，
+     不是基准，已作废（见 CHANGELOG 0.6.4）。 */
+  --dsw-alias-bg-sidebar: #f6f6f6;
   --dsw-alias-bg-layer-1: #ffffff;
   --dsw-alias-bg-layer-2: #f1f1ef;
   --dsw-alias-bg-layer-3: #e5e5e5;
@@ -155,9 +162,9 @@ body {
   --dsw-alias-scrollbar-hover-l2: rgba(13, 13, 13, 0.5);
 
   /* 具体面 */
-  --dsw-specific-sidebar-fill: #eef4f9; /* 与 --dsw-alias-bg-sidebar 同源：Codex 亮色侧栏实测 */
-  --dsw-specific-sidebar-nav-item-hover: #e8eef3; /* 侧栏底 ↔ 选中行的中点（推导值，非取样） */
-  --dsw-specific-sidebar-nav-item-active: #e2e9ed; /* Codex 选中行（PROJIECT）实测取样 */
+  --dsw-specific-sidebar-fill: #f6f6f6; /* 与 --dsw-alias-bg-sidebar 同源：Codex 侧栏叠白后的合成值 */
+  --dsw-specific-sidebar-nav-item-hover: #f0f0f0; /* 侧栏底 ↔ 选中行的中点（推导值，非取样） */
+  --dsw-specific-sidebar-nav-item-active: #e9e9e9; /* Codex 选中行实测 233 = 侧栏底 246 − 13 */
   --dsw-specific-sidebar-nav-item-active-accent: rgba(13, 13, 13, 0.1);
   --dsw-specific-input-major: #ffffff;
   /* 输入卡所坐的「表面色」。卡片底 = 5% 前景叠这个色（Codex 的 --card 公式）。
@@ -191,15 +198,22 @@ html[data-codex-ui-switching] *::after {
 }
 
 /* ── 暗色主题 ─────────────────────────────────────────────────────────────
-   两个来源各管一半，别再把它们合成一个（0.1.2~0.5.5 就是合错了）：
+   三个来源各管一段，别再把它们合成一个（0.1.2~0.5.5 把背景与表面合错了，
+   0.6.4 之前又把侧栏与表面合错了）：
      · 窗口**背景** = 主题取色面板（assets/reference/codex-theme-dark.png）里写的
        「背景 #111111 / 前景 #FCFCFC / 强调色 #0169CC」；
-     · **表面** = app.asar 的 jdi.dark.surface #181818（卡片、侧栏这类抬起来的面）。
-   实测对账：用户给的 Codex 截图里，输入卡四周的背景恒为 17 = #111111 ✓，
-   卡片内部 35 = 5% 前景叠 #181818 ✓ —— 两个值同时成立，只有「背景/表面分层」能解释。
+     · **表面**（卡片坐的那一层）= app.asar 的 jdi.dark.surface #181818；
+     · **侧栏**（左侧板 + 标题栏条 + frame 底）= 与亮色同一套机制，Codex **没有侧栏令牌**：
+       那一面是 --color-surface-tertiary 以 70% 叠在窗口底上。暗色实测 **15 = #0F0F0F**，
+       与亮色的 246 是同一档关系（亮 255→246、暗 17→15，侧栏都低一档）。
+   实测对账（用户给的 Codex 暗色截图，避开文字取样）：
+     输入卡四周背景 17 = #111111 ✓ · 卡片内部 35 = 5% 前景叠 #181818 ✓
+     侧栏与标题栏条 15 = #0F0F0F ✓ · 侧栏选中行 31 = #1F1F1F ✓
    0.5.5 及以前把背景也写成 #181818，于是卡片与背景只差 12 级（Codex 差 18 级），
-   层次感就是这么丢的。
-   层级：背景 #111111 → 侧栏/表面 #181818 → 层1 #212121 → 层2 #282828 → 层3 #303030。
+   层次感就是这么丢的；0.6.4 之前侧栏被当成表面（#181818 = 24），比背景还亮 7 级 ——
+   方向反了。
+   两条链别混：背景 #111111 → 侧栏 #0F0F0F（侧栏更低）；背景 #111111 → 表面 #181818
+   → 层1 #212121 → 层2 #282828 → 层3 #303030（面越高越亮）。
    alpha 家族由 252 抬到 255（Codex 深色 --alpha-base = #fff）。 */
 body[data-ds-dark-theme] {
   color-scheme: dark;
@@ -208,10 +222,10 @@ body[data-ds-dark-theme] {
      这里重复一次字面值而不是引用令牌 —— 令牌就定义在 body 上，html 自己读不到它的深色值。 */
   background-color: #111111;
 
-  /* 窗口背景取主题面板的 #111111；侧栏/表面取 jdi.dark.surface #181818。
-     输入卡坐在**表面**上（--dsw-composer-surface），不是坐在窗口背景上 —— 见下。 */
+  /* 窗口背景取主题面板的 #111111；侧栏取实测 #0F0F0F（比背景低一档，与亮色同向）。
+     输入卡坐在**表面**上（--dsw-composer-surface = #181818），不是坐在窗口背景上 —— 见下。 */
   --dsw-alias-bg-base: #111111;
-  --dsw-alias-bg-sidebar: #181818;
+  --dsw-alias-bg-sidebar: #0f0f0f;
   --dsw-alias-bg-layer-1: #212121;
   --dsw-alias-bg-layer-2: #282828;
   --dsw-alias-bg-layer-3: #303030;
@@ -313,9 +327,9 @@ body[data-ds-dark-theme] {
   --dsw-alias-scrollbar-hover-l1: rgba(255, 255, 255, 0.35);
   --dsw-alias-scrollbar-hover-l2: rgba(255, 255, 255, 0.5);
 
-  --dsw-specific-sidebar-fill: #181818;
-  --dsw-specific-sidebar-nav-item-hover: #212121;
-  --dsw-specific-sidebar-nav-item-active: #282828;
+  --dsw-specific-sidebar-fill: #0f0f0f; /* 与 --dsw-alias-bg-sidebar 同源：Codex 暗色侧栏实测 15 */
+  --dsw-specific-sidebar-nav-item-hover: #171717; /* 侧栏底 ↔ 选中行的中点（推导值，非取样） */
+  --dsw-specific-sidebar-nav-item-active: #1f1f1f; /* Codex 暗色选中行实测 31 = 侧栏底 15 + 16 */
   --dsw-specific-sidebar-nav-item-active-accent: rgba(255, 255, 255, 0.14);
   --dsw-specific-input-major: #212121;
   /* 深色表面 = jdi.dark.surface #181818（**不是**窗口背景 #111111）：

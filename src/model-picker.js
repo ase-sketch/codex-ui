@@ -11,22 +11,30 @@
  *      :has() 只看「我们在不在席」，摘掉触发器宿主立刻复原。
  * 数据与提交全部走宿主唯一真源 ctx.modelDirectories，本模块不缓存模型列表。
  *
- * 驱动契约（读 @deepseek-ai/dsh-client-ui-model-selection 0.1.7-rc.2 源码得到）：
+ * 驱动契约（读 @deepseek-ai/dsh-client-ui-model-selection 0.1.7-rc.1 / rc.2 源码得到）：
  *   models.directoryFor(sessionId)          → ModelDirectory（会话作用域未物化时**会抛**）
- *     dir.store.getSnapshot()                → { current, retainedEffort, groups, status, pending, error }
+ *     dir.store.getSnapshot()                → { current, routable, groups, failures, status, error }
  *         status  : 'loading' | 'ready' | 'selecting' | 'error'
  *         groups  : [{ id, name, models: [{ id, name, description?, reasoning?: { defaultEffort?, efforts: [{ id, name }] } }] }]
  *         current : { provider, model, reasoningEffort? } | null
- *         pending : 正在往返的那次 selection | null
  *     dir.store.subscribe(fn)                → 退订函数
  *     dir.load()                             → 刷新目录（宿主在每次打开菜单时调一次）
  *     dir.select({ provider, model, reasoningEffort? }) → Promise<{ ok } | { ok:false, error:{ code, message } }>
  *   会话 id：席位祖先上的 data-conversation-session（宿主 ConversationRoot 打的），
  *            取不到再退到 uiSession.current.value.key（主视图那一个会话）。
  *
+ *   **实测更正**：安装的 0.1.7-rc.1 的 ModelDirectoryState（lib/types/client/directory.d.ts:13-32）
+ *   只有上面六个字段 —— 既没有 pending 也没有 retainedEffort（两个词在该包 client.js 里各出现 0 次）。
+ *   所以「等宿主的 pending」这条路在这版上恒不触发，乐观显示必须是本模块自己的状态：
+ *   席位级 seat.pending（见 settlePending / viewOfSeat）。宿主将来补上 pending 时仍优先用宿主的。
+ *
  * 卡顿的解码：宿主把目录在**整个 selectModel 往返**（实测 ~1.1s）里标成 selecting。
  * 列表的签名里只放「长什么样」的东西，selecting 不在里面 —— 改档位时卡片不重画、不清空；
- * 往返期间轨与触发器按 pending 那一档乐观显示，并在档位名旁转圈（宿主菜单那里一个都不画）。
+ * 往返期间轨与触发器按**本地 pending** 那一档乐观显示，并在档位名旁转圈（宿主菜单那里一个都不画）。
+ *
+ * 本地 pending 的因果链（0.5.11 修）：提交时记下目标 selection，宿主的 current 追平或提交失败即撤。
+ * 没有它时，store 的第一次通知（status→selecting）会用**旧** current 重画轨，于是松手回弹一帧、
+ * 底部触发器整段往返都停在旧档 —— 实测 t=234ms 轨回到旧档、t=252ms 才到新档。
  */
 
 /** 席位名。 */
@@ -34,10 +42,12 @@ export const MODEL_SLOT = 'conversation.input.model';
 /** 自建节点的类名根（样式表只画这些类，不碰宿主任何节点）。 */
 export const TRIGGER_CLASS = 'codex-mp-trigger';
 export const POPOVER_CLASS = 'codex-mp-popover';
-/** Codex _ThumbScale 28px：拇指中心的行程是 [14, 宽 − 14]。 */
-export const THUMB_SIZE = 28;
+/** 旋钮宽（形态基准 dsh-claude-style 的 16×30 旋钮）：中心的行程是 [8, 宽 − 8]。 */
+export const THUMB_SIZE = 16;
 /** Codex --model-picker-power-slider-thumb-input-motion-duration：首帧 0s，16ms 后抬到 .3s。 */
 export const MOTION_ARM_MS = 16;
+/** 本地 pending 的兜底寿命：宿主迟迟不回显（丢包 / 被更晚的提交取代）也不能把界面钉死。 */
+export const PENDING_ECHO_MS = 12000;
 /** 弹层定位（宿主 ModelSelect 的 place()：右沿对齐触发器、上方留 8px、视口留 12px）。 */
 export const POPOVER_GAP = 8;
 export const POPOVER_MARGIN = 12;
@@ -63,6 +73,8 @@ const COPY = {
     'menu.aria': '模型与推理等级',
     'menu.model': '模型',
     'menu.effort': '推理等级',
+    'effort.faster': '更快',
+    'effort.smarter': '更强',
     'effort.providerDefault': 'Default',
     'error.action': '模型操作失败：{message}',
     'error.sessionInUse': '当前会话已被占用，可能是其他正在运行的 DSH 导致的（如其他 dsh web、桌面端），请退出其他正在运行的 DSH 后重试。',
@@ -80,6 +92,8 @@ const COPY = {
     'menu.aria': 'Model and reasoning effort',
     'menu.model': 'Model',
     'menu.effort': 'Effort',
+    'effort.faster': 'Faster',
+    'effort.smarter': 'Smarter',
     'effort.providerDefault': 'Default',
     'error.action': 'Model operation failed: {message}',
     'error.sessionInUse': 'This session is already in use, possibly by another running DSH instance (such as dsh web or the desktop app). Quit other running DSH instances and try again.',
@@ -169,9 +183,11 @@ export function sessionIdOf(slot, fallback) {
  * 目录快照 → 这一席位要显示的一切（纯函数，宿主 ModelSelect 的派生逻辑逐条对齐）。
  * pending 若是同一模型上的改档，档位按 pending 乐观显示 —— 往返 ~1.1s 里轨不回弹。
  * @param snap - dir.store.getSnapshot()。
+ * @param localPending - 席位自己的待生效 selection（宿主快照没有 pending 时用它）。
+ *                       宿主给了就用宿主的，两者都缺即 null。
  * @returns 视图模型。
  */
-export function viewOf(snap) {
+export function viewOf(snap, localPending) {
   const empty = { groups: [], current: null, choice: null, efforts: [], index: -1, effective: undefined, hasReasoning: false, pending: null, pendingEffort: false, status: 'loading', error: null, retainedEffort: undefined };
   if (snap === undefined || snap === null) return empty;
   const groups = sortGroups(snap.groups);
@@ -185,7 +201,9 @@ export function viewOf(snap) {
   }
   const reasoning = choice === null || choice.model.reasoning === undefined || choice.model.reasoning === null ? null : choice.model.reasoning;
   const efforts = reasoning === null || !Array.isArray(reasoning.efforts) ? [] : reasoning.efforts;
-  const pending = snap.pending === undefined ? null : snap.pending;
+  /* 宿主快照优先（将来补上 pending 时自动接管），缺了才用席位自己记的那一笔。 */
+  const hosted = snap.pending === undefined || snap.pending === null ? null : snap.pending;
+  const pending = hosted !== null ? hosted : (localPending === undefined || localPending === null ? null : localPending);
   const pendingEffort = pending !== null && current !== null && pending.provider === current.provider && pending.model === current.model
     && pending.reasoningEffort !== current.reasoningEffort;
   const saved = pendingEffort ? pending.reasoningEffort : (current === null ? undefined : current.reasoningEffort);
@@ -244,6 +262,14 @@ export function installModelPicker(env) {
   let errorBox = null;
   let effortBox = null;
   let effortValue = null;
+  let effortText = null;
+  let effortGhost = null;
+  /** 上一次画出来的档位名（换档时它变成 ghost 飘走）。 */
+  let lastEffortLabel = null;
+  let endsBox = null;
+  let matrix = null;
+  /** 点阵已解出的网格签名（设备像素宽@dpr），空串表示还没建。 */
+  let matrixSig = '';
   let rail = null;
   let railSignature = '';
   let lastListSignature = '';
@@ -306,7 +332,8 @@ export function installModelPicker(env) {
     const chevron = el('span', 'codex-mp-trigger-chevron');
     chevron.innerHTML = CHEVRON;
     button.append(model, layers, chevron);
-    const seat = { slot, button, model, layers, layerKey: '', sessionId: null, dir: null, off: null };
+    /* pending：本席位正在往返的那次 selection（宿主快照没有 pending 时的乐观来源）。 */
+    const seat = { slot, button, model, layers, layerKey: '', sessionId: null, dir: null, off: null, pending: null, pendingSettled: false, pendingTimer: 0 };
     button.addEventListener('click', (event) => {
       event.stopPropagation();
       if (openSeat === seat) close(false);
@@ -348,6 +375,39 @@ export function installModelPicker(env) {
     try { return seat.dir.store.getSnapshot(); } catch { return null; }
   };
 
+  /** 两个 selection 是不是同一档（reasoningEffort 缺失与 undefined 等价）。 */
+  const sameSelection = (a, b) => a !== null && b !== null
+    && a.provider === b.provider && a.model === b.model
+    && (a.reasoningEffort ?? undefined) === (b.reasoningEffort ?? undefined);
+
+  /** 撤掉本地 pending 并重画（幂等；顺带收掉兜底计时器）。 */
+  function clearPending(seat) {
+    if (seat.pendingTimer !== 0) { win.clearTimeout(seat.pendingTimer); seat.pendingTimer = 0; }
+    if (seat.pending === null) return;
+    seat.pending = null;
+    seat.pendingSettled = false;
+    syncSeat(seat.slot);
+    if (openSeat === seat) renderPopover();
+  }
+
+  /**
+   * 宿主的 current 追平本地 pending 就撤掉它。
+   *
+   * **只有本次提交的 RPC 已经落地之后才允许撤**（seat.pendingSettled）—— 0.6.2 修的：
+   * 宿主的 current 是「durable next-request projection」（directory.d.ts:14），它**落后于**提交。
+   * 于是「切回当前那一档」时 current 与 pending 天然相等，早先那版会立刻撤掉乐观值，
+   * 先前那次提交一落地就把显示拽回旧档 —— 就是「加载期间怎么滑都回弹」。
+   */
+  function settlePending(seat) {
+    if (seat.pending === null || !seat.pendingSettled) return;
+    const snap = snapshotOf(seat);
+    const current = snap === null || snap.current === undefined ? null : snap.current;
+    if (sameSelection(current, seat.pending)) clearPending(seat);
+  }
+
+  /** 席位视图：宿主快照 + 席位自己的 pending。所有读席位状态的地方都走这里。 */
+  const viewOfSeat = (seat) => viewOf(snapshotOf(seat), seat.pending);
+
   /** 可以接管：宿主确实渲染了这一格（子代理会话里宿主返回 null，我们也不出头），且目录已有可显示的内容。 */
   const canSeat = (seat, view) => {
     const hostChild = [...seat.slot.children].some((child) => child !== seat.button);
@@ -359,7 +419,8 @@ export function installModelPicker(env) {
     if (seat === undefined) { seat = createSeat(slot); seats.set(slot, seat); }
     const id = sessionIdOf(slot, env.sessionFallback);
     if (id !== seat.sessionId || seat.dir === null) bind(seat, id);
-    const view = viewOf(snapshotOf(seat));
+    settlePending(seat);
+    const view = viewOfSeat(seat);
     if (!canSeat(seat, view)) {
       if (seat.button.parentElement !== null) seat.button.remove();
       if (openSeat === seat) close(false);
@@ -370,6 +431,7 @@ export function installModelPicker(env) {
   }
 
   function dropSeat(seat) {
+    if (seat.pendingTimer !== 0) { win.clearTimeout(seat.pendingTimer); seat.pendingTimer = 0; }
     if (openSeat === seat) close(false);
     if (seat.off !== null) { try { seat.off(); } catch { /* ignore */ } }
     seat.button.remove();
@@ -444,6 +506,9 @@ export function installModelPicker(env) {
     const head = el('div', 'codex-mp-effort-head');
     head.appendChild(el('span', 'codex-mp-effort-label'));
     effortValue = el('span', 'codex-mp-effort-value');
+    effortText = el('span', 'codex-mp-value-text');
+    effortGhost = el('span', 'codex-mp-effort-ghost');
+    effortValue.append(effortText, effortGhost);
     head.appendChild(effortValue);
     const container = el('div', 'codex-mp-container');
     rail = el('div', 'codex-mp-root');
@@ -451,11 +516,16 @@ export function installModelPicker(env) {
     rail.tabIndex = 0;
     const track = el('div', 'codex-mp-track');
     track.appendChild(el('div', 'codex-mp-range'));
+    matrix = el('div', 'codex-mp-matrix');
+    track.appendChild(matrix);
     const thumbScale = el('span', 'codex-mp-thumb-scale');
     thumbScale.appendChild(el('span', 'codex-mp-thumb'));
     rail.append(track, thumbScale);
     container.appendChild(rail);
-    effortBox.append(head, container);
+    /* 两端命名的是方向（更快 / 更强），不是取值 —— 形态基准里它们在槽下方一行。 */
+    endsBox = el('div', 'codex-mp-ends');
+    endsBox.append(el('span', 'codex-mp-ends-faster', t('effort.faster')), el('span', 'codex-mp-ends-smarter', t('effort.smarter')));
+    effortBox.append(head, container, endsBox);
     popover.append(errorBox, listBox, effortBox);
     popover.addEventListener('keydown', onPopoverKey);
     popover.addEventListener('focusout', onFocusOut);
@@ -517,7 +587,7 @@ export function installModelPicker(env) {
 
   function renderPopover() {
     if (openSeat === null || popover === null) return;
-    const view = viewOf(snapshotOf(openSeat));
+    const view = viewOfSeat(openSeat);
     errorBox.hidden = failure === null;
     errorBox.textContent = failure ?? '';
     const signature = listSignature(view);
@@ -588,9 +658,17 @@ export function installModelPicker(env) {
     effortBox.hidden = !show;
     if (!show) return;
     effortBox.querySelector('.codex-mp-effort-label').textContent = t('menu.effort');
-    effortValue.textContent = '';
-    if (view.pendingEffort) effortValue.appendChild(el('span', 'codex-mp-spinner'));
-    effortValue.appendChild(el('span', '', effortLabelOf(view) ?? ''));
+    const label = effortLabelOf(view) ?? '';
+    /* 换档是**交换**不是替换：进来的从下方模糊上浮，出去的（ghost 压在原位）向上飘走。 */
+    if (label !== lastEffortLabel) {
+      if (lastEffortLabel !== null) { effortGhost.textContent = lastEffortLabel; rearm(effortGhost); }
+      lastEffortLabel = label;
+      rearm(effortText);
+    }
+    effortText.textContent = label;
+    const spin = effortValue.querySelector('.codex-mp-spinner');
+    if (view.pendingEffort && spin === null) effortValue.insertBefore(el('span', 'codex-mp-spinner'), effortText);
+    else if (!view.pendingEffort && spin !== null) spin.remove();
     rail.setAttribute('aria-label', t('menu.effort'));
     const signature = view.choice.group.id + '/' + view.choice.model.id + ':' + view.efforts.map((e) => e.id).join(',');
     if (signature !== railSignature) {
@@ -601,7 +679,7 @@ export function installModelPicker(env) {
         const tick = el('span', 'codex-mp-tick');
         tick.setAttribute('data-index', String(i));
         tick.title = level.name;
-        /* 档位等距落在拇指行程 [14, 宽 − 14] 上 —— 与拇指、色条同一条 calc，零布局读。 */
+        /* 档位等距落在旋钮行程 [8, 宽 − 8] 上 —— 与旋钮、填充同一条 calc，零布局读。 */
         tick.style.left = 'calc(' + THUMB_SIZE / 2 + 'px + (100% - ' + THUMB_SIZE + 'px) * ' + indexRatio(i, view.efforts.length) + ')';
         rail.insertBefore(tick, thumbScale);
       });
@@ -621,6 +699,97 @@ export function installModelPicker(env) {
     if (drag === null) paintRail(view.index < 0 ? null : indexRatio(view.index, view.efforts.length));
   }
 
+  /* ── 顶档点阵（形态基准 dsh-claude-style 的 .dsh-claude-effort-matrix）──────────
+     算法逐条照搬：5 行方块、1 设备像素缝、0.5 设备像素外边距，在**整设备像素**上解网格
+     （小数 pitch 会被栅格化成交替的缝）；每格的相位/周期/色调由坐标 hash 散开，不成序；
+     左侧的羽化是静态 opacity，颜色闪动从它上面走过，两者不打架。 */
+
+  /** 坐标 hash → 0..1：先把两个坐标雪崩再取，免得邻居落进规则格点被看成斜带。 */
+  function cellUnit(r, c, seed) {
+    let h = Math.imul(r + 1, 0x9e3779b1) ^ Math.imul(c + 1, 0x85ebca6b) ^ Math.imul(seed + 1, 0x27d4eb2f);
+    h = Math.imul(h ^ (h >>> 15), 0x2545f491);
+    h ^= h >>> 13;
+    return (h >>> 0) / 4294967296;
+  }
+
+  /** 左端溶回裸槽、右端实心的羽化（smoothstep）。 */
+  function cellFade(fx) {
+    if (fx <= 0.05) return 0;
+    if (fx >= 0.75) return 1;
+    const t = (fx - 0.05) / 0.7;
+    return t * t * (3 - 2 * t);
+  }
+
+  /** 按设备像素解网格：5 行 ~4px 方块，余数回填到四边留白，方块保持正方且居中。 */
+  function solveMatrix(wDev, dpr) {
+    const ROWS = 5;
+    const gap = Math.max(1, Math.round(1 * dpr));
+    const margin = Math.max(1, Math.round(0.5 * dpr));
+    const hDev = Math.round(26 * dpr);
+    const block = Math.max(3, Math.floor((hDev - 2 * margin - (ROWS - 1) * gap) / ROWS));
+    const cols = Math.max(1, Math.floor((wDev + gap) / (block + gap)));
+    const restX = wDev - (cols * block + (cols - 1) * gap);
+    const restY = hDev - (ROWS * block + (ROWS - 1) * gap);
+    return {
+      cols,
+      rows: ROWS,
+      sq: block / dpr,
+      gap: gap / dpr,
+      padTop: Math.floor(restY / 2) / dpr,
+      padBottom: (restY - Math.floor(restY / 2)) / dpr,
+      padLeft: Math.floor(restX / 2) / dpr,
+      padRight: (restX - Math.floor(restX / 2)) / dpr,
+    };
+  }
+
+  /** 给一颗粒子它自己的闪烁：色调、相位、周期全部 hash 散开。 */
+  function paintParticle(sq, r, c) {
+    sq.setAttribute('data-tone', String(Math.floor(cellUnit(r, c, 1) * 8) % 8));
+    sq.style.setProperty('animation-delay', ((cellUnit(r, c, 2) * 1.38 + 0.3).toFixed(3)) + 's', 'important');
+    sq.style.setProperty('animation-duration', (1.45 * (0.92 + cellUnit(r, c, 3) * 0.16)).toFixed(3) + 's', 'important');
+  }
+
+  /** 轨宽变了或 dpr 变了才重建；轨还没布局（隐藏中）时返回 false，调用方下次再试。 */
+  function ensureMatrix() {
+    if (matrix === null) return false;
+    const track = rail === null ? null : rail.querySelector('.codex-mp-track');
+    if (track === null) return false;
+    const w = track.clientWidth;
+    if (!w) return false;
+    const dpr = win.devicePixelRatio > 0 ? win.devicePixelRatio : 1;
+    const sig = Math.round(w * dpr) + '@' + dpr;
+    if (sig === matrixSig) return true;
+    const lay = solveMatrix(Math.round(w * dpr), dpr);
+    matrix.textContent = '';
+    matrix.style.gap = lay.gap + 'px';
+    matrix.style.padding = lay.padTop + 'px ' + lay.padRight + 'px ' + lay.padBottom + 'px ' + lay.padLeft + 'px';
+    matrix.style.gridTemplateColumns = 'repeat(' + lay.cols + ', ' + lay.sq + 'px)';
+    matrix.style.gridAutoRows = lay.sq + 'px';
+    for (let r = 0; r < lay.rows; r += 1) {
+      for (let c = 0; c < lay.cols; c += 1) {
+        const fx = lay.cols > 1 ? c / (lay.cols - 1) : 1;
+        const cell = el('div', 'codex-mp-matrix-cell');
+        /* 入场从右端扫进来（旋钮够到的那一端），带一点散相，免得读成一次擦除。 */
+        cell.style.setProperty('animation-delay', (((1 - fx) * 0.45 + cellUnit(r, c, 4) * 0.08).toFixed(3)) + 's', 'important');
+        const sq = el('div', 'codex-mp-matrix-sq');
+        sq.style.opacity = cellFade(fx).toFixed(3);
+        paintParticle(sq, r, c);
+        cell.appendChild(sq);
+        matrix.appendChild(cell);
+      }
+    }
+    matrixSig = sig;
+    return true;
+  }
+
+  /** 让 CSS 动画重新起跑（换档时名字交换要重播，否则第二次换档不动）。 */
+  function rearm(node) {
+    if (node === null) return;
+    node.style.animation = 'none';
+    void node.offsetWidth;
+    node.style.animation = '';
+  }
+
   /**
    * 画到连续位置：拇指、色条、「已走过」的圆点都由同一个 --codex-mp-pos 驱动。
    * @param ratio - 0..1；null 表示没有生效档（跟随提供方默认），此时拇指与色条藏起、圆点全按未选画。
@@ -630,11 +799,22 @@ export function installModelPicker(env) {
     const ticks = rail.querySelectorAll('.codex-mp-tick');
     const count = ticks.length;
     ticks.forEach((tick, i) => tick.setAttribute('data-selected', ratio !== null && indexRatio(i, count) <= ratio + 1e-6 ? 'true' : 'false'));
+    /* 顶档（形态基准里的 apex）：拖动中也要亮 —— 拉到最右端即触发，不等松手，所以判据挂在
+       **连续比例**上而不是生效档 index 上。单档模型没有「最高档」可言。
+       data-tier 同时打在轨上（点阵、旋钮、填充、刻度）与 effortBox 上（档位名转紫）。 */
+    const atMax = ratio !== null && count > 1 && ratio >= 1 - 1e-6;
+    if (atMax && ensureMatrix()) {
+      rail.setAttribute('data-tier', 'max');
+      if (effortBox !== null) effortBox.setAttribute('data-tier', 'max');
+    } else {
+      rail.removeAttribute('data-tier');
+      if (effortBox !== null) effortBox.removeAttribute('data-tier');
+    }
   }
 
   function currentEfforts() {
     if (openSeat === null) return null;
-    const view = viewOf(snapshotOf(openSeat));
+    const view = viewOfSeat(openSeat);
     return view.choice === null || view.efforts.length === 0 ? null : view;
   }
 
@@ -699,21 +879,67 @@ export function installModelPicker(env) {
   }
 
   /* ── 提交 ────────────────────────────────────────────────────────────── */
+  /**
+   * 提交一次 selection。
+   *
+   * 提交前先把目标记进 seat.pending 并立刻重画：轨 / 触发器 / 弹层档位名从这一帧起就是目标档，
+   * 不再等 durable projection。撤除点有三个，全都幂等 ——
+   *   1. 宿主的 current 追平（settlePending，随 store 通知与每轮 scan 跑）；
+   *   2. 提交成功返回（此时宿主已 syncInputs，current 就是目标档）；
+   *   3. 提交失败或抛异常。
+   * 只有在 seat.pending 还是本次那一笔时才撤，晚到的旧响应不会清掉更新的提交。
+   *
+   * @param seat - 席位。
+   * @param selection - { provider, model, reasoningEffort? }。
+   * @param closeOnOk - 成功后是否收起弹层（换模型收，改档位不收）。
+   */
   function submit(seat, selection, closeOnOk) {
     if (seat.dir === null) return;
     failure = null;
+    const submitted = {
+      provider: selection.provider,
+      model: selection.model,
+      ...(selection.reasoningEffort === undefined ? {} : { reasoningEffort: selection.reasoningEffort }),
+    };
+    seat.pending = submitted;
+    seat.pendingSettled = false;
+    if (seat.pendingTimer !== 0) { win.clearTimeout(seat.pendingTimer); seat.pendingTimer = 0; }
+    syncSeat(seat.slot);
+    if (openSeat === seat) renderPopover();
+    /**
+     * 本次提交的 RPC 落地了（不是本次的那一笔就留着）。
+     * 成功时**不直接撤**：先允许撤，再看宿主有没有追平；没追平就留着 pending 等它，
+     * 并挂一条兜底寿命 —— 否则界面会卡在一个宿主永远不回显的档上。
+     * @param force - 失败路径：无论如何撤掉（错就是错，不能让乐观值盖住失败）。
+     */
+    const release = (force) => {
+      if (seat.pending !== submitted) return;
+      if (force === true) { clearPending(seat); return; }
+      seat.pendingSettled = true;
+      settlePending(seat);
+      if (seat.pending === null) return;
+      seat.pendingTimer = win.setTimeout(() => { seat.pendingTimer = 0; clearPending(seat); }, PENDING_ECHO_MS);
+    };
     let pending;
-    try { pending = seat.dir.select(selection); } catch (error) { failure = t('error.action', { message: String(error && error.message ? error.message : error) }); renderPopover(); return; }
+    try { pending = seat.dir.select(selection); } catch (error) {
+      release(true);
+      failure = t('error.action', { message: String(error && error.message ? error.message : error) });
+      renderPopover();
+      return;
+    }
     Promise.resolve(pending).then((result) => {
       if (result === undefined || result === null) return;
       if (result.ok) {
+        release(false);
         if (closeOnOk && openSeat === seat) close(true);
         return;
       }
+      release(true);
       const error = result.error ?? {};
       failure = error.code === 'session/writer-held' ? t('error.sessionInUse') : t('error.action', { message: (error.code ?? '') + ': ' + (error.message ?? '') });
       if (openSeat === seat) renderPopover();
     }, (error) => {
+      release(true);
       failure = t('error.action', { message: String(error && error.message ? error.message : error) });
       if (openSeat === seat) renderPopover();
     });
@@ -723,7 +949,7 @@ export function installModelPicker(env) {
   function choose(group, model) {
     const seat = openSeat;
     if (seat === null) return;
-    const view = viewOf(snapshotOf(seat));
+    const view = viewOfSeat(seat);
     if (view.pending !== null) return;
     if (view.current !== null && view.current.provider === group.id && view.current.model === model.id) { close(true); return; }
     const effort = model.reasoning === undefined || model.reasoning === null ? undefined : model.reasoning.defaultEffort;

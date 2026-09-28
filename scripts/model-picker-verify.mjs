@@ -166,7 +166,7 @@ const page = (theme, label) => '<!doctype html><html data-codex-ui data-platform
   + '<head><meta charset="utf-8"><title>' + label + '</title><style>' + themeLayers + '</style>'
   + '<style>' + modelCss + '</style><style>' + msCss + '</style><style>' + skCss + '</style>'
   + '<style id="codex-ui-theme">' + theme + '</style>'
-  + '<style>body{margin:0;background:#eef4f9;font-family:"Segoe UI","Microsoft YaHei",sans-serif;height:760px}'
+  + '<style>body{margin:0;background:#f6f6f6;font-family:"Segoe UI","Microsoft YaHei",sans-serif;height:760px}'
   + 'h4{position:fixed;left:40px;top:16px;margin:0;font:600 12px/18px ui-monospace,Consolas,monospace;color:#8a8a8a}'
   + '.seat{position:fixed;left:40px;top:44px;background:#fff;border-radius:14px;padding:10px 12px;width:360px;display:flex;justify-content:flex-end}</style></head><body>'
   + '<h4>' + label + '</h4>'

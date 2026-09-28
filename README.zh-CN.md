@@ -25,13 +25,14 @@ DSH Web 的界面元素按 Codex 复刻：窗口边缘的阴影与发丝线、�
 
 本工作区对照 DSH `0.1.7-rc.1`（npm 全局安装）与 `0.1.7-rc.2`（Windows 桌面壳的 `app.asar`）开发；
 0.6.0 的全套验收在 npm 发布的 `@deepseek-ai/dsh@0.1.7-rc.2` 上跑（真 `dsh web` 实例 + 由它打包的 asar，见「宿主路径」）。
+0.6.1 起另在**实机安装的 0.1.7-rc.1** 上对过账 —— 那一版的目录快照没有 `pending`，乐观显示改由席位自己那一笔承担（见下）。
 夹具脚本直接读 `app.asar` 里的 shipped CSS，宿主升级后若结构变化，夹具断言会失败。
 
 ## 功能
 
 | 编号 | 内容 |
 |---|---|
-| ⑳ | **模型选择器 B 面**（默认开）：自建组件顶替 composer 的模型位 —— 模型列表（按提供方分组、带说明）+ Codex 推理等级**功率轨**（24px 轨 / 4px 档位点 / 28px 白拇指，真拖拽、←/→/Home/End，档位来自数据）；往返期间乐观显示新档并转圈、列表不清空；触发器档位文字模糊交叉淡入。设置里可关 |
+| ⑳ | **模型选择器 B 面**（默认开）：自建组件顶替 composer 的模型位 —— 模型列表（按提供方分组、带说明）+ Codex 推理等级**功率轨**（24px 轨 / 4px 档位点 / 28px 白拇指，真拖拽、←/→/Home/End，档位来自数据）；往返期间乐观显示新档并转圈、列表不清空（乐观值优先取宿主的 `pending`，宿主没给就用席位自己记的那一笔 —— 0.1.7-rc.1 就没有这个字段）；**滑杆形态对齐 dsh-claude-style**（槽 26px/8px 圆角、填充 26% 墨、旋钮 16×30、槽下 更快/更强 一行），**顶档换成紫色点阵**（5 行 hash 散相方块，亮 #8b7ad0 / 暗 #9d8ce0，`prefers-reduced-motion` 与脚本的 `data-reduced-motion` 都会让它停）；触发器档位文字模糊交叉淡入。设置里可关 |
 | ⑫ | 模型选择器 A 面（关掉 ⑳ 时的宿主原生菜单）：不透明白菜单（圆角 18px）、行高 28px、行圆角 13px（同心：18 − 内衬 5）、勾选列常驻、pending 转圈 |
 | ⑬ | 输入区顶栏消隐、面板按钮保留官方图标 |
 | ⑬c | 顶栏两格**放开**：注册在两个槽里的条目恢复渲染（子代理后代计数 / jobs roster / 预设徽标 / 在应用中打开）；视图页签仍隐去。条目本身条件渲染，所以常态顶栏与放开前一致 |
@@ -123,12 +124,13 @@ node scripts/install-skin.mjs --write  # 有漂移则覆盖
 | `npm run check` | 语法、JSON、清单自洽、产物同源、编码、双语文档成对、机器专属路径 | 无 |
 | `node scripts/audit-codex-ink.mjs` | 皮肤结构、36 组 WCAG、彩色白名单 | 无 |
 | `node scripts/model-picker-verify.mjs` | ⑫（A 面宿主菜单）与 pending 指示器，20 项 | 无 |
-| `node scripts/power-rail-verify.mjs` | ⑳ B 面组件：席位顶替与复原、触发器与弹层几何、功率轨 Codex 逐字几何、拖动中不提交 / 松手对齐提交一次、慢往返（600ms）里不回弹不清空且转圈、键盘四键、焦点环、Escape、换模型带默认档、失败提示、reduced-motion、深色、开关，47 项 | 无（只要 Chromium） |
+| `node scripts/power-rail-verify.mjs` | ⑳ B 面组件：席位顶替与复原、触发器与弹层几何、功率轨 Codex 逐字几何、拖动中不提交 / 松手对齐提交一次、慢往返（600ms）里轨不回弹 / 底部触发器同步换档 / 列表不清空 / 档位名旁转圈、键盘四键、焦点环、Escape、换模型带默认档、失败提示、reduced-motion、深色、开关，**形态对齐 dsh-claude-style 的滑杆（槽/填充/旋钮/两端刻度名）+ 顶档紫色点阵**，61 项。假目录按**安装中的**宿主形状造（快照不带 `pending`）—— 修前跑这套夹具 44/47 | 无（只要 Chromium） |
 | `node scripts/rightbar-verify.mjs` | 阴影层、右栏三件套、两条分界线，42 项 | 无 |
 | `node scripts/sidebar-align-verify.mjs` | 侧栏列对齐，6 项 | 无 |
 | `node scripts/sidebar-surface-verify.mjs` | 侧栏滚动渐隐（Codex mask 斜坡）的机制与观感：4 种状态并排、逐像素还原遮罩 alpha 曲线，13 项 | 无 |
+| `node scripts/sidebar-color-verify.mjs` | 侧栏底色按 Codex **实测像素**对齐，亮暗两套同页验收：亮 246/233/255、暗 15/31/17（全为中性，R=G=B），各自的侧栏到主区档差、层级方向，外加每套一组反例对照 —— 16 项 | 无 |
 | `node scripts/hero-verify.mjs` | ⑬⑭⑰ 与焦点环、顶栏两格放开，25 项 | 无 |
-| `node scripts/composer-shadow-verify.mjs` | ⑱ 输入卡阴影对齐 Codex `--elevation-composer`：亮色三层的几何与 alpha 逐层断言、暗色 inset 且卡外零投影、窄屏远场 80→40px，外加真实渲染像素（衰减半径、卡内顶边亮度）与一条前提自检，23 项 | 无 |
+| `node scripts/composer-shadow-verify.mjs` | ⑱ 输入卡阴影按**实测像素**对齐 Codex（0.6.3 起不再照抄源码 token）：亮色两层的几何与 alpha 逐层断言、暗色 inset 且卡外零投影、窄屏与宽屏同值（无远场可收），外加真实渲染像素（环像素最暗值、卡上沿衰减半径落进 Codex 实测带、卡内顶边亮度）与一条前提自检，21 项 | 无 |
 | `node scripts/elevation-verify.mjs` | ⑲ `--dsw-elevation-*` 令牌与 Codex 源码对账：逐层几何与 alpha、第 1 层跟随 stroke、第 2/3 层亮暗同值（Codex 无暗色变体），外加渲染出的菜单面板确实吃到该令牌，19 项 | 无 |
 | `node scripts/live-gui-probe.mjs --url <带 token 的 URL>` | 真 GUI：阴影与两条分界线 7 项，加模型位 —— B 面开着时 7 项（顶替、几何、键盘改档写进宿主 store 并改回），关着时量 A 面 pending 窗口 3 项（`--latency` 默认给往返加 800ms，本机往返 <60ms 采不到窗口） | `dsh web` 实例 |
 | `node scripts/settings-page-verify.mjs --url <带 token 的 URL>` | 真 GUI：组合包页的设置卡、9 行结构、默认不覆盖、开关与强调色写入、模型选择器关掉后宿主那一格复原、刷新后仍在，共 29 项断言 | `dsh web` 实例（profile 需启用插件管理） |
@@ -261,14 +263,32 @@ node scripts/live-gui-probe.mjs --url "http://127.0.0.1:3099/?token=..." --dpr 1
 
 ### 侧栏配色
 
-来源 `assets/reference/codex-sidebar-reference.png` 点采样。
+来源是 Codex 应用的样式表，不是点采样。**Codex 没有「侧栏色」令牌。** 侧栏是叠在窗口底上的一层半透明
+遮罩（`app-shared-*.css`，electron 窗口、左侧板外观非 `content-surface` 时）：
 
-| 令牌 | 值 |
-|---|---|
-| `--dsw-alias-bg-sidebar` | `#eef4f9` |
-| `--dsw-specific-sidebar-fill` | `#eef4f9` |
-| `--dsw-specific-sidebar-nav-item-active` | `#e2e9ed` |
-| `--dsw-specific-sidebar-nav-item-hover` | `#e8eef3` |
+```css
+.app-shell-left-panel:not([data-app-shell-left-panel-appearance=content-surface]) {
+  background: color-mix(in srgb, var(--color-surface-tertiary) 70%, transparent);
+}
+```
+
+亮色 `--color-surface-tertiary` 是 `--gray-75` = `#F3F3F3`；叠在白色底上合成
+`0.7 × 243 + 0.3 × 255 = 246.6 → #F6F6F6`，与 Codex 截图实测的 246 同值。因为有 30% 是透明的，
+**渲染值随窗口背后的底而变**：旧值 `#EEF4F9` 是某次蓝底下的读数，不是基准。
+
+避开文字取样，每套主题各一张：亮色侧栏 **246** / 选中行 **233** / 主区 **255**；
+暗色侧栏 **15** / 选中行 **31** / 主区 **17**。两套里侧栏都**比主区低一档** ——
+亮 255 → 246、暗 17 → 15 —— 这就是层级，也是唯一的差别。
+
+| 令牌 | 亮色 | 暗色 | 推导 |
+|---|---|---|---|
+| `--dsw-alias-bg-sidebar` | `#f6f6f6` | `#0f0f0f` | Codex 侧栏，两边同一采样线实测 |
+| `--dsw-specific-sidebar-fill` | `#f6f6f6` | `#0f0f0f` | 同一面（同时也是 frame 底与标题栏条） |
+| `--dsw-specific-sidebar-nav-item-active` | `#e9e9e9` | `#1f1f1f` | Codex 选中行实测 233 / 31 |
+| `--dsw-specific-sidebar-nav-item-hover` | `#f0f0f0` | `#171717` | 侧栏底与选中行的中点 |
+
+暗色的**表面**（卡片坐的那一层）仍是 `#181818` —— 在 Codex 里那是 `jdi.dark.surface`，与侧栏不是一回事。
+坐在它上面的输入卡实测 35，与 Codex 同值。
 
 ## 边界
 

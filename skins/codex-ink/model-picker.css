@@ -310,6 +310,20 @@ body[data-ds-dark-theme] .codex-mp-popover {
   display: none;
 }
 
+/* 顶档紫（Ultracode）：dsh-claude-style 亮 #8b7ad0 / 暗 #9d8ce0，各自一套 flash 与 ink。
+   定义在**卡片**上而不是轨上：档位名在 head 里、点阵在轨里，两者都要读到它。 */
+.codex-mp-effort {
+  --codex-mp-apex: #8b7ad0;
+  --codex-mp-apex-flash: #d9d2f5;
+  --codex-mp-apex-ink: #5f51b5;
+}
+
+body[data-ds-dark-theme] .codex-mp-effort {
+  --codex-mp-apex: #9d8ce0;
+  --codex-mp-apex-flash: #e6e0fb;
+  --codex-mp-apex-ink: #b9adf0;
+}
+
 .codex-mp-effort-head {
   display: flex;
   align-items: center;
@@ -340,20 +354,22 @@ body[data-ds-dark-theme] .codex-mp-popover {
   padding-inline: 6px;
 }
 
-/* Codex _Root：高 28、整宽、居中；touch-action: none 必须写，否则移动端手势被滚动抢走。
-   动效令牌逐字：主曲线 .3s cubic-bezier(.23, 1, .32, 1)，档位变换 .12s，
-   拇指跟随时长首帧 0s（脚本 16ms 后打 data-armed 抬到 .3s，打开时不从 0 滑过来）。 */
+/* ── 形态基准：dsh-claude-style 的推理强度滑杆 ─────────────────────────────
+   它的注释写明对标 Claude Desktop 的 Effort slider，几何逐条取自
+   dsh-claude-style/lib/client.js 的 .dsh-claude-effort-* 规则（不是目测）：
+   槽 26px 厚 / 圆角 8px（圆角矩形，不是胶囊）；旋钮 16×30 / 圆角 5px；
+   填充 = 主文本墨 26%，止于旋钮中心；顶档换成紫色点阵。
+   驱动仍是 --codex-mp-pos（连续比例），所以拖动跟手的性质不变。 */
 .codex-mp-root {
-  --codex-mp-motion-duration: 0.3s;
-  --codex-mp-motion-easing: cubic-bezier(0.23, 1, 0.32, 1);
+  --codex-mp-motion-duration: 0.18s;
+  --codex-mp-motion-easing: cubic-bezier(0.22, 0.61, 0.36, 1);
   --codex-mp-tick-transform-duration: 0.12s;
   --codex-mp-thumb-motion-duration: 0s;
-
   position: relative;
   display: flex;
   align-items: center;
   width: 100%;
-  height: 28px;
+  height: 30px;
   outline: none;
   touch-action: none;
   cursor: pointer;
@@ -378,43 +394,123 @@ body[data-ds-dark-theme] .codex-mp-popover {
   --codex-mp-thumb-motion-duration: 0s;
 }
 
-/* Codex _Track：24px 高、12px 圆角、前景 10% 底、0.5px 内描边（--color-border） */
+/* 热区 = 旋钮高（30px）；槽是它中间那条 26px 的圆角矩形 */
 .codex-mp-track {
   position: relative;
   flex-grow: 1;
-  height: 24px;
-  overflow: hidden;
-  border-radius: 12px;
-  background: color-mix(in srgb, var(--dsw-alias-label-primary) 10%, transparent);
-  box-shadow: inset 0 0 0 0.5px var(--dsw-codex-border);
+  height: 30px;
 }
 
-/* Codex _Range：强调色，只圆左侧两角，止于拇指中线。
-   位置公式与拇指、圆点同一条：calc(14px + (100% − 28px) × pos)。 */
+.codex-mp-track::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 50%;
+  height: 26px;
+  margin-top: -13px;
+  border-radius: 8px;
+  background: var(--dsw-alias-interactive-bg-hover);
+}
+
+/* 填充：主文本墨 26% —— 一条规则同时压暗亮槽、提亮暗槽。
+   右端方角：填充止于旋钮中心，圆角会在槽的上下行露出裸轨（claude-style 的原话）。 */
 .codex-mp-range {
   position: absolute;
-  top: 0;
-  inset-inline-start: 0;
-  width: calc(14px + (100% - 28px) * var(--codex-mp-pos, 0));
-  height: 100%;
-  border-radius: 12px 0 0 12px;
-  background: var(--dsw-alias-link);
+  left: 0;
+  top: 50%;
+  height: 26px;
+  margin-top: -13px;
+  width: calc(8px + (100% - 16px) * var(--codex-mp-pos, 0));
+  border-radius: 8px 0 0 8px;
+  background: color-mix(in srgb, var(--dsw-alias-label-primary) 26%, transparent);
   transition: width var(--codex-mp-thumb-motion-duration) var(--codex-mp-motion-easing);
+  pointer-events: none;
 }
 
-/* Codex _Tick：4px 圆点，热区 16px（::before 外扩 6px）；走过的 30% 白，没走到的 description 50% */
+/* ══ 可复用动画单元：顶档紫色点阵 ══════════════════════════════════════════════════
+   移植自 dsh-claude-style 的 .dsh-claude-effort-matrix*（MIT）。单元边界：容器 + 格 +
+   方块 + 两个 keyframes；只读 --codex-mp-apex / --codex-mp-apex-flash，不读轨的任何几何，
+   格子的行列与 pitch 由脚本按设备像素算好后写成内联样式。 */
+.codex-mp-matrix {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 50%;
+  height: 26px;
+  margin-top: -13px;
+  border-radius: 8px;
+  overflow: hidden;
+  box-sizing: border-box;
+  display: none;
+  pointer-events: none;
+}
+
+.codex-mp-root[data-tier="max"] .codex-mp-matrix {
+  display: grid;
+  grid-auto-flow: row;
+}
+
+.codex-mp-matrix-cell {
+  animation: codex-mp-cell-in 0.15s ease both;
+}
+
+@keyframes codex-mp-cell-in {
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
+  }
+}
+
+.codex-mp-matrix-sq {
+  width: 100%;
+  height: 100%;
+  border-radius: 1px;
+  background-color: var(--codex-mp-apex);
+  --codex-mp-flash-light: var(--codex-mp-apex-flash);
+  animation: codex-mp-flash 1.45s infinite ease-in-out;
+}
+
+.codex-mp-matrix-sq[data-tone="0"] { --codex-mp-flash-light: color-mix(in srgb, var(--codex-mp-apex) 62%, var(--codex-mp-apex-flash)); }
+.codex-mp-matrix-sq[data-tone="1"] { --codex-mp-flash-light: color-mix(in srgb, var(--codex-mp-apex) 54%, var(--codex-mp-apex-flash)); }
+.codex-mp-matrix-sq[data-tone="2"] { --codex-mp-flash-light: color-mix(in srgb, var(--codex-mp-apex) 46%, var(--codex-mp-apex-flash)); }
+.codex-mp-matrix-sq[data-tone="3"] { --codex-mp-flash-light: color-mix(in srgb, var(--codex-mp-apex) 38%, var(--codex-mp-apex-flash)); }
+.codex-mp-matrix-sq[data-tone="4"] { --codex-mp-flash-light: color-mix(in srgb, var(--codex-mp-apex) 30%, var(--codex-mp-apex-flash)); }
+.codex-mp-matrix-sq[data-tone="5"] { --codex-mp-flash-light: color-mix(in srgb, var(--codex-mp-apex) 22%, var(--codex-mp-apex-flash)); }
+.codex-mp-matrix-sq[data-tone="6"] { --codex-mp-flash-light: color-mix(in srgb, var(--codex-mp-apex) 14%, var(--codex-mp-apex-flash)); }
+.codex-mp-matrix-sq[data-tone="7"] { --codex-mp-flash-light: color-mix(in srgb, var(--codex-mp-apex) 6%, var(--codex-mp-apex-flash)); }
+
+@keyframes codex-mp-flash {
+  0%,
+  17.24% {
+    background-color: var(--codex-mp-apex);
+  }
+
+  17.25%,
+  50.34% {
+    background-color: var(--codex-mp-flash-light);
+  }
+
+  100% {
+    background-color: var(--codex-mp-apex);
+  }
+}
+
+/* 刻度：4px 圆点，与填充同墨。走过去的被填充吞掉、当前那档被旋钮吞掉，
+   所以圆点只在裸槽上露出来 —— 不需要再分选中/未选中两色。 */
 .codex-mp-tick {
   position: absolute;
   top: 50%;
   width: 4px;
   height: 4px;
+  margin-top: -2px;
   border-radius: 50%;
-  background: currentColor;
-  color: color-mix(in srgb, var(--dsw-alias-label-tertiary) 50%, transparent);
-  transform: translate(-50%, -50%);
-  transition:
-    transform var(--codex-mp-tick-transform-duration) var(--codex-mp-motion-easing),
-    filter var(--codex-mp-tick-transform-duration) var(--codex-mp-motion-easing);
+  background: color-mix(in srgb, var(--dsw-alias-label-primary) 26%, transparent);
+  transform: translateX(-50%);
+  pointer-events: none;
 }
 
 .codex-mp-tick::before {
@@ -423,25 +519,16 @@ body[data-ds-dark-theme] .codex-mp-popover {
   inset: -6px;
 }
 
-.codex-mp-tick:hover {
-  filter: brightness(0.85);
-  transform: translate(-50%, -50%) scale(2);
-}
-
-.codex-mp-tick[data-selected="true"] {
-  color: #ffffff4d;
-}
-
-/* Codex _ThumbScale + _Thumb：28px 定位盒 + 白色圆片（0.5px 强描边 + 0 0 2px 10% 微影）。
-   白片亮暗同色，Codex 原样如此。 */
+/* 旋钮：16×30 的圆角矩形（不是圆珠）。白片亮暗同色 —— 它是槽里唯一那颗亮石子。 */
 .codex-mp-thumb-scale {
   position: absolute;
   top: 50%;
-  left: calc(14px + (100% - 28px) * var(--codex-mp-pos, 0));
-  width: 28px;
-  height: 28px;
-  border-radius: 50%;
-  transform: translate(-50%, -50%);
+  left: calc(8px + (100% - 16px) * var(--codex-mp-pos, 0));
+  width: 16px;
+  height: 30px;
+  margin-top: -15px;
+  border-radius: 5px;
+  transform: translateX(-50%);
   pointer-events: none;
   will-change: left;
   transition: left var(--codex-mp-thumb-motion-duration) var(--codex-mp-motion-easing);
@@ -452,20 +539,117 @@ body[data-ds-dark-theme] .codex-mp-popover {
   inset: 0;
   box-sizing: border-box;
   display: block;
-  border: 0.5px solid var(--dsw-codex-border-strong);
-  border-radius: 50%;
-  background: #fff;
-  box-shadow: 0 0 2px #0000001a;
+  border-radius: 5px;
+  background: var(--dsw-static-neutral-bluish-00, #ffffff);
+  box-shadow:
+    0 1px 3px rgb(20 20 19 / 28%),
+    0 0 0 1px rgb(20 20 19 / 6%);
 }
 
-/* 键盘焦点：Codex outline 2px + offset 0，画在拇指上（不是全局那条 2px + 2px） */
+body[data-ds-dark-theme] .codex-mp-thumb {
+  box-shadow:
+    0 1px 3px rgb(0 0 0 / 55%),
+    0 0 0 1px rgb(0 0 0 / 40%);
+}
+
+/* 顶档：填充与刻度隐去，交给点阵；旋钮染紫 + 光晕；档位名转紫。 */
+.codex-mp-root[data-tier="max"] .codex-mp-range,
+.codex-mp-root[data-tier="max"] .codex-mp-tick {
+  opacity: 0;
+}
+
+.codex-mp-root[data-tier="max"] .codex-mp-thumb {
+  background: color-mix(in srgb, var(--codex-mp-apex) 22%, #ffffff);
+  box-shadow:
+    0 0 10px color-mix(in srgb, var(--codex-mp-apex) 80%, transparent),
+    0 0 0 1px color-mix(in srgb, var(--codex-mp-apex) 35%, transparent);
+}
+
+.codex-mp-effort[data-tier="max"] .codex-mp-effort-value {
+  color: var(--codex-mp-apex-ink);
+}
+
+/* 键盘焦点：2px 环画在旋钮上（不是全局那条 2px + 2px） */
 .codex-mp-root[data-keyboard-focused="true"] .codex-mp-thumb-scale {
   outline: 2px solid var(--dsw-focus-ring-color);
   outline-offset: 0;
 }
 
-/* 没有生效档（跟随提供方默认）：拇指与色条不画，只剩轨与圆点 */
+/* 没有生效档（跟随提供方默认）：旋钮与填充不画，只剩槽与圆点 */
 .codex-mp-root[data-unset] .codex-mp-thumb-scale,
 .codex-mp-root[data-unset] .codex-mp-range {
   visibility: hidden;
+}
+
+/* 两端刻度名：它们命名的是**方向**（更快 / 更强），不是取值，所以保持 caption 色 */
+.codex-mp-ends {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 0 9px 2px;
+  font-size: 11px;
+  line-height: 14px;
+  color: var(--dsw-alias-label-caption);
+}
+
+/* 档位名交换：进来的从下方模糊上浮，出去的（ghost，绝对定位压在原位）向上模糊飘走。
+   用**自己的**类名：.codex-mp-effort-text 是触发器上那组叠层档名用的，别撞。 */
+.codex-mp-value-text {
+  animation: codex-mp-value-in 0.28s ease;
+}
+
+.codex-mp-effort-ghost {
+  position: absolute;
+  left: 0;
+  top: 0;
+  white-space: nowrap;
+  pointer-events: none;
+  color: inherit;
+  animation: codex-mp-value-out 0.28s ease forwards;
+}
+
+@keyframes codex-mp-value-in {
+  from {
+    filter: blur(4px);
+    opacity: 0;
+    transform: translateY(5px);
+  }
+
+  to {
+    filter: blur(0);
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes codex-mp-value-out {
+  from {
+    filter: blur(0);
+    opacity: 1;
+    transform: translateY(0);
+  }
+
+  to {
+    filter: blur(4px);
+    opacity: 0;
+    transform: translateY(-5px);
+  }
+}
+
+/* 关动效：系统偏好，以及脚本在打开弹层时打的 data-reduced-motion。 */
+@media (prefers-reduced-motion: reduce) {
+  .codex-mp-matrix-cell,
+  .codex-mp-matrix-sq,
+  .codex-mp-value-text,
+  .codex-mp-effort-ghost {
+    animation: none;
+  }
+}
+
+.codex-mp-popover[data-reduced-motion="true"] .codex-mp-matrix-cell,
+.codex-mp-popover[data-reduced-motion="true"] .codex-mp-matrix-sq,
+.codex-mp-popover[data-reduced-motion="true"] .codex-mp-value-text,
+.codex-mp-popover[data-reduced-motion="true"] .codex-mp-effort-ghost {
+  animation: none;
 }

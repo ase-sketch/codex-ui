@@ -253,12 +253,50 @@ check('功率轨视图：pending 乐观显示、selecting 不重画列表、分�
   assert(picker.listSignature(idle) === picker.listSignature({ ...idle, status: 'selecting' }), 'selecting 进了列表签名：改档时卡片会被清空重画');
   const fallback = picker.viewOf({ groups, current: { provider: 'deepseek-official', model: 'flash' }, status: 'ready', pending: null });
   assert(fallback.effective === 'high' && fallback.index === 2, '未存档位时没退到 defaultEffort');
+  /* 0.6.1：安装中的 ModelDirectoryState 没有 pending（directory.d.ts:13-32），乐观显示靠席位自己那一笔。
+     这四条是它的判据 —— 去掉 localPending 这条路，前两条立刻 FAIL（夹具已按真宿主形状去掉 pending）。 */
+  const local = picker.viewOf({ groups, current, status: 'selecting' }, { provider: 'deepseek-official', model: 'flash', reasoningEffort: 'max' });
+  assert(local.index === 3 && local.pendingEffort === true, '宿主没给 pending 时没采用席位自己的 pending（往返会回弹、底部会停在旧档）');
+  assert(picker.viewOf({ groups, current, status: 'selecting' }, null).index === 1, 'localPending 为 null 时不该改变行为');
+  assert(picker.viewOf({ groups, current, status: 'selecting' }, undefined).index === 1, 'localPending 省略时不该改变行为');
+  const foreign = picker.viewOf({ groups, current, status: 'selecting' }, { provider: 'other', model: 'x', reasoningEffort: 'max' });
+  assert(foreign.index === 1 && foreign.pendingEffort === false, '别的模型上的 pending 污染了本模型的档位');
+  assert(picker.viewOf({ groups, current, status: 'selecting', pending: { ...current, reasoningEffort: 'off' } }, { provider: 'deepseek-official', model: 'flash', reasoningEffort: 'max' }).index === 0,
+    '宿主将来补上 pending 时没优先用宿主的');
   assert(picker.viewOf(null).groups.length === 0 && picker.sessionIdOf(null, () => 'session-x') === 'session-x', '空快照 / 会话回退处理错');
   return 'ok';
 });
+check('顶档点阵：可复用动画单元自成一体，且两条关动效的口子都接上', () => {
+  const raw = fs.readFileSync(join(SKIN_DIR, 'model-picker.css'), 'utf8');
+  const css = raw.replace(/\/\*[\s\S]*?\*\//g, '');
+  /* 单元边界：两个 keyframes + 三个能独立挂载的类。 */
+  for (const name of ['codex-mp-cell-in', 'codex-mp-flash']) {
+    assert(new RegExp('@keyframes\\s+' + name + '\\b').test(css), '缺 @keyframes ' + name);
+  }
+  for (const cls of ['codex-mp-matrix', 'codex-mp-matrix-cell', 'codex-mp-matrix-sq']) {
+    assert(new RegExp('\\.' + cls + '\\s*[,{]').test(css), '缺可挂载类 .' + cls);
+  }
+  /* 可复用的判据：方块自身只读 --codex-mp-apex*，不读功率轨几何。 */
+  const unit = css.match(/\.codex-mp-matrix-sq\s*\{([^}]*)\}/);
+  assert(unit !== null, '找不到 .codex-mp-matrix-sq 的声明块');
+  assert(!/--codex-mp-pos|100% - 16px/.test(unit[1]), '点阵单元读了功率轨几何，搬不到别处');
+  assert(/--codex-mp-flash-light:\s*var\(--codex-mp-apex-flash\)/.test(unit[1]), '方块闪动的浅色不是单一来源 --codex-mp-apex-flash');
+  /* 8 档色调桶：羽化尾巴分级降温，不至于出现几条可见的带。 */
+  const tones = new Set([...css.matchAll(/\.codex-mp-matrix-sq\[data-tone="(\d)"\]/g)].map((m) => m[1]));
+  assert(tones.size === 8, '色调桶不是 8 档：' + tones.size);
+  /* 顶档紫两套主题各一份（形态基准亮 #8b7ad0 / 暗 #9d8ce0）。 */
+  assert(/--codex-mp-apex:\s*#8b7ad0/.test(css) && /--codex-mp-apex:\s*#9d8ce0/.test(css), '顶档紫缺亮/暗之一');
+  /* 两条关动效的口子：系统偏好 + 脚本打的 data-reduced-motion。 */
+  const offs = [...css.matchAll(/([^{}]+)\{([^}]*animation:\s*none[^}]*)\}/g)].map((m) => m[1]);
+  assert(offs.some((s) => s.includes('prefers-reduced-motion')), '缺 prefers-reduced-motion 关闭');
+  assert(offs.some((s) => s.includes('data-reduced-motion') && s.includes('codex-mp-matrix-sq')), '缺 data-reduced-motion 关闭');
+  return '2 个 keyframes · 8 档色调 · 单元不读轨几何 · 两条关闭口子';
+});
 check('模型选择器样式只画自建节点，不碰宿主菜单', () => {
   const css = fs.readFileSync(join(SKIN_DIR, 'model-picker.css'), 'utf8').replace(/\/\*[\s\S]*?\*\//g, '');
-  const selectors = [...css.matchAll(/([^{}]+)\{/g)].map((m) => m[1].trim()).filter((s) => s !== '' && !s.startsWith('@') && !/^(from|to|\d+%)$/.test(s));
+  /* keyframes 里的关键帧选择器不是 CSS 选择器：from / to / 百分比（可以逗号并列，如 `0%, 100%`）。 */
+  const selectors = [...css.matchAll(/([^{}]+)\{/g)].map((m) => m[1].trim())
+    .filter((s) => s !== '' && !s.startsWith('@') && !s.split(',').every((t) => /^(from|to|\d+(?:\.\d+)?%)$/.test(t.trim())));
   const offenders = [];
   for (const group of selectors) {
     for (const sel of group.split(',').map((s) => s.trim())) {
