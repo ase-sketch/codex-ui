@@ -367,7 +367,7 @@ async function powerRail(t) {
   await t.sleep(100);
   const on = await seatNow();
   t.check('再打开：重新接管', on.ours === 1 && on.host === 'none', JSON.stringify(on));
-  /* React 换掉宿主子节点：没有标记可丢，只看我们在不在席。 */
+  /* React 换掉宿主子节点：标记打在席位出口上，不在宿主子节点上，换掉子节点不会丢。 */
   await page.evaluate(() => {
     const slot = document.querySelector('[data-conversation-session="session-a"] [data-slot="conversation.input.model"]');
     const fresh = document.createElement('div');

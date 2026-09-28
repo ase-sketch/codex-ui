@@ -27,8 +27,9 @@ images are in the sections below and in `assets/reference/`.
 ## Host compatibility
 
 Developed against DSH `0.1.7-rc.1` (npm global install) and `0.1.7-rc.2` (Windows desktop shell `app.asar`);
-the full 0.6.0 verification ran on the npm release `@deepseek-ai/dsh@0.1.7-rc.2` (a real `dsh web` instance plus an asar packed from it, see "Host paths").
-The verification scripts read shipped CSS straight out of `app.asar`; a host upgrade that changes structure fails their assertions.
+the full 0.6.1 verification ran on the npm release `@deepseek-ai/dsh@0.1.7-rc.2` (fixtures against both its
+`node_modules` and an `app.asar` packed from it, the live checks on a `dsh web` booted from it; see "Host and browser").
+Fixtures read the shipped host CSS and render code directly, so a structural host change fails their assertions.
 
 ## Features
 
@@ -67,27 +68,33 @@ With face B switched off, the host menu (face A) while a reasoning effort is bei
 
 ## Install
 
-```powershell
-npm run install:web        # node scripts/install-plugin.mjs --write
-npm run install:desktop    # desktop shell; restart the app afterwards
-npm run build              # regenerate theme.css and client.js from skins/codex-ink
+A standard DSH plugin install; none of this repository's scripts are involved:
 
-node scripts/install-plugin.mjs                              # dry run (web profile by default)
-node scripts/install-plugin.mjs --bundle --write              # register through dsh.profile.bundles and drop the redundant insert
-node scripts/build.mjs --check                               # report stale artifacts without writing
+```powershell
+dsh plugin --profile web add link:<absolute repo path>   # adds a link dependency and puts the package into dsh.profile.bundles
+dsh web
+dsh plugin --profile web remove codex-ui                 # uninstall: removes the dependency and the bundles entry
 ```
 
-The installer scopes the eight stylesheets in `skins/codex-ink/` to `html[data-codex-ui]`, combines them with
-`src/client.template.js` (which inlines `src/override.js`, `src/model-picker.js` and `src/settings-card.js`) into `client.js`, copies the
-result to `profiles/<name>/vendor/codex-ui`, creates the `node_modules/codex-ui` junction, and keeps exactly one
-registration path.
+To keep your everyday profile untouched, try it in a new profile first:
 
-Never use both registration paths at once — two rows share the id and the market check disables the plugin:
+```powershell
+dsh codex --from-default-profile web --dump-config   # creates the codex profile from the web template
+dsh plugin --profile codex add link:<absolute repo path>
+dsh codex --port 3099 --no-open
+```
 
-| Path | How | Used by |
-|---|---|---|
-| bundle | the package name goes into the profile `package.json` `dsh.profile.bundles`; the package's own `cordis.patch.yml` inserts the entry | the desktop shell profile and the web profile (`--bundle`) |
-| insert | a hand-written `- insert:` in the profile `cordis.patch.yml` | throwaway verification profiles that skip pnpm install |
+The desktop app owns its profile and the CLI refuses to write it: open "Plugins" → "Add plugin" in the app and enter
+the absolute repo path (the dialog accepts a package name, a Git URL, a tarball or a local absolute path).
+`@deepseek-ai/schemastery` is declared in `peerDependencies` and provided by the host.
+
+`link:` points at the repository itself: after changing a stylesheet or a component, run `npm run build` and reload the
+page. A change to the `Config` in `index.js` needs a `dsh web` restart (the host half loads at boot).
+
+**Migrating from 0.6.0 or earlier**: `install-plugin.mjs` is gone. It installed a copy at
+`profiles/<name>/vendor/codex-ui` plus a `node_modules/codex-ui` junction, registered either through the package name in
+`dsh.profile.bundles` or a hand-written `- insert:` in the profile `cordis.patch.yml`. Remove those before the standard
+install — two registrations of the same id fail the market check and the plugin is disabled.
 
 The same stylesheets can be picked up by a skin loader:
 
@@ -96,81 +103,97 @@ node scripts/install-skin.mjs          # per-file SHA256 check against $DSH_HOME
 node scripts/install-skin.mjs --write  # overwrite on drift
 ```
 
+## Development
+
+```powershell
+npm run build                    # regenerate theme.css and client.js from skins/codex-ink and src/client
+node scripts/build.mjs --check   # report stale artifacts without writing
+```
+
+The build has no dependencies and one implementation, `scripts/build.mjs`: the eight stylesheets are stripped of
+comments and scoped to `html[data-codex-ui]` into `theme.css`; the ES modules in `src/client/` are bundled in dependency
+order into one classic script, `client.js` (the DSH `__ModuleLoader__.load` shape, stylesheet inlined, host packages such
+as `react` resolved through the loader's `require`). It accepts two import forms (`import { a, b as c } from '…'`,
+`import * as ns from '…'`) and three export forms (`export const | function | class`); anything else fails the build
+instead of bundling wrongly.
+
+Adding a feature: a module in `src/client/` exporting `installXxx(ctx)` plus one line in `apply` in
+`src/client/index.js`; new styles go into a new file in `skins/codex-ink/`, registered in `SKIN_PARTS` in
+`scripts/build.mjs`. Required host services go into `inject` (one missing service keeps the plugin inactive); optional
+ones go through a `ctx.inject([...], cb)` child scope, as the model picker does.
+
 ## Layout
 
 | Path | Content |
 |---|---|
-| `index.js` `cordis.patch.yml` `package.json` | Host half and manifest |
-| `src/client.template.js` | Browser half template (stylesheet, override layer, settings seat) |
-| `src/override.js` | Override-layer pure functions (no DOM; unit-tested by the repo checks) |
-| `src/settings-card.js` | The config card on the bundle page (inlined into `client.js` at build time) |
-| `src/model-picker.js` | Model picker face B: seat takeover, popover, power rail (its pure functions are unit-tested by `check-repo`) |
-| `src/build.mjs` | Scoping and artifact generation; the only implementation |
-| `theme.css` `client.js` | Generated from `skins/codex-ink/` by `src/build.mjs` |
-| `skins/codex-ink/` | Stylesheet sources (skin.css / patches.css / model-picker.css / sidebar-align.css / sidebar-surface.css / window-shadow.css / composer.css / settings.css) |
+| `index.js` `cordis.patch.yml` `package.json` | Host half (the `Config` schema) and manifest |
+| `src/client/index.js` | Browser half entry: `inject` and `apply`, wiring up the modules below in order |
+| `src/client/stylesheet.js` | Injects the skin (`style[data-plugin]`, which the host removes on unload and hot reload) |
+| `src/client/settings.js` `theme-preview.js` `settings-card.js` | Settings: the override `<style>`, the local theme preview, the config card on the bundle page |
+| `src/client/override.js` | Override-layer pure functions (no DOM; unit-tested by `check.mjs`) |
+| `src/client/model-picker/` | Model picker face B: `index.js` waits for the `modelDirectories` service, `component.js` is the seat takeover, popover and power rail, `view.js` holds the pure functions (unit-tested by `check.mjs`) |
+| `src/client/constants.js` `host.js` | Shared names and small helpers for reading host services |
+| `skins/codex-ink/` | Stylesheet sources (skin.css / patches.css / model-picker.css / sidebar-align.css / sidebar-surface.css / window-shadow.css / composer.css / settings.css) and the Skin v2 manifest |
+| `theme.css` `client.js` | Generated by `scripts/build.mjs` and committed (DSH loads `client.js`) |
+| `scripts/build.mjs` | Scoping and bundling |
+| `scripts/check.mjs` | Host-free repository checks; the CI entry point |
+| `scripts/verify.mjs` `scripts/specs/` | Fixture verification: shipped host CSS plus a rebuilt DOM, asserted in headless Chromium |
+| `scripts/live/` | Live GUI verification: `gui.mjs`, `settings.mjs`, and `parity.mjs` (per-element computed-style comparison before and after a change) |
+| `scripts/lib/` | Host and browser lookup (`host.mjs`), CDP driver (`cdp.mjs`), assertion summary (`checks.mjs`) |
+| `scripts/install-skin.mjs` | Sync for the skin loader path |
 | `docs/` | Plans and decisions |
-| `scripts/build.mjs` | Regenerate the artifacts; `--check` compares without writing |
-| `scripts/check-repo.mjs` | Host-free repository checks; the CI entry point |
-| `scripts/host-paths.mjs` | Resolves `app.asar`, the global `@deepseek-ai` modules and Chromium |
-| `scripts/pack-host-asar.mjs` | Without a desktop shell, packs npm-installed host packages into an `app.asar` the fixtures can read |
-| `scripts/install-plugin.mjs` `scripts/install-skin.mjs` | Installers |
-| `scripts/*-verify.mjs` `scripts/live-gui-probe.mjs` `scripts/settings-page-verify.mjs` | Fixture verification and live probing |
-| `scripts/make-verify-profile.mjs` | Builds a throwaway verification profile: plugin manager enabled, only this plugin, no existing profile touched |
 | `assets/reference/` | Codex reference images |
-| `assets/screenshots/` | Verification output |
+| `assets/screenshots/` | Images used by the READMEs |
 | `.github/workflows/ci.yml` | CI |
 
 ## Verification
 
 | Command | Coverage | Requirement |
 |---|---|---|
-| `npm run check` | Syntax, JSON, manifest, artifact sync, encoding, docs pairing, machine-specific paths | none |
-| `node scripts/audit-codex-ink.mjs` | Skin structure, 36 WCAG pairs, color whitelist | none |
-| `node scripts/model-picker-verify.mjs` | ⑫ (face A, the host menu) and the pending indicator, 20 assertions | none |
-| `node scripts/power-rail-verify.mjs` | ⑳ face B: seat takeover and hand-back, trigger and popover geometry, Codex power rail geometry verbatim, no commit while dragging / one snapped commit on release, no snap-back and no list reset during a slow (600ms) round trip with a spinner, the four keys, focus ring, Escape, model change carrying its default effort, failure notice, reduced motion, dark, the switch — 47 assertions | none (Chromium only) |
-| `node scripts/rightbar-verify.mjs` | Shadow layer, right panel, both dividers, 42 assertions | none |
-| `node scripts/sidebar-align-verify.mjs` | Sidebar column alignment, 6 assertions | none |
-| `node scripts/sidebar-surface-verify.mjs` | Sidebar scroll fade (the Codex mask ramp): mechanism plus pixels, four states side by side, 13 assertions | none |
-| `node scripts/hero-verify.mjs` | ⑬ ⑭ ⑰, the focus ring and the released header slots, 25 assertions | none |
-| `node scripts/composer-shadow-verify.mjs` | ⑱ Composer shadow aligned to Codex's `--elevation-composer`: per-layer geometry and alpha in light, the dark inset with zero outside shadow, the narrow-viewport 80→40px branch, plus rendered pixels (falloff radius, inside top edge) and one precondition self-check — 23 assertions | none |
-| `node scripts/elevation-verify.mjs` | ⑲ The `--dsw-elevation-*` tokens against Codex's source: per-layer geometry and alpha, layer 1 tracking the stroke, layers 2–3 identical across themes (Codex declares no dark variant), and a rendered menu panel — 19 assertions | none |
-| `node scripts/live-gui-probe.mjs --url <token URL>` | Real GUI: 7 assertions on shadows and both dividers, plus the model seat — 7 on face B when it is on (takeover, geometry, a keyboard change written into the host store and reverted), or 3 on the face A pending window when it is off (`--latency` adds 800ms to that round trip by default; locally it takes <60ms and the window cannot be sampled) | a running `dsh web` |
-| `node scripts/settings-page-verify.mjs --url <token URL>` | Real GUI: the card on the bundle page, its 9 rows, no override at defaults, switch and accent writes, the host seat coming back when the model picker is off, survival across a reload — 29 assertions | a running `dsh web` with the plugin manager enabled |
-| `node scripts/theme-flash-probe.mjs --url <token URL>` | Per-frame sampling of the effective backdrop during theme and page switches (first opaque ancestor background); reports frames belonging to neither end of the transition (measured: 9 windows, ~720 frames, 0 anomalies) | same as above |
+| `npm run check` | Syntax, JSON, manifest and `peerDependencies`, artifacts in sync with sources, the DSH client plugin contract of `client.js` (executed once in isolation), scoping, override-layer and power-rail pure functions, 36 WCAG pairs, color whitelist, encoding, docs pairing, machine-specific paths — 60 checks | none |
+| `npm run verify` | All fixtures, 195 assertions (table below) | host packages + Chromium |
+| `node scripts/live/gui.mjs --url <token URL>` | Real GUI: shadows and both dividers, plus the model seat — 14 assertions with face B on (takeover, geometry, a keyboard change written into the host store and reverted), 10 with it off (the face A pending window; `--latency` adds 800ms to that round trip by default, since locally it takes <60ms and cannot be sampled) | a running `dsh web` |
+| `node scripts/live/settings.mjs --url <…>` | Real GUI: the card on the bundle page, its 9 rows, no override at defaults, switch and accent writes, the host seat coming back when the model picker is off, survival across a reload, no intermediate frame while switching theme; resets everything at the end — 30 assertions | same, with the plugin manager enabled |
+| `node scripts/live/parity.mjs snap --url <…> --out <dir>`<br>`node scripts/live/parity.mjs diff <before> <after>` | Stores every element's computed style across 14 UI states and compares them; exits 0 on zero differences. This is how a refactor proves the look did not change. `--ignore` skips given properties or newly added `--variables` | same |
 
-`npm run check` needs no host. The fixture suites run locally: they need shipped CSS from `app.asar` plus a DOM
-rebuilt from the render code, read with `getComputedStyle`. Fixtures have no title bar, no real AppFrame grid and no
-real RPC, so the shadow layer, divider hover and pending feedback are verified by the live probe.
+Fixtures: `node scripts/verify.mjs [spec…]`; without a spec, all of them run.
 
-### Host paths
+| Spec | Sections | Coverage | Assertions |
+|---|---|---|---|
+| `composer` | composer-shadow · hero | ⑱ composer shadow aligned to Codex's `--elevation-composer` (per-layer geometry and alpha, dark inset, narrow-viewport 80→40px, rendered pixels); ⑬ ⑭ ⑰, the focus ring and the released header slots | 23 + 25 |
+| `elevation` | elevation | ⑲ `--dsw-elevation-*` against Codex's source, plus a rendered menu panel | 19 |
+| `model-picker` | host-menu · power-rail | ⑫ face A (the host menu) and the pending indicator; ⑳ face B: seat takeover and hand-back, geometry, no commit while dragging / one snapped commit on release, no snap-back and a spinner during a slow round trip, the four keys, focus ring, Escape, model change carrying its default effort, failure notice, reduced motion, dark, the switch | 20 + 47 |
+| `rightbar` | rightbar | Shadow layer, right panel, both dividers | 42 |
+| `sidebar` | align · surface | Sidebar column alignment; the sidebar scroll fade (Codex mask ramp), mechanism plus per-pixel alpha | 6 + 13 |
 
-The verification scripts read the host they run against. Each path is resolved in this order:
+Options: `--host <app.asar | node_modules>` picks the host, `--shots <dir>` the screenshot directory (default
+`codex-ui-shots/` under the system temp directory), `--verbose` prints the readings. Fixtures read the shipped host CSS
+over a DOM rebuilt from the render code with `getComputedStyle`; they have no title bar, no real AppFrame grid and no
+real RPC, so the shadow layer, divider hover and pending feedback are verified on the live GUI.
 
-1. `DSH_ASAR`, `DSH_GLOBAL_MODULES`, `DSH_CHROME`;
-2. `scripts/host.local.json`, a gitignored per-machine file, for example `{ "asar": "D:/.../resources/app.asar" }`;
-3. a scan of the standard install locations, Playwright's browser cache and `npm root -g`.
+### Host and browser
 
-No machine-specific path is committed (`npm run check` scans JS, stylesheets and docs, including the JSON-escaped form inside `client.js`).
+Fixtures read the host they run against, taking the first available source in this order (an explicit path that does
+not exist is an error):
 
-Without a desktop shell, pack the same packages from npm:
+1. `DSH_ASAR` (the desktop shell's `app.asar`) or `DSH_GLOBAL_MODULES` (any `node_modules` containing `@deepseek-ai/*`);
+2. `scripts/host.local.json`, a gitignored per-machine file with `asar` / `globalModules` / `chrome`;
+3. a scan of the desktop shell's standard install locations and `npm root -g`.
+
+The browser comes from `DSH_CHROME`, then Playwright's Chromium, a local Chrome, and Edge. No machine-specific path is
+committed (`npm run check` scans every file, including the JSON-escaped form inside `client.js`).
+
+Without a desktop shell, the same packages from npm are enough; no asar is needed:
 
 ```powershell
 npm install @deepseek-ai/dsh@0.1.7-rc.2 --prefix <tmp>
-node scripts/pack-host-asar.mjs --from <tmp>/node_modules --out <tmp>/app.asar
-$env:DSH_ASAR = "<tmp>/app.asar"; $env:DSH_GLOBAL_MODULES = "<tmp>/node_modules"
-$env:DSH_CHROME = "C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe"   # system Edge when Playwright is not installed
+$env:DSH_GLOBAL_MODULES = "<tmp>/node_modules"
+npm run verify
 ```
 
-The same npm package can also boot a real instance: `$env:DSH_HOME = "<tmp>/home"; node <tmp>/node_modules/@deepseek-ai/dsh/lib/bin.js web --port 3098 --no-open`
-(the first run creates the web profile; then run `install-plugin.mjs --profile web --write`).
-
-```powershell
-dsh --profile web --port 3099 --no-open      # prints a token URL
-node scripts/live-gui-probe.mjs --url "http://127.0.0.1:3099/?token=..." --dpr 1.5
-```
-
-The probe opens a new conversation before timing the pending window, and exits non-zero if an assertion fails.
-The token expires; after about half an hour requests return 401 and a restart is needed.
+The same package boots a real instance (the first run creates the web profile; then add the plugin as in "Install"):
+`$env:DSH_HOME = "<tmp>/home"; node <tmp>/node_modules/@deepseek-ai/dsh/lib/bin.js web --port 3098 --no-open`.
+The token URL it prints is the `--url` for the live checks.
 
 ## Settings page
 
@@ -295,17 +318,22 @@ Source: point samples from `assets/reference/codex-sidebar-reference.png`.
 - Fixture checks are not signed-in screenshots. The `dsh web` launch token has a lifetime and lives in process memory only.
 - In headless mode only the foreground tab handles `:hover`, so multi-page fixtures open the web-shape page last.
 - Face B of the model seat (⑳) **registers no slot**: the host still renders `conversation.input.model`; the component
-  appends its own trigger to the same seat and hides the host's child with one direct-child `:has()`; data and commits go
-  through the host's `ctx.modelDirectories` only. The three advanced states of the Codex power rail — the highlight when
+  appends its own trigger to the same seat and marks the seat `data-codex-ui-seated`, and one child rule hides the host's
+  child (which stays in the React tree); removing the trigger removes the mark too and the host control is back at once.
+  Data and commits go through the host's `ctx.modelDirectories` only. The three advanced states of the Codex power rail — the highlight when
   Fast is off, the Fast-mode tick fly-out, and the purple/blue gradient beyond the maximum level — are not built: DSH has
   no Fast mode and no "beyond maximum" state. The purple Max label on the trigger (`--color-chart-purple`) is skipped too:
   it is outside the color whitelist.
 - ⑯ keeps the host tab strip: hiding it also removes the fullscreen and collapse buttons.
 - The session row text column is 40px, 2px shorter than the workspace, new session and plugin rows, because the shipped
   `Rows.module.css` gives `.sessionRow .title` its own margin. Left as is.
-- `composer.css`, `patches.css` and `sidebar-surface.css` use hash-class suffix anchors (`[class$=…]`, `[class*=…]`) where the host
-  exposes no `data-*`; `node scripts/build.mjs` reports the counts on every run (0.6.0: composer 18 · patches 12 ·
-  sidebar-surface 2, comment mentions included). `model-picker.css` has none.
+- `composer.css`, `patches.css`, `sidebar-align.css` and `sidebar-surface.css` use hash-class suffix anchors (`[class$=…]`,
+  `[class*=…]`) where the host exposes no `data-*` (0.6.1: composer 10 · patches 10 · sidebar-align 9 · sidebar-surface 2).
+  The 9 in sidebar-align are one anchor, `_collapsed` (the collapsed sidebar), replacing an ancestor-position `:has()`.
+  `model-picker.css` has none.
+- Selectors keep `:has()` out of ancestor positions: while the conversation streams nodes in, Chromium re-matches the
+  whole subtree under every affected ancestor, which took style recalc from ~0.3s to over 4s. The remaining `:has()`
+  are in subject position or look at direct children only; `check.mjs` holds `model-picker.css` at zero.
 
 ## Codex source alignment
 
@@ -347,8 +375,8 @@ Deliberate differences:
 
 ## CI
 
-`.github/workflows/ci.yml` runs `scripts/check-repo.mjs` and `scripts/build.mjs --check` on Ubuntu and Windows,
-Node 22 and 24. The fixture suites and the live probe need the desktop shell and Chromium, so they stay local.
+`.github/workflows/ci.yml` runs `scripts/check.mjs` (which includes the artifact sync check) on Ubuntu and Windows,
+Node 22 and 24. Fixtures and live checks need a host and Chromium, so they stay local.
 
 ## License
 

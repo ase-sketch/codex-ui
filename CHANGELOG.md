@@ -2,6 +2,82 @@
 
 [简体中文](CHANGELOG.zh-CN.md)
 
+## 0.6.1 - 2026-09-28
+
+An architecture cleanup: no feature changes, much faster while a reply streams in, and the engineering scripts reduced
+to three entry points. Before and after the refactor, every element's computed style was compared across 14 UI states on
+a real `dsh web`: zero differences apart from the one intended change under "Fixes".
+
+### Performance
+
+- **No more `:has()` in ancestor positions**: 9 rules in sidebar alignment, 2 in the sidebar fade, 1 for the model
+  picker seat; the composer hero rule became a fixed-depth child `:has()`. An ancestor-position `:has()` makes Chromium
+  re-match the whole subtree under every affected ancestor each time the conversation inserts a node carrying `data-slot`.
+  Simulated streaming (200 frames, each 30 spans plus one `data-slot` node), median of 5 runs:
+
+  | Mode | Style recalc | Wall time |
+  |---|---|---|
+  | web | 4264 → 267 ms | 6.3 → 2.3 s |
+  | Windows desktop shell (title bar) | 9518 → 442 ms | 11.7 → 2.5 s |
+
+  In the desktop-shell mode the skin's extra recalc over a bare host is now within noise. Every new anchor keeps the
+  old selector's specificity, so the cascade against host rules is unchanged.
+- **Model picker seat**: the host control used to be hidden by `seat:has(> .codex-mp-trigger) > :not(trigger)`; now the
+  **seat itself** gets `data-codex-ui-seated` when our trigger goes in, and loses it when the trigger is removed. The mark
+  sits on the slot outlet, not on the host's child, so React replacing that child does not drop it (0.6.0's reason for
+  avoiding a mark no longer applies; the fixture "still hidden after the host replaces its own child" passes).
+- **Narrower observer**: the model picker's MutationObserver rescans everything only on attribute changes and on seats
+  being added or removed; otherwise it re-syncs just the touched seats and the ones not settled yet. Script time while
+  streaming: 47.5 → 10.1 ms.
+
+### Fixes
+
+- **The dark `html` background never applied**: `skin.css`'s `:root:has(body[data-ds-dark-theme])` was scoped to
+  `html[data-codex-ui] :root:has(…)` (a descendant selector that never matches), so in dark mode `html` stayed light
+  `#fff`, normally hidden behind `body`. The scoper now maps compound selectors starting with `:root` to the root itself.
+  This is the release's only visible difference: in dark mode the `html` background goes `#fff` → `#111111` (the
+  intended design; see the last item under "Settings page" in the README). It is its own commit (249e6d1) and can be
+  reverted on its own.
+
+### Structure
+
+- The browser half is split into ES modules under `src/client/`: `index.js` (`inject` and `apply`), `stylesheet.js`,
+  `settings.js`, `theme-preview.js`, `settings-card.js`, `override.js`, `model-picker/{index,component,view}.js`,
+  `constants.js`, `host.js`. The string-splicing template `src/client.template.js` and `src/build.mjs` are gone. A new
+  feature is one module exporting `installXxx(ctx)` plus one line in `apply`.
+- `scripts/build.mjs` is the only build: a zero-dependency bundler turns the modules into IIFEs in dependency order
+  (relative imports become destructuring, host packages go through the loader's `require`), with the stylesheet
+  inlined as the virtual module `codex-ui:theme.css`; unknown import or export forms fail the build. The CSS scoper
+  understands comments and strings, and comments are stripped from the output.
+- Unreachable code removed: the settings card's summary branch, the no-primitives fallback and theme fallback table,
+  and the matching `.cx-row--stack` and fallback styles in `settings.css`.
+- Deduplicated styles: repeated shadows and fills became 4 tokens (`--dsw-codex-ambient`, `--dsw-codex-menu-shadow`,
+  `--dsw-codex-suggest-shadow`, `--dsw-codex-suggest-fill`), dark declarations identical to light ones were dropped,
+  comments were slimmed; the eight stylesheets went from 2491 to about 1820 lines.
+
+### Engineering
+
+- Scripts went from 25 files / 4886 lines to 15 / 3356, with three entry points and shared code in `scripts/lib/`
+  (host / cdp / checks):
+  - `scripts/check.mjs`: the former `check-repo.mjs` plus `audit-codex-ink.mjs`, 60 checks, the CI entry point; new are a
+    DSH client plugin contract check on `client.js` (executed once in isolation: loader id = package name, `inject` is
+    exactly the three required services, the inlined stylesheet equals `theme.css`) and a `peerDependencies` check.
+  - `scripts/verify.mjs` + `scripts/specs/`: the eight former `*-verify.mjs` fixtures with the same assertion names and
+    counts, 195 in total; `npm run verify`.
+  - `scripts/live/`: `gui.mjs`, `settings.mjs` (absorbing `theme-flash-probe.mjs`: no intermediate frame while switching
+    theme) and the new `parity.mjs` (per-element computed-style comparison before and after a change).
+- **Install goes through the standard `dsh plugin add link:`**: removed `install-plugin.mjs`, `make-verify-profile.mjs`,
+  `pack-host-asar.mjs` (an npm-installed `node_modules` works as a fixture host directly), `make-preview.mjs` and
+  `scripts/fixtures/`; `package.json` drops `install:*`, adds `verify`, and declares `@deepseek-ai/schemastery` in
+  `peerDependencies` (`index.js` imports it; the host provides it). See "Install" in the README for **migrating**.
+- Fixture fixes: the old hero / composer-shadow fixtures truncated the host's conversation root styles at the first
+  `content:""` (2672 of 6717 characters read); with the full CSS the scroller clips the shadow, so the fixture now puts
+  the padding inside the scroller as the real app does, with unchanged readings (edge 224, 42px falloff). The face A
+  menu fixture and the right-bar fixture, already broken on 0.6.0, work again. The settings check resets every override
+  when it finishes, so later comparisons are not polluted.
+- Removed `docs/plan-settings-page.zh-CN.md` (an executed plan whose conclusions are in the changelog) and the
+  verification screenshots the READMEs no longer reference.
+
 ## 0.6.0 - 2026-09-28
 
 Face B of the model picker (the Codex reasoning power rail) lands, together with a full-repository review against the

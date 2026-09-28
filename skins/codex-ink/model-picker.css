@@ -1,5 +1,5 @@
 /* codex-ink · L3 模型选择器组件（B 面：模型列表 + 推理等级功率轨），消费者 src/client/model-picker/component.js。
-   纪律（0.5.0 卡顿的教训，check-repo 守着）：只画自建节点 .codex-mp-* 加席位的一条隐藏规则，
+   纪律（0.5.0 卡顿的教训，scripts/check.mjs 守着）：只画自建节点 .codex-mp-* 加席位的一条隐藏规则，
    不挂宿主菜单 portal（body 直属的 role=menu），不改宿主菜单的 display / height / padding。
    取值：Codex = app.asar 模型选择器实现块 _Root / _Track / _Tick / _Thumb 逐字值；
          宿主 = dsh-client-ui-model-selection 的 ModelSelect.module.css（触发器几何、z-index，与原生那一格同位同高）。 */

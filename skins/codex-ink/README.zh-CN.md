@@ -1,7 +1,7 @@
 # codex-ink · 墨白终端
 
-代码方向为 Codex / ChatGPT。这是 codex-ui 插件的样式正本：`src/build.mjs` 读本目录的八份 CSS，把选择器作用域化到
-`html[data-codex-ui]`，写出 `theme.css` 与 `client.js`；`scripts/install-plugin.mjs` 负责安装。同一份目录也满足
+代码方向为 Codex / ChatGPT。这是 codex-ui 插件的样式正本：`scripts/build.mjs` 读本目录的八份 CSS，把选择器作用域化到
+`html[data-codex-ui]`，写出 `theme.css` 并内联进 `client.js`；安装见仓库 README（`dsh plugin add link:`）。同一份目录也满足
 Skin v2 清单格式，可由皮肤加载器单独收录。
 
 ## 文件
@@ -11,9 +11,9 @@ Skin v2 清单格式，可由皮肤加载器单独收录。
 | `skin.json` | 清单 | id、accent、明暗预览图 |
 | `skin.css` | L1 令牌 + L2 排版 | `--dsw-alias-*` 重映射；spacing / radius / 字阶 / motion / elevation 令牌层 |
 | `patches.css` | L3 组件 | 焦点环、链接、卡片契约、mono pill 徽标、tag tone 归一、reduced-motion、⑫ 宿主模型菜单（A 面）、⑬ 输入区顶栏与卡片、⑯ 右栏展开选择组件、⑰ composer 控件悬停 |
-| `model-picker.css` | L3 模型选择器组件 | B 面：`src/model-picker.js` 自建的触发器、弹层与推理等级功率轨（Codex `_Track` / `_Tick` / `_Thumb` 逐字几何）；只画 `.codex-mp-*` 与席位的一条隐藏规则，不碰宿主菜单。验收 `scripts/power-rail-verify.mjs` |
+| `model-picker.css` | L3 模型选择器组件 | B 面：`src/client/model-picker/` 自建的触发器、弹层与推理等级功率轨（Codex `_Track` / `_Tick` / `_Thumb` 逐字几何）；只画 `.codex-mp-*` 与席位的一条隐藏规则，不碰宿主菜单。验收 `scripts/verify.mjs model-picker` |
 | `sidebar-align.css` | L3 侧栏对齐 | 新会话行与插件行落到工作区列表行的两条竖线（图标列 20px、文字列 42px）；选择器同时覆盖 rc.1 扁平 DOM 与 rc.2 嵌套 DOM |
-| `sidebar-surface.css` | L3 侧栏面 | 侧栏滚动渐隐：把宿主那条 24px 覆盖层让位，改用 Codex 的 40px 四段 mask 斜坡（挂在滚动容器上，右侧 12px 让开滚动条槽）。验收 `scripts/sidebar-surface-verify.mjs` |
+| `sidebar-surface.css` | L3 侧栏面 | 侧栏滚动渐隐：把宿主那条 24px 覆盖层让位，改用 Codex 的 40px 四段 mask 斜坡（挂在滚动容器上，右侧 12px 让开滚动条槽）。验收 `scripts/verify.mjs sidebar` |
 | `window-shadow.css` | L3 窗口边缘 | 会话窗口 0.5px 发丝线加 24px 环境影；右栏面板左沿只留 0.5px 发丝线、影只往上泄；右分界线拖拽柄悬停渐变 |
 | `composer.css` | L3 输入区 | 卡片几何与表面、编辑区 44px、底部控件行 28px、候选菜单、hero 布局。本层允许使用 `[class*=…]` 后缀锚点 |
 | `settings.css` | L3 设置页 | 插件管理 → 组合包页那张配置卡的版式（`.cx-*`） |
@@ -40,17 +40,17 @@ Skin v2 清单格式，可由皮肤加载器单独收录。
 ## 验收
 
 ```bash
-node scripts/audit-codex-ink.mjs
+node scripts/check.mjs
 ```
 
-脚本校验 `skin.json` 结构、实测 36 组 WCAG 对比度、审计 `patches.css` 的彩色白名单。
+其中与本目录有关的几项：`skin.json` 结构、实测 36 组 WCAG 对比度、`patches.css` 的彩色白名单。
 当前结果：36/36 通过，19 组 AAA，白名单外彩色 0 个。
 
 ## 安装
 
 ```powershell
-node scripts/install-plugin.mjs --write      # 插件路径，主用法
-node scripts/install-skin.mjs --write        # 皮肤加载器路径：同步到 $DSH_HOME/skins/codex-ink
+dsh plugin --profile web add link:<仓库绝对路径>   # 插件路径，主用法
+node scripts/install-skin.mjs --write             # 皮肤加载器路径：同步到 $DSH_HOME/skins/codex-ink
 ```
 
 ## 未覆盖
