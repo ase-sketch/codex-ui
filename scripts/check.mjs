@@ -316,6 +316,129 @@ attempt('模型选择器样式只画自建节点，不碰宿主菜单', () => {
   return selectors.length + ' 组选择器';
 });
 
+/* ── 7b. 设置模态框契约（结构层 + 视觉层 + 装配）───────────────────────────
+   这一层由两个文件组成（结构层 + 视觉层），且靠构建期装配 —— 任一环断了，浏览器里都只表现为
+   「设置界面没变化」，很难从现象反推原因。仓库体检必须在这里就把它抓住。
+   结构层现在是一个普通 ES 模块（src/client/settings-modal.js），由 src/client/index.js 导入 ——
+   PR #1 原版的占位符拼装（__CODEX_UI_MODAL__）在模块化打包器下不再需要。 */
+const MODAL_FILE = join(ROOT, 'src', 'client', 'settings-modal.js');
+const MODAL_CSS = join(SKIN_DIR, 'settings-modal.css');
+
+/**
+ * 扫一遍 CSS 的每条规则，挑出选择器里带 .cx-sm- 却没挂作用域根的。
+ * 逐规则扫而不是正则捞：正则会被注释里的花括号带偏，而作用域漏挂是本层最致命的一类错
+ * （漏了前缀 = 规则在宿主默认态下裸奔）。
+ * @param css - 已作用域化的样式文本。
+ * @returns 越界的选择器片段数组。
+ */
+const unscopedCxSm = (css) => {
+  const bad = [];
+  let i = 0;
+  while (i < css.length) {
+    const open = css.indexOf('{', i);
+    if (open < 0) break;
+    const prelude = css.slice(i, open);
+    let depth = 1;
+    let j = open + 1;
+    while (j < css.length && depth > 0) {
+      if (css[j] === '{') depth += 1;
+      else if (css[j] === '}') depth -= 1;
+      j += 1;
+    }
+    const body = css.slice(open + 1, j - 1);
+    const close = prelude.lastIndexOf('*/');
+    const selText = close >= 0 ? prelude.slice(close + 2) : prelude;
+    if (selText.includes('.cx-sm-') && !selText.includes(SCOPE)) bad.push(selText.trim().slice(0, 80));
+    if (selText.trim().startsWith('@') && body.includes('{')) bad.push(...unscopedCxSm(body));
+    i = j;
+  }
+  return bad;
+};
+
+attempt('设置模态框：两个源文件存在且非空', () => {
+  for (const [what, p] of [['结构层', MODAL_FILE], ['视觉层', MODAL_CSS]]) {
+    assert(fs.existsSync(p), what + ' 源文件不存在：' + rel(p));
+    assert(fs.statSync(p).size > 0, what + ' 源文件是空的：' + rel(p));
+  }
+  return rel(MODAL_FILE) + ' ' + fs.statSync(MODAL_FILE).size + ' B · '
+    + rel(MODAL_CSS) + ' ' + fs.statSync(MODAL_CSS).size + ' B';
+});
+attempt('设置模态框：结构层被装配进 client.js 且已挂到 apply 上', () => {
+  /* 定义与调用缺一不可：模块拼进去了但没人调用，界面同样不会有任何变化。 */
+  assert(built.clientJs.includes('function installSettingsModal('),
+    'client.js 里没有 installSettingsModal 的定义 —— src/client/index.js 没导入它？');
+  assert(/installSettingsModal\(ctx\)/.test(built.clientJs),
+    'client.js 里没有 installSettingsModal(ctx) 的调用 —— 模块装配了却没挂到 apply 上，界面不会变');
+  assert(/from '\.\/settings-modal\.js'/.test(read('src', 'client', 'index.js')),
+    'src/client/index.js 里没有 settings-modal.js 的 import');
+  return '定义 + 调用都在';
+});
+attempt('设置模态框：视觉层进了 theme.css、全部作用域化、隐藏态有属性兜底', () => {
+  assert(themeCss.includes('.cx-sm-'), 'theme.css 里一条 .cx-sm-* 规则都没有，视觉层等于没进去');
+  const unscoped = unscopedCxSm(themeCss);
+  assert(unscoped.length === 0,
+    '有 ' + unscoped.length + ' 条 .cx-sm-* 规则没挂作用域根 ' + SCOPE + '：' + unscoped.slice(0, 2).join(' | '));
+  /* 隐藏态必须以**属性选择器**为准：宿主在选中态搬家时会把那一项的 className 整条重写，
+     类名会被抹掉，只有 data-* 属性留得下来。只写 .cx-sm-hidden 的话，
+     筛选态下点一下别的设置项，被隐藏项就会当场复现并永久留在侧栏（集成验证批实测的回归）。 */
+  assert(themeCss.includes('[data-cx-sm-hidden]'),
+    '隐藏态缺少属性选择器 [data-cx-sm-hidden] —— 宿主重写 className 后类名会丢，被隐藏项会当场复现');
+  return '隐藏态含属性兜底';
+});
+/* 面板锚点契约：形态规则**只**认插件自有锚点 [data-cx-sm-panel]，
+   宿主 data-shortcut-modal / 适配器 data-dsh-surface 都只在 JS 的 PANEL_SELECTOR 里出现。
+   两层分开断言，是为了让「视觉层写回宿主/适配器锚点」与「结构层丢掉宿主锚点」这两种退化
+   各自指向明确 —— 前者是这里，后者在下面那条。 */
+attempt('设置模态框：形态规则只挂自有锚点 [data-cx-sm-panel]', () => {
+  assert(themeCss.includes('[data-cx-sm-panel]'),
+    'theme.css 里找不到 [data-cx-sm-panel] —— 视觉层没挂到插件自有锚点上，面板一改名就整层失效');
+  /* 只看本层的选择器文本（theme.css 已去注释）：patches.css 对 [data-dsh-surface="sidebar"|…]
+     的规则是它自己的锚点契约，与设置面板无关。 */
+  const legacy = [];
+  let i = 0;
+  while (i < themeCss.length) {
+    const open = themeCss.indexOf('{', i);
+    if (open < 0) break;
+    const selText = themeCss.slice(i, open).trim();
+    let depth = 1;
+    let j = open + 1;
+    while (j < themeCss.length && depth > 0) {
+      if (themeCss[j] === '{') depth += 1;
+      else if (themeCss[j] === '}') depth -= 1;
+      j += 1;
+    }
+    if (selText.includes('.cx-sm-') && /data-dsh-surface|data-shortcut-modal/.test(selText)) legacy.push(selText.slice(0, 90));
+    i = j;
+  }
+  assert(legacy.length === 0,
+    '设置层里有 ' + legacy.length + ' 条规则还挂在宿主/适配器锚点上（应改挂 [data-cx-sm-panel]）：' + legacy.slice(0, 2).join(' | '));
+  const scoped = (themeCss.match(/\[data-cx-sm-panel\]/g) ?? []).length;
+  assert(scoped > 0, '设置层里没有一条规则挂 [data-cx-sm-panel]');
+  return '自有锚点 ' + scoped + ' 处 + 0 条回退锚点规则';
+});
+attempt('设置模态框：结构层的面板选择器 = 宿主锚点优先、适配器兜底', () => {
+  const src = read('src', 'client', 'settings-modal.js');
+  const m = /const PANEL_SELECTOR = '([^']+)'/.exec(src);
+  assert(m !== null, 'settings-modal.js 里找不到 PANEL_SELECTOR');
+  assert(m[1] === '[data-shortcut-modal="settings"], [data-dsh-surface="settings"]',
+    'PANEL_SELECTOR 变了（当前 ' + m[1] + '）—— data-shortcut-modal 是宿主自己的属性，必须排在前；'
+    + 'data-dsh-surface 是第三方 adapter 补打的兜底，不能升为首选');
+  assert(/setAttribute\(panel, PANEL_ATTR, ''\)/.test(src) || /setAttr\(panel, PANEL_ATTR, ''\)/.test(src),
+    'findPanel() 没有盖印自有锚点 PANEL_ATTR（data-cx-sm-panel）—— 视觉层的全部形态规则都挂它，盖不上就整层失效');
+  assert(src.includes('const PANEL_ATTR'), '找不到 PANEL_ATTR 声明');
+  /* 面板锚点失配必须**显式报警**，不能静默失效：设置界面确实开着
+     （settings.section 槽在 DOM 里）却一个锚点都没匹配到时，整层注入会无声跳过。 */
+  assert(src.includes('[data-slot="settings.section"]'),
+    'findPanel() 里找不到「设置界面开着」的判据 —— 锚点全失配时会静默失效，不发警告');
+  return m[1];
+});
+attempt('设置模态框：产物里不残留任何构建占位符', () => {
+  const left = ['__CODEX_UI_CSS__', '__CODEX_UI_OVERRIDE__', '__CODEX_UI_SETTINGS__', '__CODEX_UI_MODAL__']
+    .filter((ph) => built.clientJs.includes(ph));
+  assert(left.length === 0, 'client.js 里残留占位符 ' + left.join(' ') + '（构建没跑，或拼装漏了一环）');
+  return '0 个残留占位符（模块化打包器下不再需要模板占位符）';
+});
+
 /* ── 8. 皮肤配色：WCAG 对比度与彩色白名单 ──────────────────────────────── */
 /** 颜色解析：#rgb / #rrggbb / #rrggbbaa / rgb() / rgba()。 */
 function parseColor(input) {

@@ -2,6 +2,53 @@
 
 [English](CHANGELOG.md)
 
+## 0.7.0 - 2026-09-28
+
+架构整理（原 PR #3）与设置界面全页化（原 PR #1）一起落在 0.6.4 之上。0.6.2–0.6.4 的东西一样没丢：
+结构用新的那一套，原来散在扁平脚本里的判据逐条搬进新脚本，不是删掉。
+
+### 结构（原 PR #3 的重构）
+
+- **客户端模块化**：`src/client.template.js` 删除。入口是 `src/client/index.js`，下面挂 `settings.js`、
+  `settings-card.js`、`override.js`、`stylesheet.js`、`theme-preview.js`、`host.js`、`constants.js`
+  与 `model-picker/`。`scripts/build.mjs` 里的打包器零依赖，产出的仍是宿主要求的经典脚本
+  `window.__ModuleLoader__.load(...)`。加一个功能 = 加一个模块 + 入口一行。
+- **工具链收拢成三个入口**：`npm run check`（不依赖宿主）、`npm run verify`（夹具）、`scripts/live/*`（真 GUI）。
+  公共部分在 `scripts/lib/`，夹具在 `scripts/specs/*.mjs`。旧的 `check-repo.mjs` / `*-verify.mjs` /
+  `live-gui-probe.mjs` / `theme-flash-probe.mjs` 删除；它们的判据是**搬家**，不是删除。
+- **祖先位置的 `:has()` 清零**，MutationObserver 收窄：流式输出时的样式重算 4264 → 267 ms（web）、
+  9518 → 442 ms（桌面壳）。
+- **暗色 `html` 底色从未生效**：作用域化把 `:root:has(body[data-ds-dark-theme])` 变成了永远不匹配的后代选择器。
+  现在以 `:root` 开头的复合选择器映射到根自身。
+
+### 设置模态框（原 PR #1 的工作）
+
+- **㉑ 设置对话框全页 Codex 化**：分组侧栏（「← 返回应用」一行、按文字过滤宿主条目的搜索框）、分组标题、
+  内容区页头、每个子页面的白卡细边与贴底保存栏。结构在 `src/client/settings-modal.js`，外观在
+  `skins/codex-ink/settings-modal.css`。
+- **宿主锚点优先**：面板先认宿主自己的 `[data-shortcut-modal="settings"]`，只有找不到才退到第三方
+  skin-center 适配器补打的 `[data-dsh-surface="settings"]`。视觉层只挂插件自有的 `[data-cx-sm-panel]` ——
+  宿主改锚点只动一个常量，不动样式表。设置界面确实开着却一个锚点都没匹配到时，这一层**发警告**，不静默失效。
+- **隐藏态以属性为准**：宿主在选中态搬走时会把导航项的 `className` 整条重写，所以耐久标记是
+  `data-cx-sm-hidden`，类名只是给人看的。列表观察器必须开 `subtree` —— 不开时那次 class 重写一条 mutation
+  记录都不产生（实测 0 条 vs 5 条）。
+- **绝不接管宿主节点**：未知项只做视觉分组，宿主节点不移动、不克隆、不删除。排序走 `style.order`；
+  已知代价是键盘 Tab 顺序仍是 DOM 顺序。
+
+### 搬进新结构的部分
+
+- 0.6.2–0.6.4 的模型选择器改动（席位级 `pending`、顶档紫色点阵、16×30 旋钮与「更快/更强」一行）落在
+  `src/client/model-picker/{component,view}.js`；夹具的假目录不再假装快照里有 `pending` 字段 ——
+  安装中的宿主本来就没有。
+- 0.6.3 的实测像素值（侧栏 `#f6f6f6`、中列环境影 13px @7%、输入卡阴影两层）都在，且暗色中列规则**单独保留**：
+  亮色那支拟合对暗色不成立，一个令牌表达不了两档。
+- `scripts/live/settings-modal.mjs` 与 `scripts/live/settings-sweep.mjs` 是模态框的真 GUI 验收。
+  扫掠脚本把「一个设置页都没扫到」当硬故障 —— 旧版在这种情况下报 PASS。
+
+### 验收
+
+`npm run check` 67/67 · `node scripts/verify.mjs` 208/208（8 个 spec）。
+
 ## 0.6.4 - 2026-09-28
 
 亮暗两套侧栏都换了基准。Codex **没有「侧栏色」令牌**；那一面是半透明遮罩，渲染出来的颜色取决于窗口背后是什么。

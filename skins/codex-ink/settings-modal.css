@@ -1,0 +1,718 @@
+/* ============================================================================
+   codex-ink · L3 设置界面（全页 Codex 化）视觉层
+   ----------------------------------------------------------------------------
+   用途
+     把宿主「设置」模态从「居中卡片弹窗」改成 Codex 桌面端的整页设置界面：
+     全页铺满 → 左侧 236px 分组侧栏（返回 / 搜索 / 分组标题 / 项目）
+     → 右侧内容区（大标题 + 分组大卡 + 右上角页级操作）。
+     大卡内多行、行间一条 hairline，卡外才是组间距 —— 见 §4。
+
+   作用域
+     形态类规则全部挂在 html[data-codex-ui] 下的 [data-cx-sm-panel] 之下；
+     该属性是**本插件自有锚点**：src/settings-modal.js 检测到设置面板
+     （宿主锚点 data-shortcut-modal="settings"，兼容适配器的 data-dsh-surface 兜底）
+     后盖印，面板不在就不盖 —— 锚点改名只需改 JS 一个函数。
+     组件类（.cx-sm-*）只作用于 JS 注入的节点，注入节点带
+     data-codex-ui-injected="settings-modal"。
+     设置模态关闭时，本文件不命中宿主任何元素 —— 默认态不受影响。
+
+   与 settings.css 的区别（勿混淆）
+     settings.css 服务的是「官方插件管理 → 组合包配置卡」那块 UI
+     （座位 plugins.bundle.config，.cx-form / .cx-row / .cx-swatch…），
+     与设置模态是**两套完全不同的界面**。
+     本文件服务设置模态（面板锚点见「作用域」节），前缀统一 .cx-sm-。
+
+   锚点纪律
+     只用 data-cx-sm-panel（自有锚点）/ data-slot / aria-current / role / 结构位置 / tag。
+     宿主类名是 CSS-Modules 哈希（每次构建都变），一律不用 —— 与 patches.css 同规矩。
+
+   取色纪律
+     颜色只走 --dsw-alias-* 令牌，暗色由令牌自身翻转（body[data-ds-dark-theme]），
+     本文件不写任何暗色专用规则、不出现硬编码色值。
+     ⚠️ 订正（2026-09-27 实测）：此处曾写「--dsw-alias-bg-base 是全透明的，不能拿来当
+     面板底色」。**该说法与实测不符** —— 皮肤把它定义在 skin.css，亮 #ffffff / 深 #181818
+     （实测页面上把 var(--dsw-alias-bg-base) 用在探针 div 上，计算值 = rgb(255,255,255)）。
+     它因此是可以当底色用的，内容列正取它。旧说法作废。
+     最终形态（用户 2026-09-27 定稿，Codex 参考图）：
+       侧栏灰（背板 bg-sidebar：浅 #f6f6f6 / 深 #0f0f0f —— 跟随上游插件取值（0.6.4 基准），见 skin.css）
+       + 内容区白平铺（本列取 bg-base：浅 #ffffff / 深 #111111 —— 上游 0.5.6 起）
+       + 白卡浅细边（分组大卡 bg-layer-1 + 取侧栏那一档的细边，见 §4.2）。
+     背板必须**不透明**：整页 overlay 用毛玻璃会把底下的主窗口/壁纸色揉进设置页
+     （真机实测，详见 §1），页面颜色要钉死。
+
+   结构位置依据（实测，见 docs/dom-recon-settings-layout.md）
+     [data-cx-sm-panel]                面板（JS 盖印的自有锚点）
+       > nav                               侧栏；children = [navTitle, navList]
+       > div:last-child                    内容列；children = [header, options]
+       > nav > div:has(> button)           navList（13 个 button.navCell）
+     [data-slot="settings.section"] > *    设置页根容器
+     [data-slot="settings.general.item"] > *  单行（通用页；slot 是 display:contents 包装）
+     选中项 = button[aria-current="true"]
+   ========================================================================== */
+
+/* ── 0 · 局部刻度：只声明自定义属性，不产生任何渲染 ─────────────────────── */
+html[data-codex-ui] {
+  /* 密度：对照 Codex 截图整体下调一号（以「像同一个 app」为准，非精确取值） */
+  --cx-sm-sidebar-w: 236px;
+  --cx-sm-row-h: 46px;
+  --cx-sm-panel-w: 760px;   /* 内容柱宽度，水平居中于侧栏之外 */
+  --cx-sm-gutter: 24px;
+  --cx-sm-radius-card: var(--dsw-radius-m, 12px);
+  /* 这里**没有**内容列的圆角刻度：内容列已经是整页的一面，不产生轮廓。
+     历史：曾有 --cx-sm-radius-panel: 16px 给「浮起面板」用，随本轮拍平一并删除。 */
+  --cx-sm-radius-field: 10px;
+  --cx-sm-radius-pill: 999px;   /* 搜索框专用：全圆角胶囊（唯一使用点，见 §2.5） */
+  /* ⚠️ 凡引用 --dsw-alias-* 的颜色令牌（--cx-sm-surface-backdrop、--cx-sm-card-edge）
+     都不在这里声明：皮肤把那些令牌定义在 body 上，在 html 上取不到值。
+     没有兜底值时会「invalid at computed-value time」→ 属性落回 initial，
+     border-color 会变成 currentColor，画出一条深色实线（实测踩到：
+     本该是淡发丝线，实际是一条 rgb(29,37,57) 的硬线）。它们改到面板上声明，见 §1。 */
+}
+
+@media (max-width: 900px) {
+  html[data-codex-ui] {
+    --cx-sm-sidebar-w: 196px;
+    --cx-sm-gutter: 14px;
+  }
+}
+
+/* ══════════════════════════════════════════════════════════════════════════
+   1 · 全页化：干掉居中弹窗
+   ──────────────────────────────────────────────────────────────────────────
+   实测面板是 800×800 居中卡片（radius 16 / 底色 bg-layer-2 / 阴影）。
+   改成固定铺满视口：inset 0 + 直角 + 无阴影。overlay 随之拉伸。
+   遮罩（[aria-hidden] 兄弟）不处理 —— 面板不透明且铺满，它自然被盖住。
+   ══════════════════════════════════════════════════════════════════════════ */
+
+/* 形态定稿（用户 2026-09-27 确认，以 Codex 参考图为准）：
+   **侧栏灰 + 内容区白平铺 + 白卡浅细边**。
+     · 背板（= 侧栏那一列）取 bg-sidebar：浅 #f6f6f6 / 深 #0f0f0f（上游 0.6.4 基准），**不透明**；
+     · 内容列取 bg-base：浅 #ffffff / 深 #181818 —— 平铺、flush，无圆角无 gutter 无描边，
+       是「内容区本来就是白的」，不是一块浮起面板；
+     · 分组大卡 bg-layer-1：浅 #ffffff / 深 #212121，浅色配一条侧栏那一档的细边（见 §4.2）。
+   深色下 bg-base = bg-sidebar = #181818，内容列与侧栏同面，正是 Codex 深色通体一色。
+
+   演进史（勿退回，三条都被裁决推翻过）：
+     ① 最早的「居中 800×800 弹窗 + 毛玻璃」——全页化后作废（见下）；
+     ② 「灰背板 + 白内容面板」两个面：内容列铺 button-elevated-fill + 0.5px 描边 +
+        16px 圆角 + 一圈 gutter。用户实测判定那个对比本身就是要消灭的东西；
+     ③ 「整页灰」：内容列不吃底色、直接坐在侧栏那一档背板上，整页一面灰。
+        用户 2026-09-27 **否决**了这一版 —— 否决理由见 §3（内容列改回白、卡补细边）。
+     选定的是 Codex 参考图那一版：侧栏与内容**分色**，靠卡片细边而不是整页同色表达层次。
+
+   ⚠️ 必须声明在**面板**上而不是 html 上：皮肤把 --dsw-alias-* 定义在 body，
+   在 html 上引用它们取不到值 —— 自定义属性在「声明它的那个元素」上完成替换，
+   整条 var() 会变成无效值，background 直接落成 transparent（本次实测踩到）。
+   面板在 body 之内，在这里替换拿得到值。 */
+html[data-codex-ui] div[data-cx-sm-panel] {
+  --cx-sm-surface-backdrop: var(--dsw-alias-bg-sidebar);
+  /* 分组大卡的**外轮廓**色（浅色 = 侧栏那一档的浅细边，深色在下方分主题覆盖）。
+     卡的层次由这条边表达：浅色白卡 + 白底，靠它划出卡的边界。
+     和背板令牌一样必须在这里（面板）声明 —— 在 html 上引用 body 里的
+     --dsw-alias-* 会变成无效值，border-color 会退回 currentColor，
+     画出一条抢眼的深色硬线；声明在面板上就能被行继承（行是面板的后代，
+     实测行上读到的 border-color 正是这里的值，链路成立）。
+     浅色要「侧栏那一档灰」，深色不能用它（#181818 的边在 #212121 卡上
+     几乎不可见），深色继续走 border-l1 的白色 8%。 */
+  --cx-sm-card-edge: var(--dsw-alias-bg-sidebar);
+  /* 子页卡片统一成白卡（用户 2026-09-27 裁决：「其他子页统一按通用设置，
+     灰色太明显不好看」）：宿主多数子页的卡片填充挂在 bg-layer-2 / bg-layer-3 上
+     —— 实测（子页结构侦察，docs/recon/recon-subpages.mjs）：宠物/创意工坊 cardOpen、
+     已归档 selectionBar/autoPanel、订阅服务 segments 轨道 = layer-2（浅 #f3f3f3）；
+     记忆系统 providerRow/topologyLayer、皮肤 pluginCard = layer-3（浅 #ededed）。
+     在设置面板内把这两档重定向到 layer-1：浅色 = 白卡，与通用设置的行卡一致；
+     深色 layer-1 本就是 #212121 = 通用设置暗色卡色（layer-2/3 的 #282828/#303030
+     随之收拢到同一浮起层级），无需暗色专用规则。
+     作用域只到设置面板：主界面的 layer-2/3 消费方（tag-chip、侧栏收起钮、
+     composer 控件，见 patches.css）都在面板之外，不受影响。
+     例外只剩一条：LLM Verifier 的 pre 走 --dsw-alias-markdown-code-block，
+     是代码井不是卡，灰色保留、不在本次统一范围。
+     ⚠️ 订正（2026-09-28）：这里曾写「模型 / Agent 预设的卡是**硬编码**灰、
+     不吃令牌，由 §4.3 的后缀锚点收尾」——**该说法与宿主源码不符**，已作废。
+     实测那两页的卡吃的是宿主主题令牌 --dsw-alias-settings-card-fill
+     （宿主 dsh-client-ui-theme 在 body 上声明为 var(--dsw-alias-bg-layer-2)），
+     由 skin.css 显式定义成 layer-1 覆盖；§4.3 那条后缀规则只是同值重复，已删除。
+     完整机制与删除理由见 §4.3。 */
+  --dsw-alias-bg-layer-2: var(--dsw-alias-bg-layer-1);
+  --dsw-alias-bg-layer-3: var(--dsw-alias-bg-layer-1);
+}
+
+/* ⚠️ 本文件唯一一处暗色专用声明（已知例外，此处写明理由）。
+   --cx-sm-card-edge 的浅色取值 bg-sidebar 在深色下也是 #181818 —— 画在 #212121 的卡上
+   等于没有边。深色沿用它原来的 border-l1（白色 8%）才看得见，所以这一条必须分主题。
+   其余颜色一律由 --dsw-alias-* 自身翻转，不在此列。 */
+html[data-codex-ui] body[data-ds-dark-theme] div[data-cx-sm-panel] {
+  --cx-sm-card-edge: var(--dsw-alias-border-l1);
+}
+
+html[data-codex-ui] div[data-cx-sm-panel] {
+  position: fixed;
+  inset: 0;
+  box-sizing: border-box;
+  width: auto;
+  height: auto;
+  max-width: none;
+  max-height: none;
+  border-radius: 0;
+  box-shadow: none;
+  overflow: hidden;
+  /* 背板 = **不透明**的 bg-sidebar。这里曾经是「不透明兜底 + 毛玻璃 @supports 覆盖」，
+     毛玻璃那一段已整体删除（用户裁决 2026-09-27）。
+
+     为什么删（真机实测的教训，勿退回）：设置页是全页铺满的 overlay，它下面压着的是
+     主窗口内容 —— 用户装了会画壁纸的宠物插件。78% alpha + blur + saturate(1.3) 会把
+     壁纸色揉进设置页的灰，整页比背板色更深且偏色，**且随用户壁纸变化**。
+     铺满全窗的 overlay 从毛玻璃拿不到任何视觉受益（背后没有需要被虚化的浮层内容，
+     只有被污染的风险），确定性却要全部赔进去。
+     用户原话：「卡片内是白色，边框（页面）带有 #f9f9f9 即可」—— 页面颜色必须钉死。
+
+     历史脉络：毛玻璃是更早「居中 800×800 弹窗」时代的合理诉求（那时它是一块真正的
+     浮层，透过它能看见后面的应用）；§1 全页化之后这个前提就没了，本条只是把那笔账
+     结清。所以这里不再需要任何 @supports 兜底 —— 单一不透明声明在各内核下都成立。 */
+  background: var(--cx-sm-surface-backdrop);
+}
+
+/* 桌面端（Windows 无边框）标题栏：宿主 preload 会在 <html> 打 data-windows-titlebar，
+   并在 root 内联 --dsh-windows-titlebar-height（实测 40px）。
+   面板铺满视口后会把标题栏区域一起盖住，内容必须整体下移，否则「← 返回应用」
+   与顶部标签/窗口按钮重叠。做法照搬宿主自己的全屏 overlay 先例。
+   属性顺序写成 data-codex-ui 在前：仓库的「全部作用域化」体检按 html[data-codex-ui 前缀认作用域，
+   两序在 CSS 里等价（同一复合选择器、同特异性），写成前缀序才进得了那条体检。 */
+html[data-codex-ui][data-windows-titlebar] div[data-cx-sm-panel] {
+  padding-top: var(--dsh-windows-titlebar-height, 40px);
+}
+
+/* 标题栏区不可拖动的部分：输入与按钮，否则点不动（窗口拖动由宿主标签栏负责） */
+html[data-codex-ui][data-windows-titlebar] div[data-cx-sm-panel] button,
+html[data-codex-ui][data-windows-titlebar] div[data-cx-sm-panel] input,
+html[data-codex-ui][data-windows-titlebar] div[data-cx-sm-panel] a {
+  -webkit-app-region: no-drag;
+}
+
+/* ══════════════════════════════════════════════════════════════════════════
+   2 · 侧栏：236px / 分组标题 / 项目 / 图标
+   ══════════════════════════════════════════════════════════════════════════ */
+
+html[data-codex-ui] div[data-cx-sm-panel] > nav {
+  position: relative; /* 给 sr-only 的宿主标题一个containing block */
+  box-sizing: border-box;
+  flex: 0 0 var(--cx-sm-sidebar-w);
+  width: var(--cx-sm-sidebar-w);
+  min-height: 0;
+  padding: 12px 12px 16px;
+  gap: 8px; /* 返回 / 搜索 / 列表之间 */
+  background: none; /* 侧栏不自带底：它直接坐在灰背板上（Codex 的层次就是这么来的） */
+  overflow: hidden;
+}
+
+/* 宿主的侧栏标题「设置」（VOzbGW_navTitle）夹在搜索框与第一个分组标题之间，
+   与 Codex 侧栏的样子不符，也跟紧随其后的「个人」抢层级。
+   但它正是面板 aria-labelledby 指向的节点，删不得 —— 所以「视觉隐藏、语义保留」
+   （sr-only 手法），读屏仍能念出面板名，布局上让出位置、不再占一行。
+   锚定办法：「nav 下、不含 button 的 div」在宿主里只有 navTitle 一个
+   （导航列表满是 button）。再排除注入层节点 —— 注入节点一律带
+   data-codex-ui-injected 属性，本文件只认这个属性、不认注入层的类名或内部结构，
+   所以注入顺序怎么变都不会把它误伤成 navTitle。
+   若将来 navTitle 被移除，本规则只是不命中，不会波及别的元素。 */
+html[data-codex-ui] div[data-cx-sm-panel] > nav > div:not([data-codex-ui-injected]):not(:has(> button)) {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+/* navList：宿主没给语义锚点，用「有 button 直接子节点」锁定。
+   nav > div:last-child 作为兜底（结构上 navList 恒为末子节点）。 */
+html[data-codex-ui] div[data-cx-sm-panel] > nav > div:has(> button),
+html[data-codex-ui] div[data-cx-sm-panel] > nav > div:last-child {
+  box-sizing: border-box;
+  min-height: 0;
+  flex: 1 1 auto;
+  gap: 2px;
+}
+
+/* ── 2.1 项目：圆角 + Codex 式 hover/选中 ─────────────────────────────── */
+html[data-codex-ui] div[data-cx-sm-panel] > nav > div:has(> button) > button {
+  box-sizing: border-box;
+  width: 100%;
+  min-height: 32px;
+  padding: 6px 10px;
+  gap: 9px;
+  border: 0;
+  border-radius: var(--dsw-radius-s, 8px);
+  background: none;
+  color: var(--dsw-alias-label-secondary);
+  font-size: 14px;
+  line-height: 20px;
+  text-align: left;
+}
+
+/* hover 用 hint 档（比改前更轻），选中用 active 档 —— 两者拉开一档差距，
+   这样「划过」与「停留」不会看起来是同一个状态（Codex 的侧栏就是这种克制感）。 */
+html[data-codex-ui] div[data-cx-sm-panel] > nav > div:has(> button) > button:hover {
+  background: var(--dsw-alias-interactive-bg-hover);
+  color: var(--dsw-alias-label-primary);
+}
+
+/* 选中态锚点是宿主的 aria-current（不是哈希类名） */
+html[data-codex-ui] div[data-cx-sm-panel] > nav > div:has(> button) > button[aria-current="true"] {
+  background: var(--dsw-alias-interactive-bg-active);
+  color: var(--dsw-alias-label-primary);
+  font-weight: 500;
+}
+
+html[data-codex-ui] div[data-cx-sm-panel] > nav > div:has(> button) > button[aria-current="true"]:hover {
+  background: var(--dsw-alias-interactive-bg-active);
+}
+
+html[data-codex-ui] div[data-cx-sm-panel] > nav > div:has(> button) > button:focus-visible {
+  outline-offset: -2px;
+}
+
+/* ── 2.2 项内图标：尺寸与描边统一 ─────────────────────────────────────── */
+html[data-codex-ui] div[data-cx-sm-panel] > nav > div:has(> button) > button svg {
+  width: 16px;
+  height: 16px;
+  flex: 0 0 auto;
+  stroke-width: 1.4;
+  opacity: 0.72;
+}
+
+html[data-codex-ui] div[data-cx-sm-panel] > nav > div:has(> button) > button:hover svg,
+html[data-codex-ui] div[data-cx-sm-panel] > nav > div:has(> button) > button[aria-current="true"] svg {
+  opacity: 1;
+}
+
+/* ── 2.3 分组标题（注入 div.cx-sm-group）：浅灰小字、无图标、拉开组间距 ── */
+html[data-codex-ui] .cx-sm-group {
+  margin: 12px 0 4px;
+  padding: 0 10px;
+  color: var(--dsw-alias-label-caption);
+  font-size: 12px;
+  line-height: 18px;
+  font-weight: 500;
+  letter-spacing: 0.01em;
+  user-select: none;
+}
+
+html[data-codex-ui] :lang(zh) .cx-sm-group {
+  letter-spacing: 0;
+}
+
+/* 首个分组紧跟搜索框，别再顶一截 */
+html[data-codex-ui] .cx-sm-search + .cx-sm-group {
+  margin-top: 4px;
+}
+
+/* ── 2.4 返回按钮（注入 div.cx-sm-back）────────────────────────────────── */
+html[data-codex-ui] .cx-sm-back {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  box-sizing: border-box;
+  width: fit-content;
+  min-height: 28px;
+  padding: 2px 6px 2px 4px;
+  border-radius: var(--dsw-radius-s, 8px);
+  color: var(--dsw-alias-label-secondary);
+  font-size: 13px;
+  line-height: 20px;
+  cursor: pointer;
+  user-select: none;
+}
+
+html[data-codex-ui] .cx-sm-back:hover {
+  background: var(--dsw-alias-interactive-bg-hover);
+  color: var(--dsw-alias-label-primary);
+}
+
+html[data-codex-ui] .cx-sm-back svg {
+  width: 14px;
+  height: 14px;
+  flex: 0 0 auto;
+  stroke-width: 1.6;
+  opacity: 0.8;
+}
+
+/* ── 2.5 搜索框（注入 div.cx-sm-search > input）──────────────────────────
+   Codex 形态：**纯填充、无可见边框**。
+   填充用 bg-layer-1（亮色下比背板更白、暗色下比背板 #181818 更浅），
+   两侧都能读成「一个凹进去的输入槽」，不靠描边撑轮廓。
+   焦点环也不用边框色，改成一条细内环 —— 无边框控件用 border-color 表达焦点
+   会突然长出一条描边、框体尺寸观感跳变。
+
+   圆角 = **全圆角胶囊**（用户指名，2026-09-27）：写成 999px 的 pill 语义，
+   与 --cx-sm-radius-field(10px) 那档划清界限 —— 后者仍是输入框类控件的常规刻度，
+   只有搜索框是胶囊。32px 高的盒子下，绘制时被夹到半高 16px 即真正的胶囊
+   （注意：夹取只发生在绘制阶段，getComputedStyle 仍返回 999px）。
+   不写 50% 是因为那会让表现依赖容器高度，999px 的意图在任何高度下都自解释。 */
+
+html[data-codex-ui] .cx-sm-search {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  box-sizing: border-box;
+  width: 100%;
+  height: 32px;
+  /* 胶囊两侧是圆弧，左右内衬要比方形井多给一点，图标与文字才不贴弧 */
+  padding: 0 14px;
+  border: 0;
+  border-radius: var(--cx-sm-radius-pill);
+  background: var(--dsw-alias-bg-layer-1);
+  color: var(--dsw-alias-label-tertiary);
+}
+
+html[data-codex-ui] .cx-sm-search:focus-within {
+  box-shadow: inset 0 0 0 1px var(--dsw-alias-border-l3);
+}
+
+html[data-codex-ui] .cx-sm-search svg {
+  width: 14px;
+  height: 14px;
+  flex: 0 0 auto;
+  stroke-width: 1.6;
+  opacity: 0.7;
+}
+
+html[data-codex-ui] .cx-sm-search input {
+  box-sizing: border-box;
+  flex: 1 1 auto;
+  min-width: 0;
+  height: 100%;
+  padding: 0;
+  border: 0;
+  outline: 0;
+  background: none;
+  color: var(--dsw-alias-label-primary);
+  font: inherit;
+  font-size: 13px;
+  line-height: 20px;
+}
+
+html[data-codex-ui] .cx-sm-search input::placeholder {
+  color: var(--dsw-alias-label-caption);
+}
+
+/* ══════════════════════════════════════════════════════════════════════════
+   3 · 内容区：底色 / 页头 / 正文留白
+   ══════════════════════════════════════════════════════════════════════════ */
+
+/* 内容列 = **平铺的白**（bg-base：浅 #ffffff / 深 #181818），保持 flush。
+   这是「内容区本来就是白的」，不是一块浮起面板 —— 所以无圆角、无 gutter、无描边，
+   三个都不许回来（有轮廓就又变回面板；有 gutter 就会在四周露背板、重现那条缝）。
+
+   用户 2026-09-27 否决了上一版「整页灰」（内容列不吃底色、直接坐在背板上）：
+   设置页整页同色把层次压没了，参考图要的是**侧栏灰 + 内容白**的分色。
+   深色下 bg-base = #181818 = 背板色，内容列与侧栏自然同面 —— 正好符合 Codex 深色通体一色。
+
+   演进（勿退回）：更早这里是 margin:8px 8px 8px 0 + 0.5px 描边 + 16px 圆角 +
+   button-elevated-fill 底的「浮起面板」，同被推翻。 */
+html[data-codex-ui] div[data-cx-sm-panel] > div:last-child {
+  box-sizing: border-box;
+  flex: 1 1 auto;
+  min-width: 0;
+  min-height: 0;
+  /* 平铺白：内容区与侧栏分色（侧栏走背板的 bg-sidebar，内容走这里的 bg-base）。
+     深色下两者同值 #181818，自动退化成通体一色，不需要暗色专用规则。 */
+  background: var(--dsw-alias-bg-base);
+  /* border / border-radius / margin 一律不写：平铺，不是浮起面板。 */
+  overflow: hidden;
+}
+
+/* 页头（右上角页级操作 + 关闭）：宿主在这里，宽度与下面的内容容器对齐，
+   否则「打开配置文件 / ×」会贴到面板最右边、与正文不在一条竖线上。 */
+html[data-codex-ui] div[data-cx-sm-panel] > div:last-child > div:first-child {
+  box-sizing: border-box;
+  flex: 0 0 auto;
+  align-items: center;
+  min-height: 52px;
+  padding: 12px var(--cx-sm-gutter) 8px;
+}
+
+/* 页头的宽度**不能碰**：宿主在自己的操作区上用了固定 margin-left 把按钮推到右侧
+   （实测 margin-left:458px）。我们一改页头宽度，那个固定值就不再适配，
+   「打开配置文件」会被挤到换行（本次实测踩到）。页头保持宿主自己的布局。 */
+
+/* 页头与正文同一根居中柱对齐。
+   ⚠️ 只能打在**页头自身**上：页头是 flex 行（children = 操作区 + 关闭按钮），
+   若把 max-width/width:100% 加到它的子元素上，两个子元素会被当成两个等宽弹性项
+   各占一半（实测各 376px），「打开配置文件」会从右端跑到中间。 */
+
+
+/* 滚动正文（宿主已给 overflow-y:auto，这里只接管留白与弹性）。
+   ⚠️ 底部留白必须是 0，呼吸感挪给下面的页根 padding-bottom ——
+   宿主部分设置页（LLM Verifier 等）带 position:sticky; bottom:0 的悬浮保存栏，
+   sticky 只能贴到滚动容器 padding 的**内侧**：这里若留 40px，保存栏就悬在
+   离视口底 40px 的半空（实测 rect bottom=920/960，全页化后像漂在页面中间，
+   用户 2026-09-27 判定「保存设置按理应该在最下面」）。
+   padding 清零后保存栏贴住视口底边、成为真正的底栏；
+   滚到页面末尾时它回到自然位置，由页根的 padding-bottom 给它同样的底部间距。 */
+html[data-codex-ui] div[data-cx-sm-panel] > div:last-child > div:last-child {
+  box-sizing: border-box;
+  flex: 1 1 auto;
+  min-height: 0;
+  padding: 2px var(--cx-sm-gutter) 0;
+}
+
+/* 内容居中：收窄到 --cx-sm-panel-w 再水平居中。
+   ⚠️ 锚点必须落到**真正生成盒子的那一层**：正文的直接子节点是
+   [data-slot="settings.section"]（display:contents，不产生盒子），
+   页根是它的子元素。写成「正文 > *」会打在 contents 包装上 ——
+   max-width / margin:auto 全部无效（本次实测踩到，页根仍是满宽 1144px）。
+   窄屏放不下时 max-width 自然让位、退回全宽，不需要媒体查询。 */
+html[data-codex-ui] div[data-cx-sm-panel] > div:last-child > div:last-child [data-slot="settings.section"] > * {
+  box-sizing: border-box;
+  width: 100%;
+  max-width: var(--cx-sm-panel-w);
+  margin-left: auto;
+  margin-right: auto;
+  /* 底部呼吸感从滚动容器挪到页根（原因见上面滚动正文那条）：
+     无悬浮栏的页面 = 原来的 40px 页底间距；有悬浮保存栏的页面，
+     滚到末尾时栏回到自然位置、这 40px 垫在它下面，不会紧贴视口底边。 */
+  padding-bottom: 40px;
+}
+
+/* ── 3.1 页级操作区（宿主座位 settings.action）与关闭按钮 ─────────────── */
+html[data-codex-ui] div[data-cx-sm-panel] [data-slot="settings.action"] button {
+  box-sizing: border-box;
+  height: 32px;
+  padding: 0 12px;
+  /* 必须 nowrap：宿主按钮默认允许换行，在收紧后的页头里「打开配置文件」会断成两行
+     并被 32px 高度裁掉（实测）。nowrap 后最小宽度回到文本宽度，反而更稳。 */
+  white-space: nowrap;
+  border: 0.5px solid var(--dsw-alias-border-l2);
+  border-radius: var(--dsw-radius-s, 8px);
+  background: var(--dsw-alias-button-elevated-fill);
+  color: var(--dsw-alias-label-primary);
+  font-size: 13px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+html[data-codex-ui] div[data-cx-sm-panel] [data-slot="settings.action"] button:hover {
+  background: var(--dsw-alias-interactive-bg-hover);
+  border-color: var(--dsw-alias-border-l3);
+}
+
+/* 关闭按钮：**隐藏**。Codex 的设置界面右上角没有 ✕ —— 退出由侧栏的
+   「← 返回应用」承担，多一个 ✕ 是重复出口（用户实测点名要去掉）。
+   data-slot 嵌在 span 里，用 :has 取按钮本身（不碰哈希类名）。
+
+   为什么 display:none 是安全的：宿主自己的 Escape 关闭路径不受影响；
+   src/settings-modal.js 的 requestClose() 先用 Escape，兜底才 button.click()
+   —— 而 display:none 的元素 .click() 仍会触发宿主的 React onClick
+   （display:none 只影响布局与命中测试，不阻止程序化派发）。那条兜底因此照旧可用。 */
+html[data-codex-ui] div[data-cx-sm-panel] button:has([data-slot="settings.close"]) {
+  display: none;
+}
+
+/* ── 3.2 大标题（注入 .cx-sm-pagehead / .cx-sm-title）──────────────────── */
+html[data-codex-ui] .cx-sm-pagehead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  box-sizing: border-box;
+  width: 100%;
+  min-height: 36px;
+  margin: 0 0 12px;
+}
+
+html[data-codex-ui] .cx-sm-title,
+html[data-codex-ui] .cx-sm-pagehead > h1,
+html[data-codex-ui] .cx-sm-pagehead > h2 {
+  margin: 0;
+  padding: 0;
+  color: var(--dsw-alias-label-primary);
+  /* Codex 页标题：20px/600（字重不动，层级靠字重+灰度） */
+  font-size: 20px;
+  line-height: 26px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+
+html[data-codex-ui] :lang(zh) .cx-sm-title,
+html[data-codex-ui] :lang(zh) .cx-sm-pagehead > h1,
+html[data-codex-ui] :lang(zh) .cx-sm-pagehead > h2 {
+  letter-spacing: 0;
+}
+
+/* ══════════════════════════════════════════════════════════════════════════
+   4 · 设置页正文：分组大卡（连续行合并成一张卡）
+   ──────────────────────────────────────────────────────────────────────────
+   形态目标（对齐 Codex 官方设置页）：**一个分组一张大卡**，卡内多行、行间一条
+   hairline、行与行之间没有空隙；卡外才是组间距。
+
+   为什么不能靠「兄弟选择器选相邻行」：
+   实测宿主把所有行装在**同一层**，且行不是页容器的直接子节点 —— 它们的父层是
+   display:contents（不产生盒子），中间还隔着匿名 flex item。
+   于是不能写「行 A + 行 B」，只能从**页容器**这一层下手（见 §4.2 的四条规则）。
+
+   行锚点：[data-slot="settings.general.item"] 是 display:contents 包装，
+   它的直接子元素才是真正的一行。该座位**只有通用设置页有**，其余页的宿主行
+   没有语义锚点，故本节只担保通用页。
+   ══════════════════════════════════════════════════════════════════════════ */
+
+/* ── 4.1 页容器：行间距归零，组与组之间改由 margin 表达 ────────────────── */
+/* 宽度交给 §3 的居中容器统一控制（这里再限一次会与它打架），
+   本节只管行间距归零。 */
+html[data-codex-ui] div[data-cx-sm-panel] [data-slot="settings.section"] > * {
+  box-sizing: border-box;
+  width: 100%;
+  gap: 0;
+  padding-top: 2px;
+}
+
+/* ── 4.2 行 = 卡内的一段：卡边 + 首末行圆角 + 行间 hairline ──────────────
+   ① 基准：每行只画上下两条边（--cx-sm-card-edge），行间自然形成 1px 发丝线。
+   ② 首行补左右 + 上圆角；末行补左右下 + 下圆角 —— 卡的侧轮廓只由首末行画，
+      中间行留空，发丝线才是一条完整直线。
+   ③ 中间行四角都不圆。
+   这四条用 :first-child / :last-child 表达，全部是结构语义，
+   不碰宿主哈希类名；宿主若换实现，最坏是圆角/边位置不对，不会串版。
+
+   「卡边 = 浅色侧栏那一档」是用户 2026-09-27 定稿的 Codex 参考形态：
+   白卡浮在白底上，靠一条浅细边划出卡的边界（用户原话「边框带有 #f9f9f9 即可」；
+   该色随 --dsw-alias-bg-sidebar 走，上游 0.6.4 起浅色侧栏为 #f6f6f6）。 */
+/* 基准：卡内行只画**上下**两条边 —— 下一条贴住上一条，行间自然形成 1px 发丝线；
+   左右交给下面「卡首行」那条补，这样中间行的发丝线不会被左右边切断。
+   边色走 --cx-sm-card-edge（面板上声明、行继承拿到值，实测链路成立）。 */
+html[data-codex-ui] div[data-cx-sm-panel] [data-slot="settings.general.item"] > * {
+  box-sizing: border-box;
+  min-height: var(--cx-sm-row-h);
+  padding: 8px 16px;
+  border-style: solid;
+  border-color: var(--cx-sm-card-edge);
+  border-width: 0.5px 0; /* 卡内行只留上下两条边 → 中间自然形成 1px hairline */
+  /* 卡面 bg-layer-1：浅 #ffffff / 深 #212121（layer-1 与 button-elevated-fill 本皮肤同值）。
+     形态定稿后内容列已是平铺白，卡的层次改由这条细边表达，不再靠卡/面明暗差。 */
+  background: var(--dsw-alias-bg-layer-1);
+  transition: background-color var(--dsw-motion-fast, 150ms) var(--dsw-ease, ease);
+}
+
+/* 卡首行：补上左右两条边（卡的侧轮廓）+ 上圆角。
+   左右只在首末行给：中间行不给左右，行间发丝线才是完整一条。 */
+html[data-codex-ui] div[data-cx-sm-panel] [data-slot="settings.section"] > :first-child > [data-slot="settings.general.item"] > *:first-child {
+  border-top-width: 0.5px;
+  border-left-width: 0.5px;
+  border-right-width: 0.5px;
+  border-radius: var(--cx-sm-radius-card) var(--cx-sm-radius-card) 0 0;
+}
+
+/* 卡末行：补左右下，收下圆角。 */
+html[data-codex-ui] div[data-cx-sm-panel] [data-slot="settings.section"] > :first-child > [data-slot="settings.general.item"] > *:last-child {
+  border-bottom-width: 0.5px;
+  border-left-width: 0.5px;
+  border-right-width: 0.5px;
+  border-radius: 0 0 var(--cx-sm-radius-card) var(--cx-sm-radius-card);
+}
+
+/* ── 4.3 class 后缀锚点规则：已删除（2026-09-28），此处留记录，勿退回 ──────
+   删掉的是这两条（同一条规则的两种落点）：
+     html[data-codex-ui] div[data-cx-sm-panel] li[class$="_rowCard"],
+     html[data-codex-ui] div[data-cx-sm-panel] li[class$="_card"] { background: var(--dsw-alias-bg-layer-1); }
+
+   **正确机制**（宿主源码取证）：
+   宿主「模型」（settings-models）与「Agent 预设」（agent-preset）两页的卡，
+   源码里写的是（类名前缀是构建哈希，此处只写稳定后缀）：
+     .<hash>_rowCard { background: var(--dsw-alias-settings-card-fill) }   /* 模型页 */
+     .<hash>_card     { background: var(--dsw-alias-settings-card-fill) }   /* Agent 预设页 */
+     .<hash>_cardActive { background: var(--dsw-alias-bg-module-platform) } /* 选中态 */
+   —— 它们**吃令牌**，不是硬编码灰。该令牌由宿主主题包 dsh-client-ui-theme 在
+   **body** 上声明为 var(--dsw-alias-settings-card-fill: var(--dsw-alias-bg-layer-2))；
+   本机 app.asar 全文扫描里，该令牌的**声明**只有这一处，另 4 处都是 background 消费点。
+   皮肤把它同名重定义成 layer-1（skin.css：html[data-codex-ui], html[data-codex-ui] body），
+   特异性与顺序都压过宿主的 body 声明 —— 白卡 / 深色 #212121 因此**自动生效**。
+
+   旧注释怎么错的（一并记下，免得后人再被同一个坑骗）：
+   旧文写「#f3f3f3 硬编码、换色试验证明不走任何令牌」。那个换色试验是在 §4.3 规则**还在**的
+   前提下做的 —— §4.3 以特异性 (0,3,3) 压过宿主的 (0,1,0)，无论令牌被改成什么，卡都会保持
+   §4.3 写死的 layer-1，于是「0 个元素跟随」是这条规则生效的**必然结果**，推不出「卡不读令牌」。
+   定案靠的是宿主源码里那两条 background 声明，不是那个试验。
+   （二审结论见 docs/recon/second-pass-review.md 的 M1/M2。）
+
+   **删除理由**（三条，任一条都够）：
+     ① 同值重复：皮肤已把该令牌定成 layer-1，§1 的 layer-2/3→layer-1 重定向同样落上去，
+        这条规则写的是**同一个值**，三层路径同值，将来改一处根本无法判断谁在生效；
+     ② 覆盖面无意义：它靠特异性 (0,3,3) 压过宿主 .rowCard/.card 的 (0,1,0)，
+        而值相同 —— 赢了也没有任何视觉差异；
+     ③ **会漂**：[class$="_card"] 匹配的是「整条 class 属性以该后缀结尾」，
+        覆盖面随宿主状态类的书写顺序漂移。实测 Agent 预设的选中卡是
+        class="rtSEdW_card rtSEdW_cardActive"（以 _cardActive 结尾）→ 今天**不命中**、
+        靠宿主自己的 .cardActive{background: var(--dsw-alias-bg-module-platform)} 保住选中底色，
+        纯属侥幸；一旦宿主把状态类挪到前面，选中卡会被压成 layer-1，**选中态视觉当场丢失，
+        而没有任何断言会红**。删除即消除这条会随宿主改版静默劣化的路径。
+
+   删除后的着色机制**唯一**：--dsw-alias-settings-card-fill（skin.css 定义）
+   → 未选中卡 = layer-1（浅 #ffffff / 深 #212121）。选中卡保持宿主自己的
+   bg-module-platform（浅 #f9f9f9）—— 与未选中卡不同色，选中态仍可区分。
+   这条路径由 scripts/settings-modal-verify.mjs 的两条集成断言把守
+   （未选中卡 == var(--dsw-alias-bg-layer-1) 的计算值；选中卡背景 ≠ 未选中卡背景）。 */
+
+/* 第④条：夹在两条行之间的行，四角都不是卡角（左右边由基准那条保持为 0）。 */
+html[data-codex-ui] div[data-cx-sm-panel] [data-slot="settings.section"] > :first-child > [data-slot="settings.general.item"] > *:not(:first-child):not(:last-child) {
+  border-radius: 0;
+}
+
+/* 卡内行 hover：整行淡填充（Codex 的分组卡就是这样给反馈，不再改描边） */
+html[data-codex-ui] div[data-cx-sm-panel] [data-slot="settings.general.item"] > *:hover {
+  background: var(--dsw-alias-interactive-bg-hover);
+}
+
+/* ── 4.4 行内说明文字：只压灰度，且**绝不碰标题** ────────────────────────
+   上一版写成「行内所有 div」，把标题一并染成 caption 灰、还压成 12px，
+   整页标题层级塌掉（实测踩到）。行内标题锚点就是 div:first-child ——
+   通用选择器躲不开它。
+
+   实测到的行结构（每行一致）：
+     row(div)
+       ├─ rowText(div)            ← 行的第一个子元素，承载文字
+       │    ├─ title(div)         ← rowText 的**第一个**子 div
+       │    └─ desc(div)          ← 其后跟随的 div（可能没有）
+       └─ 控件（span / div，视页面而定）
+
+   因此只认「行的第一个子元素里、非首位的 div」= 说明文字。
+   标题（首位的那个 div）**一个字节都不碰**，完全交给宿主默认的
+   14px + label-primary。字号也不改：宿主已经给了 12px，本层再写会与它的
+   行高计算打架，这里只做灰度一档的收敛。
+   ⚠️ 不要退回成「行内所有 div」：那会连控件区的数字（如字号步进的 14）
+      一起染灰压小 —— 上一版就是如此。 */
+html[data-codex-ui] div[data-cx-sm-panel] [data-slot="settings.general.item"] > * > :first-child > div:not(:first-child) {
+  color: var(--dsw-alias-label-caption);
+}
+
+/* ══════════════════════════════════════════════════════════════════════════
+   5 · 搜索过滤态：隐藏 / 空结果
+   ══════════════════════════════════════════════════════════════════════════ */
+
+/* 隐藏态以**属性选择器为准**：宿主在选中态搬走时会把那一项的 className 整条重写
+   （"…navCell VOzbGW_active cx-sm-hidden" → "…navCell"），类名被抹掉，data-* 属性原样保留。
+   —— 只写类名选择器的话，筛选态下点一下别的设置项，被隐藏项就会当场复现且永久留在侧栏
+   （本次实测：filter="皮肤" 时点「皮肤」，把选中态从被隐藏的「通用设置」搬走 → 它 disp:flex 复活）。
+   属性是第一耐久标记，类名只是补丁，两者都列上；特异性并列，谁在都隐藏。 */
+html[data-codex-ui] [data-cx-sm-hidden],
+html[data-codex-ui] .cx-sm-hidden {
+  display: none !important;
+}
+
+html[data-codex-ui] .cx-sm-empty {
+  box-sizing: border-box;
+  padding: 32px 8px;
+  color: var(--dsw-alias-label-tertiary);
+  font-size: 13px;
+  line-height: 20px;
+  text-align: center;
+}
+
+/* ══════════════════════════════════════════════════════════════════════════
+   6 · 注入节点基线：统一盒模型（注入子树整体接管，避免各处漏 box-sizing）
+   ══════════════════════════════════════════════════════════════════════════ */
+
+html[data-codex-ui] [data-codex-ui-injected="settings-modal"],
+html[data-codex-ui] [data-codex-ui-injected="settings-modal"] * {
+  box-sizing: border-box;
+}

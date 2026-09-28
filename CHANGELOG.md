@@ -2,6 +2,57 @@
 
 [简体中文](CHANGELOG.zh-CN.md)
 
+## 0.7.0 - 2026-09-28
+
+The architecture cleanup (originally PR #3) and the full-page settings work (originally PR #1) land together on top of
+0.6.4. Nothing from 0.6.2–0.6.4 is dropped: the structure is the new one, and every assertion that used to live in the
+old flat scripts was re-expressed in the new ones.
+
+### Structure (the PR #3 refactor)
+
+- **Client side is modular**: `src/client.template.js` is gone. `src/client/index.js` is the entry and pulls in
+  `settings.js`, `settings-card.js`, `override.js`, `stylesheet.js`, `theme-preview.js`, `host.js`,
+  `constants.js` and `model-picker/`. The bundler in `scripts/build.mjs` is zero-dependency and produces the same
+  classic `window.__ModuleLoader__.load(...)` script. A new feature is one module plus one line in the entry.
+- **Tooling collapsed into three entries**: `npm run check` (host-free), `npm run verify` (fixtures),
+  `scripts/live/*` (real GUI). Shared code lives in `scripts/lib/`; fixtures are `scripts/specs/*.mjs`.
+  The old `check-repo.mjs` / `*-verify.mjs` / `live-gui-probe.mjs` / `theme-flash-probe.mjs` are gone; their
+  assertions were moved, not deleted.
+- **No `:has()` in ancestor positions** and a narrower MutationObserver: style recalc while a reply streams in went
+  4264 → 267 ms (web) and 9518 → 442 ms (desktop shell).
+- **The dark `html` background never applied**: the scoper turned `:root:has(body[data-ds-dark-theme])` into a
+  descendant selector that could not match. Compound selectors starting with `:root` now map to the root itself.
+
+### Settings modal (the PR #1 work)
+
+- **㉑ The settings dialog gets a full Codex pass**: a grouped sidebar with a "← Back to app" row and a search box that
+  filters host items, group headers, a page header in the content area, white cards with hairlines on every sub-page and
+  sticky save bars. Structure lives in `src/client/settings-modal.js`, looks in `skins/codex-ink/settings-modal.css`.
+- **Host anchors first**: the panel is found by `[data-shortcut-modal="settings"]` (the host's own attribute) and only
+  falls back to the third-party skin-center adapter's `[data-dsh-surface="settings"]`. The visual layer hangs off the
+  plugin's own `[data-cx-sm-panel]` only, so a host rename moves one constant, not a stylesheet. When the settings
+  dialog is open but no anchor matches, the layer **warns** instead of failing silently.
+- **Hiding is attribute-first**: the host rewrites a nav item's whole `className` when the selection moves away, so the
+  durable marker is `data-cx-sm-hidden`; the class is only for humans. The list observer runs with `subtree` — without
+  it the class rewrite produces zero mutation records (measured 0 vs 5).
+- **Never takes over host nodes**: unknown items are only grouped visually, host nodes are never moved, cloned or
+  deleted. Reordering uses `style.order`; the known cost is that Tab order stays DOM order.
+
+### Ported into the new structure
+
+- The 0.6.2–0.6.4 model-picker work (seat-local `pending`, top-rung violet dot matrix, the 16×30 knob and the
+  Faster/Smarter row) lives in `src/client/model-picker/{component,view}.js`; the fixture's fake directory no longer
+  pretends the snapshot has a `pending` field, which is what the installed host actually looks like.
+- The 0.6.3 measured-pixel values (sidebar `#f6f6f6`, centre-column ambient shadow 13px @7%, two-layer composer
+  shadow) are in, and the dark centre-column rule is kept separate: the light fit does not hold for dark, so a single
+  token cannot express both.
+- `scripts/live/settings-modal.mjs` and `scripts/live/settings-sweep.mjs` are the live-GUI checks for the modal. The
+  sweep treats "found zero settings pages" as a hard failure — it used to report PASS while scanning nothing.
+
+### Verification
+
+`npm run check` 67/67 · `node scripts/verify.mjs` 208/208 (8 specs).
+
 ## 0.6.4 - 2026-09-28
 
 Both sidebars were rebased. Codex has **no sidebar color token**; the left panel is painted with a translucent

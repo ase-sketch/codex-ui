@@ -24,7 +24,7 @@ DSH Web 的界面元素按 Codex 复刻：窗口边缘的阴影与发丝线、�
 ## 宿主兼容性
 
 本工作区对照 DSH `0.1.7-rc.1`（npm 全局安装）与 `0.1.7-rc.2`（Windows 桌面壳的 `app.asar`）开发；
-0.6.1 的全套验收在 npm 发布的 `@deepseek-ai/dsh@0.1.7-rc.2` 上跑（夹具读它的 `node_modules` 与由它打包的 `app.asar` 各一遍，
+0.7.0 的全套验收在 npm 发布的 `@deepseek-ai/dsh@0.1.7-rc.2` 上跑（夹具读它的 `node_modules` 与由它打包的 `app.asar` 各一遍，
 真 GUI 用它起的 `dsh web`，见「宿主与浏览器」）。夹具直接读宿主 shipped 的 CSS 与渲染代码，宿主升级后若结构变化，夹具断言会失败。
 
 ## 功能
@@ -43,6 +43,7 @@ DSH Web 的界面元素按 Codex 复刻：窗口边缘的阴影与发丝线、�
 | ②d | 右栏面板：左沿只留发丝线、影只往上泄；压掉 dockkit 的 1px 深边框 |
 | ②e | 右分界线拖拽柄：悬停时中段最深、两端淡出的渐变 |
 | ⑱ | 插件管理 → codex-ui 组合包页的设置卡：主题 / 强调色 / 背景 / 前景 / UI 字体 / 代码字体 / 半透明侧边栏 / Codex 模型选择器 / 对比度 |
+| ㉑ | **设置模态框全页 Codex 化**：设置对话框换成分组侧栏（「← 返回应用」一行、按文字过滤宿主条目的搜索框、分组标题）、内容区页头、每个子页面的白卡细边与贴底保存栏。结构在 `src/client/settings-modal.js`（只用宿主锚点，宿主节点绝不移动或克隆；隐藏态靠耐久的 `data-*` 属性），外观在 `skins/codex-ink/settings-modal.css`。任何一步与宿主结构不符都只 warn 并跳过 —— 这一层会降级，绝不抛 |
 
 ## 界面
 
@@ -104,7 +105,7 @@ npm run build                    # 由 skins/codex-ink 与 src/client 重新生�
 node scripts/build.mjs --check   # 只比对产物是否过期，不落盘
 ```
 
-构建零依赖，只有 `scripts/build.mjs` 一份实现：八份样式去注释、作用域化到 `html[data-codex-ui]`，写出 `theme.css`；
+构建零依赖，只有 `scripts/build.mjs` 一份实现：九份样式去注释、作用域化到 `html[data-codex-ui]`，写出 `theme.css`；
 `src/client/` 的 ES 模块按依赖顺序打成一个经典脚本 `client.js`（DSH 的 `__ModuleLoader__.load` 形态，样式内联在里面，
 `react` 等宿主包走 loader 给的 `require`）。只认两种 import（`import { a, b as c } from '…'`、`import * as ns from '…'`）
 和三种 export（`export const | function | class`），其余写法构建直接报错，不会悄悄打错。
@@ -151,9 +152,9 @@ node scripts/build.mjs --check   # 只比对产物是否过期，不落盘
 
 | spec | 小节 | 覆盖 | 项数 |
 |---|---|---|---|
-| `composer` | composer-shadow · hero | ⑱ 输入卡阴影对齐 Codex `--elevation-composer`（逐层几何与 alpha、暗色 inset、窄屏 80→40px、渲染像素）；⑬⑭⑰ 与焦点环、顶栏两格放开 | 23 + 25 |
+| `composer` | composer-shadow · hero | ⑱ 输入卡阴影**按实测像素拟合**（两层：环 + 近场；逐层几何与 alpha、暗色 inset、宽窄屏一致、渲染像素）；⑬⑭⑰ 与焦点环、顶栏两格放开、徽标配色与圆角改读令牌计算值 | 21 + 25 |
 | `elevation` | elevation | ⑲ `--dsw-elevation-*` 与 Codex 源码对账，外加渲染出的菜单面板 | 19 |
-| `model-picker` | host-menu · power-rail | ⑫ A 面宿主菜单与 pending 指示器；⑳ B 面：席位顶替与复原、几何、拖动中不提交 / 松手对齐提交一次、慢往返不回弹且转圈、键盘四键、焦点环、Escape、换模型带默认档、失败提示、reduced-motion、深色、开关 | 20 + 47 |
+| `model-picker` | host-menu · power-rail | ⑫ A 面宿主菜单与 pending 指示器；⑳ B 面：席位顶替与复原、几何、拖动中不提交 / 松手对齐提交一次、慢往返不回弹且转圈、键盘四键、焦点环、Escape、换模型带默认档、失败提示、**顶档紫色点阵**（5 行、8 档色调桶、相位 hash 散开、羽化、两条关动效口子）、reduced-motion、深色、开关。假目录按**安装中的**宿主形状写（快照里没有 `pending`） | 20 + 62 |
 | `rightbar` | rightbar | 阴影层、右栏三件套、两条分界线 | 42 |
 | `sidebar` | align · surface | 侧栏列对齐；侧栏滚动渐隐（Codex mask 斜坡）的机制与逐像素 alpha | 6 + 13 |
 
@@ -317,7 +318,7 @@ npm run verify
 - 顶栏两格自 0.3.0 起放开（⑬·3c），因此**会话顶栏会比参考图多出条目**：只有当会话真有子代理 /
   后台 job / 预设 / 工作目录时才出现，此时它同时是"子代理在跑"的唯一可见面。取舍写在 CHANGELOG。
 - `composer.css`、`patches.css`、`sidebar-align.css` 与 `sidebar-surface.css` 使用哈希类名后缀锚点（`[class$=…]`、`[class*=…]`），
-  宿主没有对应 `data-*` 的位置只能如此（0.6.1：composer 10 · patches 10 · sidebar-align 9 · sidebar-surface 2）。sidebar-align 的 9 处
+  宿主没有对应 `data-*` 的位置只能如此（0.7.0 原始出现次数：composer 9 · patches 9 · sidebar-align 9 · sidebar-surface 2 · settings-modal 3）。sidebar-align 的 9 处
   是同一个锚点 `_collapsed`（侧栏折叠态），替掉原先落在祖先位置的 `:has()`。`model-picker.css` 为 0。
 - 选择器不把 `:has()` 放在祖先位置：会话区流式插入节点时，Chromium 要为每个受影响的祖先重配整片子树，
   实测样式重算从 ~0.3s 涨到 4s 以上。剩下的 `:has()` 都在主语位置或只看直接子代；`model-picker.css` 由 `check.mjs` 强制为 0。
