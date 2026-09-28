@@ -37,38 +37,87 @@
 
 /* ── ⑭·1 卡片几何与表面 ───────────────────────────────────────────────────
    上游把输入区放宽到 chat 内容宽 + 32px，左右留白 24px；卡片 20px 圆角（浏览器
-   支持 corner-shape 时升到 25px 超椭圆），亮色三层极淡投影、暗色改用内描边。 */
+   支持 corner-shape 时升到 25px 超椭圆）。
+
+   表面：**亮暗两套机制相反** —— 这是本层最容易搞错的地方。
+
+   暗色 = 填充分层。卡片比页面亮一档：5% 白叠 surface #181818 = 35.6 → 36
+   （Codex 暗色参考裁图 layer-codex.png / codex-card-ref.png 众数实测：卡内
+   #232323 = 35、页面 #111111 = 17，落差 18）。暗色**没有投影**，见下方 inset 高光。
+
+   亮色 = 阴影分层，卡片**与页面同色**（都是 #ffffff）。三份独立实测同向：
+     codex-composer-reference.png 卡内众数 #fffeff/#ffffff/#fefdfe 合计 62%；
+     用户 2026-09-28 同屏截图卡内众数 #fffeff 73.8% + #fefdfe 23.0% = 96.8%；
+     codex-app-reference.png 整窗 #ffffff 76.5%。
+   0.5.6 及以前在亮色也叠了 5% 墨（= #f4f4f4，比实测暗 11 级），是把暗色模型错套到
+   亮色上。照抄的 --card: 5% foreground 属于 **widget 层**（codex.exe 的 artifact
+   契约），不是应用外壳的输入卡；外壳令牌里亮色 --gray-fixed-0 = #ffffff 与实测吻合
+   （--color-surface-elevated-secondary = gray-50 = #f9f9f9 差 5 级，不采用）。
+   该令牌映射本身仍是推断，见 CHANGELOG 0.5.8 的边界说明。
+
+   阴影按源码逐字取 Codex 的 --elevation-composer（见下方声明）。0.5.4 那轮把
+   0 4px 80px 8px 判为「比实测宽三倍」并删掉，是误判 —— Codex 确有该层（第三层，
+   仅 2.4% 墨），缺的是它前面的 8px 近场。0.5.7 已恢复三层。
+   注：亮色参考图里卡片边缘实测约 12% 墨，而源码的环只有 #0000000a = 4%，两者不一致；
+   本皮肤按源码取 4%，该差异未解释，见 CHANGELOG 0.5.8 边界说明。 */
 [data-conversation-scroll] {
   --dsh-composer-card-max-width: calc(var(--dsh-chat-content-width) + 32px);
   --dsh-composer-side-clearance: 24px;
-  --dcu-composer-bg: var(--dsw-specific-input-major, #fff);
-  --dcu-composer-shadow: 0 0 0 1px #0000000a, 0 2px 8px #0000000a, 0 4px 80px 8px #00000006;
+  /* 亮色**不叠罩**：直接取表面色（= #ffffff）—— Codex 亮色卡与页面同色，见上。
+     仍写成不透明实色、不用 transparent：DSH 的输入卡浮在会话滚动内容之上，
+     留 transparent 会让身后的文件列表透出来（实测已复现）。 */
+  --dcu-composer-bg: var(--dsw-composer-surface);
+  /* 阴影逐字取 Codex 的 --elevation-composer（app.asar @67930943）：
+       0 0 0 1px ...          环：源码里输入卡有**两条互斥路径** ——
+                                 路径A（默认/large/single-line）box-shadow: var(--elevation-composer)
+                                 路径B（[data-composer-radius-variant=compact]）
+                                   box-shadow: none; border: 1px solid var(--color-border) !important
+                               实测走的是 B。而 --color-border = --alpha-10（亮）/ --alpha-12（暗）。
+                               两种方法同时指向 10%：
+                                 · 同图内比较（DPR 无关）：Codex 环像素比页面低 26 级；
+                                   本皮肤 4% 环低 16 级 → 反推 α ≈ 10.4%；
+                                 · 标定渲染（DPR 1.25）：4% → Δ14、12% → Δ29 → 插值 α ≈ 10.4%。
+                               0.5.8 取 12% 偏重（渲成 Δ29~35）；0.5.10 按上两法收到 10%。
+                               0.5.7 曾按路径A 取 4%，那是只看了三层里的第一层。
+       0 2px 8px 0 #0000000a 近场：8px 模糊 / 2px 位移，墨压在这一层
+       0 4px 80px 8px #00000006 远场：80px 宽晕、仅 2.4%，负责"浮起来"的空气感
+     三层缺一不可：只有远场会糊，只有环会像贴纸（本皮肤此前正是后者）。 */
+  --dcu-composer-shadow: 0 0 0 1px rgba(13, 13, 13, 0.1), 0 2px 8px 0 #0000000a, 0 4px 80px 8px #00000006;
 }
 
+/* 暗色：Codex 的 --elevation-composer-dark 是 inset 0 0 1px 0 #fff3 —— **完全外无投影**，
+   改用 1px 内嵌高光把顶边点亮（实测 Codex 卡体 36、顶边 40，本皮肤此前内侧全平 36/36）。
+   机制差异：外描边读作"画了一条线"，内嵌高光读作"边被光打到"，后者才是 Codex 的层次来源。
+   外层 0.5px 发丝线一并撤掉：暗色下 Codex 卡外就是页面底色，无任何环。 */
 body[data-ds-dark-theme] [data-conversation-scroll] {
-  --dcu-composer-bg: var(--dsw-alias-bg-layer-2, #242424);
-  --dcu-composer-shadow: inset 0 0 1px #fff3;
+  /* 叠罩**只用于暗色**：5% 白叠 surface #181818 = 35.6 → 36（Codex 实测 35）。
+     用 srgb 插值不用 oklab —— 浏览器那边就是 sRGB alpha 合成，oklab 会压到 34。
+     基色取 --dsw-composer-surface（#181818 = Codex 的 surface），**不是**
+     --dsw-alias-bg-base：后者是窗口背景 #111111，叠上去只有 29，卡片就不分层了。 */
+  --dcu-composer-bg: color-mix(in srgb, var(--dsw-alias-label-primary) 5%, var(--dsw-composer-surface));
+  --dcu-composer-shadow: inset 0 0 1px 0 #fff3;
 }
 
 [data-conversation-scroll] [data-composer-card] {
-  padding-top: 8px;
+  padding-top: 12px;
   gap: 4px;
   border: 0;
-  border-radius: var(--dsw-radius-xl);
+  border-radius: var(--dsw-radius-card);
   background: var(--dcu-composer-bg);
   box-shadow: var(--dcu-composer-shadow);
 }
 
 @supports (corner-shape: superellipse(1.5)) {
   [data-conversation-scroll] [data-composer-card] {
-    border-radius: var(--dsw-radius-2xl);
+    border-radius: var(--dsw-radius-card);
     corner-shape: superellipse(1.5);
   }
 }
 
 @media (max-width: 639px) {
   [data-conversation-scroll] {
-    --dcu-composer-shadow: 0 0 0 1px #0000000a, 0 2px 8px #0000000a, 0 4px 40px 8px #00000006;
+    /* Codex 在 width<40rem 时把远场 80px 收到 40px（阈值同为 640，与本查询一致） */
+    --dcu-composer-shadow: 0 0 0 1px rgba(13, 13, 13, 0.1), 0 2px 8px 0 #0000000a, 0 4px 40px 8px #00000006;
   }
 }
 
@@ -129,7 +178,9 @@ body[data-ds-dark-theme] [data-conversation-scroll] {
 }
 
 /* ── ⑭·4 工具条与建议菜单（只保留官方锚点能命中的部分） ────────────────────
-   hero 的工作区行按钮 → Codex 胶囊；@ / 指令建议菜单 → 与输入区同宽同圆角。 */
+   hero 的工作区行按钮 → Codex 胶囊；@ / 指令建议菜单 → 与输入区同宽，
+   圆角走浮层刻度 --dsw-radius-menu（18px），与模型菜单同一族；
+   旧值 12px（--dsw-radius-m）与菜单族的 18 不同源，已收回。 */
 [class*="_heroWorkspaceRow"] button {
   min-height: 28px;
   border-radius: var(--dsw-radius-pill);
@@ -150,7 +201,7 @@ body[data-ds-dark-theme] [data-conversation-scroll] {
   min-width: 0;
   max-width: none;
   padding: 5px;
-  border-radius: var(--dsw-radius-m);
+  border-radius: var(--dsw-radius-menu);
   background: #fff;
   box-shadow: 0 8px 32px #0002, 0 0 0 1px #0000000a;
 }
@@ -168,6 +219,7 @@ body[data-ds-dark-theme] [data-conversation-scroll] [data-trigger-menu] {
   scrollbar-width: thin;
 }
 
+/* 选项行圆角同「浮层 18 − 内衬 5 = 13」，与 ⑫·3 的菜单行同一公式 */
 [data-conversation-scroll] [data-trigger-menu] [role=option] {
   box-sizing: border-box;
   width: 100%;
@@ -175,7 +227,7 @@ body[data-ds-dark-theme] [data-conversation-scroll] [data-trigger-menu] {
   min-height: 28px;
   padding: 4px 9px;
   gap: 8px;
-  border-radius: var(--dsw-radius-s);
+  border-radius: calc(var(--dsw-radius-menu) - 5px);
   font-size: 13px;
   line-height: 20px;
 }
@@ -226,7 +278,10 @@ body[data-ds-dark-theme] [data-conversation-scroll] [data-trigger-menu] {
   min-height: 48px;
   margin: 0 28px -10px;
   padding: 6px 12px 16px;
-  border-radius: var(--dsw-radius-l) var(--dsw-radius-l) 0 0;
+  /* 上栏条圆角 = 卡片圆角（同一个 --dsw-radius-card）：它探在卡片背后，只有上面两角可见，
+     与卡片同心叠放。旧值 16px（卡片 20）时 条/卡 = 0.79，而 Codex 实测 1.03
+     —— 条比卡片紧 5px 就是那两条对不上的角弧。 */
+  border-radius: var(--dsw-radius-card) var(--dsw-radius-card) 0 0;
   background: color-mix(in srgb, var(--dsw-alias-label-primary) 4%, var(--dsw-alias-bg-base));
 }
 

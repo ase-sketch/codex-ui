@@ -33,12 +33,12 @@ The verification scripts read shipped CSS straight out of `app.asar`; a host upg
 
 | Id | Content |
 |---|---|
-| ⑫ | Model picker: native trigger, opaque white menu, 28px rows, permanent check column, pending spinner |
+| ⑫ | Model picker: native trigger, opaque white menu (18px radius), 28px rows with 13px radius (concentric: 18 − 5px inset), permanent check column, pending spinner |
 | ⑬ | Composer header turned blank, panel buttons keep the official icons |
 | ⑬c | Both header slots **released**: entries registered there render again (subagent descendant count / job roster / preset badge / open-in-app); the view tabs stay hidden. The entries are conditionally rendered, so the top bar is unchanged in the common case |
-| ⑭ | Composer card: radius, shadow, geometry, tool row, hero layout |
+| ⑭ | Composer card: radius (card 20/25, top strip = the card's own radius), shadow, geometry, tool row, hero layout |
 | ⑯ | Right panel guide entries: no border, no fill, 52px rows, 20px icons, filled shortcut pills |
-| ⑰ | Composer bottom controls: add button has no box until hover; model and permission controls share the hover chip |
+| ⑰ | Composer bottom controls: add button has no box until hover; model and permission controls share the hover chip and, like the add button, are **fully rounded** (Codex reference measures R = h/2) |
 | ② | Sidebar colors match the Codex light sidebar; sidebar rows align with the workspace list |
 | ②c | Conversation window edge: 0.5px hairline plus a 24px ambient shadow |
 | ②d | Right panel: hairline only on its left edge, shadow bleeds upward only; the dockkit 1px border is removed |
@@ -118,11 +118,13 @@ node scripts/install-skin.mjs --write  # overwrite on drift
 |---|---|---|
 | `npm run check` | Syntax, JSON, manifest, artifact sync, encoding, docs pairing, machine-specific paths | none |
 | `node scripts/audit-codex-ink.mjs` | Skin structure, 36 WCAG pairs, color whitelist | none |
-| `node scripts/model-picker-verify.mjs` | ⑫ and the pending indicator, 18 assertions | none |
+| `node scripts/model-picker-verify.mjs` | ⑫ and the pending indicator, 20 assertions | none |
 | `node scripts/rightbar-verify.mjs` | Shadow layer, right panel, both dividers, 42 assertions | none |
 | `node scripts/sidebar-align-verify.mjs` | Sidebar column alignment, 6 assertions | none |
 | `node scripts/sidebar-surface-verify.mjs` | Sidebar scroll fade (the Codex mask ramp): mechanism plus pixels, four states side by side, 13 assertions | none |
-| `node scripts/hero-verify.mjs` | ⑬ ⑭ ⑰, the focus ring and the released header slots, 17 assertions | none |
+| `node scripts/hero-verify.mjs` | ⑬ ⑭ ⑰, the focus ring and the released header slots, 25 assertions | none |
+| `node scripts/composer-shadow-verify.mjs` | ⑱ Composer shadow aligned to Codex's `--elevation-composer`: per-layer geometry and alpha in light, the dark inset with zero outside shadow, the narrow-viewport 80→40px branch, plus rendered pixels (falloff radius, inside top edge) and one precondition self-check — 23 assertions | none |
+| `node scripts/elevation-verify.mjs` | ⑲ The `--dsw-elevation-*` tokens against Codex's source: per-layer geometry and alpha, layer 1 tracking the stroke, layers 2–3 identical across themes (Codex declares no dark variant), and a rendered menu panel — 19 assertions | none |
 | `node scripts/live-gui-probe.mjs --url <token URL>` | Real GUI: 10 assertions on shadows, both dividers, the model menu pending window | a running `dsh web` |
 | `node scripts/settings-page-verify.mjs --url <token URL>` | Real GUI: the card on the bundle page, its 8 rows, no override at defaults, switch and accent writes, survival across a reload — 22 assertions | a running `dsh web` with the plugin manager enabled |
 | `node scripts/theme-flash-probe.mjs --url <token URL>` | Per-frame sampling of the effective backdrop during theme and page switches (first opaque ancestor background); reports frames belonging to neither end of the transition (measured: 9 windows, ~720 frames, 0 anomalies) | same as above |
@@ -235,16 +237,18 @@ Source: `assets/reference/codex-theme-light.png` and `codex-theme-dark.png` (the
 | Role | Light | Dark | Token |
 |---|---|---|---|
 | Accent | `#339CFF` | `#0169CC` | `--dsw-alias-link` |
-| Background | `#FFFFFF` | `#181818` | `--dsw-alias-bg-base` |
+| Background | `#FFFFFF` | `#111111` | `--dsw-alias-bg-base` |
+| Surface (what the composer sits on) | `#FFFFFF` | `#181818` | `--dsw-composer-surface` |
 | Foreground | `#1A1C1F` | `#FFFFFF` | `--dsw-alias-label-primary` |
 | Hover fill | `#F2F2F3` | `rgba(255,255,255,.08)` | `--dsw-codex-hover-fill` |
 
-The light values come from the color picker screenshot `codex-theme-light.png`. **Since 0.2.0 the dark values come from
-the app's own defaults** (the `jdi` object inside `resources/app.asar`: `surface #181818`, `ink #ffffff`,
-`accent #339cff`) instead of the picker. The dark link stays on the app's text-link token `#0169CC`.
+The light values come from the color picker screenshot `codex-theme-light.png`. **Since 0.5.6 the dark side is split across two sources**: the window background comes from the theme picker
+(`codex-theme-dark.png` states `背景 #111111`) and the surface from `resources/app.asar`'s `jdi.dark.surface
+#181818`; foreground and accent still come from `jdi` (`ink #ffffff`, `accent #339cff`). 0.2.0~0.5.5 collapsed the
+two into `#181818`, which cut the composer card's step against the background from Codex's 18 levels to 12. The dark link stays on the app's text-link token `#0169CC`.
 
-The dark ramp rises from `#181818`: sidebar `#181818` (the same face as the surface, separated by the 0.5px hairline),
-layer 1 `#212121`, layer 2 `#282828`, layer 3 `#303030`; the alpha family moved from `rgba(252,252,252,·)` to
+The dark ramp: window background `#111111` → sidebar/surface `#181818` → layer 1 `#212121` → layer 2 `#282828` →
+layer 3 `#303030`; the alpha family moved from `rgba(252,252,252,·)` to
 `rgba(255,255,255,·)` (the app's dark `--alpha-base` is `#fff`).
 
 ### Sidebar colors
@@ -287,6 +291,7 @@ The Codex desktop app carries its webview CSS inside `resources/app.asar` (`webv
 | Hairline | `--shadow-hairline: 0 0 0 .5px #0000001a` | the window and panel hairlines use the same 0.5px ring |
 | Light foreground | `--color-text-foreground: #1a1c1f` | `--dsw-alias-label-primary` |
 | Chip fill | `--background-button-secondary-hover`, 8% of the foreground | light `#f2f2f3` (measured), dark `rgba(255,255,255,.08)` |
+| Composer chip radius | Fully rounded pill (per-pixel measurement of `codex-composer-chip-hover.png`: R = h/2 = 21px) | `--dsw-radius-pill` (declared explicitly since 0.5.0; before that it inherited the host's `--dsw-radius-sm` = 8px) |
 
 Deliberate differences:
 

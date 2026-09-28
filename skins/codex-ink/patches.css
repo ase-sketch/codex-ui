@@ -150,8 +150,10 @@ button[aria-disabled="true"],
   border-radius: var(--dsw-radius-s);
 }
 
-/* ── ⑧ 输入区：工具不是主角，14px 圆角 + 纯描边 ────────────────────────── */
-[data-composer-card],
+/* ── ⑧ 输入区：工具不是主角，14px 圆角 + 纯描边 ──────────────────────────
+   卡片（[data-composer-card]）的圆角只在 ⑭ 层（composer.css）声明一处：20px，
+   corner-shape 可用时 25px 超椭圆。旧版这里还写着 var(--dsw-radius-l)=16px，
+   与 ⑭ 层构成同一元素的第二真源，谁生效只看选择器权重 —— 已删。 */
 [data-dsh-surface="composer"] [data-dsh-part="composer-input"] {
   border-radius: var(--dsw-radius-l);
 }
@@ -228,8 +230,10 @@ button[aria-disabled="true"],
   box-shadow: none;
 }
 
-/* ── ·2 菜单面板：不透明白 + 圆角 + 软影（仓库值 18px 圆角落到本层刻度 l=16；
-      影 0 8px 32px #0002 + 环 1px #0000000a）────────────────────────────── */
+/* ── ·2 菜单面板：不透明白 + 圆角 + 软影（参考仓库 composer-tool-menus 实测 18px
+      = --dsw-radius-menu。旧版把它折到刻度 l=16，结果菜单 16 与输入卡 20/25 叠在
+      一起时两条角弧肉眼可辨；改回实测值后与卡片只差 2px，正是 Codex 自己
+      菜单 18 / 卡片 20 的关系。影 0 8px 32px #0002 + 环 1px #0000000a）────── */
 body > div[role="menu"][aria-busy] {
   --dsw-menu-surface-fill: var(--dsw-alias-bg-layer-1);
   --dsw-menu-backdrop-filter: none;
@@ -237,7 +241,7 @@ body > div[role="menu"][aria-busy] {
      MenuSurface 的 material 子层 —— 两边都压成不透明白。 */
   background: var(--dsw-alias-bg-layer-1);
   padding: 5px;
-  border-radius: var(--dsw-radius-l);
+  border-radius: var(--dsw-radius-menu);
   box-shadow: 0 8px 32px rgba(13, 13, 13, 0.13), 0 0 0 1px rgba(13, 13, 13, 0.04);
   color: var(--dsw-alias-label-primary);
 }
@@ -246,7 +250,10 @@ body[data-ds-dark-theme] > div[role="menu"][aria-busy] {
   box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(236, 236, 236, 0.05);
 }
 
-/* ── ⑫·3 行契约：根面板两 cell（模型 / 推理强度）与选项行共用 ────────────── */
+/* ── ⑫·3 行契约：根面板两 cell（模型 / 推理强度）与选项行共用 ──────────────
+   圆角按同心纪律取「面板 18 − 内衬 5 = 13」。旧版写 8px（--dsw-radius-s）：
+   面板 16、行 8 的两条角弧不同心，行看起来比面板"方"——宿主原生是同心的
+   （MenuSurface 16 − 列表内衬 4 = 行 12），这条是皮肤自己改散的，已收回。 */
 body > div[role="menu"][aria-busy] button[role="menuitem"],
 body > div[role="menu"][aria-busy] button[role="menuitemradio"] {
   box-sizing: border-box;
@@ -254,7 +261,7 @@ body > div[role="menu"][aria-busy] button[role="menuitemradio"] {
   padding: 4px 9px;
   gap: 8px;
   border: 0;
-  border-radius: var(--dsw-radius-s);
+  border-radius: calc(var(--dsw-radius-menu) - 5px);
   background: none;
   color: inherit;
   font-size: 13px;
@@ -346,7 +353,7 @@ body > div[role="menu"][aria-busy="true"] button[role="menuitemradio"]:disabled 
   width: calc(100% - 48px);
   margin: 0 auto -12px;
   padding: 8px 16px 22px;
-  border-radius: var(--dsw-radius-l) var(--dsw-radius-l) 0 0;
+  border-radius: var(--dsw-radius-card) var(--dsw-radius-card) 0 0;
   background: #f5f5f5;
   color: var(--dsw-alias-label-secondary);
   font-family: var(--dsw-font-meta);
@@ -616,17 +623,31 @@ header:has([data-conversation-header-leading]):has([data-conversation-tabs]) {
      · 加号：40px 直径圆形，悬停时才填 --dsw-codex-hover-fill（实测 #F2F2F3）。
      · 悬停胶囊：整块填充 242,242,243，**没有描边**（逐像素量了外沿：白 255 → 243 → 242，
        没有更深的环）；左右弧顶到弧顶 41px，全圆角。
+     · 圆角：胶囊**全圆角**。2026-09-27 逐像素复测 codex-composer-chip-hover.png：
+       胶囊高 42px、最左点 x=13，而最上一行的边界在 x=29 —— 离最左点 16px，正合
+       R=h/2=21 的预测值 16.4；若真是 12px 圆角则应为 8.6。旧版只搬了填充色，
+       圆角留在宿主的 --dsw-radius-sm=8px，于是 28px 高的控件配 20/25px 的输入卡
+       不成同心（同心值 20−8=12、25−8=17，都 > 控件高的一半 14）—— 已补 pill。
 
    锚点：加号按钮没有 data-* 只有哈希类名，按 composer.css 已备案的「后缀锚点」写法取
    button[class$="_add"]；两个触发器（模型 _7KE1Ra_trigger / 权限 iWlSmW_trigger）
    同样按后缀取 button[class$="_trigger"]，整条规则限定在 [data-composer-card] 内。
    实测（真 GUI，2026-09-26）：加号 idle 与 hover 同为 rgb(241,241,239) —— 常驻灰底，
    就是「多了个背景框」；两个触发器 idle 透明、hover rgba(13,13,13,.04)，与参考图同形。
+   圆角不交给宿主：宿主 rc.2 的 .u91W7W_trigger / ._5Tq8wa_trigger 都是
+   --dsw-radius-sm=8px（且历史版本换过值），皮肤显式写 pill 才与宿主版本无关。
    ═══════════════════════════════════════════════════════════════════════════ */
 
 [data-composer-card] button[class$="_add"],
 [data-composer-card] button[class$="_trigger"] {
   transition: background-color var(--dsw-motion-fast) var(--dsw-ease);
+}
+
+/* 圆角：Codex 的 composer chip 是全圆角胶囊（参考图实测 R = h/2）。加号宿主自带
+   999px，一并显式声明，免得宿主改值后悄悄变方。 */
+[data-composer-card] button[class$="_add"],
+[data-composer-card] button[class$="_trigger"] {
+  border-radius: var(--dsw-radius-pill);
 }
 
 /* 加号：撤掉宿主常驻的 --dsw-alias-bg-layer-2 灰底 */

@@ -249,12 +249,16 @@ const checks = [
   ['触发器高度 28（原生，不再压 24）', got.trigger.height === '28px'],
   ['触发器字号 13', got.trigger.size === '13px'],
   ['chevron 可见（不再隐藏）', got.trigger.chevron !== 'none'],
-  ['菜单圆角 16', got.menu.radius === '16px'],
+  ['菜单圆角 18（浮层刻度 --dsw-radius-menu）', got.menu.radius === '18px'],
   ['菜单内衬 5', got.menu.pad === '5px'],
   ['无 TUI 页脚', got.menu.footer === 'none'],
   ['菜单不透明白', got.menu.fill === 'rgb(255, 255, 255)'],
   ['行高 28', got.row.minH === '28px'],
-  ['行圆角 8', got.row.radius === '8px'],
+  ['行圆角 13（同心：菜单 18 − 内衬 5）', got.row.radius === '13px'],
+  /* 同心闭环：改任何一边都要两边一起动。宿主原生就是同心的（16 − 4 = 12），
+     这条防的是皮肤又把行圆角写死成某个跟面板不同源的刻度。 */
+  ['原生对照：宿主菜单 16 / 行 12', before.value.menu.radius === '16px' && before.value.row.radius === '12px'],
+  ['同心闭环：行圆角 = 菜单圆角 − 内衬', parseFloat(got.row.radius) === parseFloat(got.menu.radius) - parseFloat(got.menu.pad)],
   ['无编号前缀', got.row.prefix === 'none'],
   ['选中行淡填充', got.selected.bg.includes('13, 13, 13')],
   ['勾选列可见', got.selected.checkShown !== 'none'],

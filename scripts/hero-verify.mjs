@@ -61,10 +61,14 @@ const chip = (label, glyph) => '<button type="button" style="display:inline-flex
 
 const page = '<!doctype html><html data-codex-ui><head><meta charset="utf-8">' +
   '<style>' + rootCss + '</style><style>' + barCss + '</style><style>' + labelCss + '</style><style>' + theme + '</style>' +
-  /* 宿主底样式复刻（实测自真 GUI）：加号常驻 --dsw-alias-bg-layer-2 圆底并全圆角，
-     两个触发器默认透明、圆角 24px。夹具缺了这几条就测不出「默认有没有框」。 */
+  /* 宿主底样式复刻：加号常驻 --dsw-alias-bg-layer-2 圆底并全圆角；两个触发器默认透明。
+     触发器圆角旧夹具写 24px（2026-09-26 记录）；2026-09-27 复核宿主 rc.2 源码，
+     dsh-client-ui-model-selection 的 .u91W7W_trigger 与 dsh-client-ui-permission-presets
+     的 ._5Tq8wa_trigger 都是 border-radius: var(--dsw-radius-sm)，而该令牌在
+     dsh-client-ui-theme 里只有一处定义 = 8px。夹具按源码取 8px（本页不引宿主令牌层，
+     所以写死字面量）；这条基线的意义是「皮肤必须显式压过它」，不是复刻某个历史值。 */
   '<style>[class$="_add"]{background:var(--dsw-alias-bg-layer-2);border:0;border-radius:999px}'
-  + '[class$="_trigger"]{background:transparent;border:0;border-radius:24px}button{font:inherit}</style>' +
+  + '[class$="_trigger"]{background:transparent;border:0;border-radius:8px}button{font:inherit}</style>' +
   '<style>body{margin:0;background:#fff;font:14px/1.5 "Segoe UI","Microsoft YaHei",sans-serif}' +
   '.stage{padding:24px 0 40px}h4{margin:0 0 10px 24px;font:600 12px/18px ui-monospace,Consolas,monospace;color:#8a8a8a}' +
   '.hdrwrap{margin:0 24px 28px;border-bottom:1px solid #e5e5e5}</style></head><body>' +
@@ -116,6 +120,8 @@ const page = '<!doctype html><html data-codex-ui><head><meta charset="utf-8">' +
         '</div>' +
       '</div>' +
     '</div>' +
+    '<h4>⑰ 宿主基线：同款哈希类名、但在 [data-composer-card] 之外（皮肤锚点不命中）</h4>' +
+    '<div style="margin:0 24px 40px"><button type="button" data-host-baseline="trigger" class="_7KE1Ra_trigger" style="height:28px">DeepSeek V4 Flash High</button></div>' +
   '</div></body></html>';
 
 fs.mkdirSync(FIX, { recursive: true });
@@ -159,6 +165,7 @@ const controls = '(() => {'
   + 'return JSON.stringify({'
   + '  add: read(pick("_add")),'
   + '  trig: read(pick("_trigger")),'
+  + '  trigRaw: read(document.querySelector("[data-host-baseline=trigger]")),'
   + '  hoverFill: cs(document.querySelector("[data-composer-card]")).getPropertyValue("--dsw-codex-hover-fill").trim(),'
   + '}); })()';
 const readControls = async () => {
@@ -214,12 +221,32 @@ const checks = [
   ['徽标圆角保持官方 6px（未被皮肤改写）', hdr.presetLabel.radius === '6px'],
   ['徽标高 22px（官方控件高度，未改写）', hdr.presetLabel.h === 22],
   ['徽标不填底色（令牌未定义即透明，不另配色）', hdr.presetLabel.bg === 'rgba(0, 0, 0, 0)'],
+  /* ⑭ 上栏条（hero 工作区行）只有上面两角是圆角，它探在卡片背后，与卡片同心叠放。
+     2026-09-28 同屏对照实测（DSH / Codex 两块同一缩放）：Codex 条/卡 = 1.03，
+     本皮肤旧值 条/卡 = 0.79（条 16 / 卡 20）—— 条比卡片紧 5px，就是那两条对不上的角弧。
+     现在条与卡片共用 --dsw-radius-card，比值恒为 1；这两条断言防的就是它们再次分家。 */
+  ['上栏条与卡片同值（字面量）', hdr.heroRow.radius === hdr.card.radius],
+  ['上栏条与卡片同值（比值 = 1）', parseFloat(hdr.heroRow.radius) === parseFloat(hdr.card.radius)],
+  ['上栏条取 --dsw-radius-card（条 = 卡 = 令牌）', hdr.heroRow.radius === hdr.card.token && hdr.heroRow.radius === hdr.card.radius],
+  /* ⑭·2 输入区纵向留白：2026-09-28 用户同屏对照实测（DPR 1.25，两侧卡片角弧 29.6 / 29.5 完全同形
+     ⇒ 同缩放）——Codex 卡 149 设备像素、本皮肤 147，总高本来就对齐；差的是**卡片上内衬**
+     （DSH 22.4 vs Codex 29.25）。故只把上内衬 8 → 12，编辑区与底衬回到宿主原值。
+     上一版把编辑区抬到 64 是拿「声明栈」推的，实测超了 35 设备像素（≈28 CSS px），已回退。 */
+  ['输入区编辑区 min-height 44（宿主原值）', hdr.editor.minH === '44px'],
+  ['卡片上内衬 12（Codex 实测）', hdr.card.padTop === '12px'],
+  /* 输入卡必须**不透明**：Codex 的 --card 是叠在不透明画布上的，DSH 的卡浮在会话滚动内容之上，
+     留 transparent 会让身后的文件列表透出来（2026-09-28 实测复现）。计算值里出现 "/" 即带 alpha。 */
+  ['输入卡底不透明（不透视身后会话内容）', !hdr.card.bg.includes('/')],
+  ['底栏下内衬 8（宿主原值）', hdr.footPad === '8px'],
   ['加号默认无底色框', idle.add.bg === 'rgba(0, 0, 0, 0)'],
   ['加号悬停才出现淡底', addHover.add.bg === 'rgb(242, 242, 243)'],
   ['加号圆形（999px）', idle.add.radius === '999px'],
   ['触发器默认无底色框', idle.trig.bg === 'rgba(0, 0, 0, 0)'],
   ['触发器悬停才出现淡底', trigHover.trig.bg === 'rgb(242, 242, 243)'],
-  ['触发器全圆角（24px）', idle.trig.radius === '24px'],
+  /* 圆角不再交给宿主：Codex 的 composer chip 是全圆角胶囊（参考图实测 R = h/2），
+     皮肤显式声明 999px。卡外同款类名的对照证明这是皮肤写的、不是宿主给的。 */
+  ['触发器全圆角胶囊（999px）', idle.trig.radius === '999px'],
+  ['原生对照：卡外同款触发器仍是宿主 8px', idle.trigRaw.radius === '8px'],
   ['悬停色标 = Codex 实测 #F2F2F3', idle.hoverFill === '#f2f2f3'],
   ['焦点环 = Codex --color-border-focus', focusRing === 'rgb(51, 156, 255) 2px solid'],
 ];

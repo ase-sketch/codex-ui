@@ -21,7 +21,7 @@ up by a skin loader on its own.
 ## Design rules
 
 1. Chrome stays ink: buttons, links and selection are ink; the light theme primary button is `#1A1C1F` on white, dark inverts. The focus ring is the one exception — it uses Codex `--color-border-focus` (`#339CFF`; dark at 70%).
-2. Greys carry hierarchy. Light `#FFFFFF → #F1F1EF → #E5E5E5`; dark `#181818 → #212121 → #282828 → #303030` (the sidebar shares the base face; the 0.5px hairline separates them).
+2. Greys carry hierarchy. Light `#FFFFFF → #F1F1EF → #E5E5E5`; dark `#111111 → #181818 → #212121 → #282828` (window background `#111111`, sidebar/surface `#181818`; the composer card sits on the surface and the 0.5px hairline separates them).
 3. Light sidebar `#EEF4F9`, active row `#E2E9ED`, hover `#E8EEF3`.
 4. Metadata (token counts, model names, timestamps, badges, paths, shortcuts) uses `--ds-font-family-code`, 11px and `.04em`/`.08em` tracking; `:lang(zh)` exempts Chinese from tracking and uppercase.
 5. Radius and spacing come from `--dsw-radius-*` and `--dsw-space-*`. Cards use a 0.5px stroke instead of a shadow.

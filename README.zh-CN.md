@@ -30,12 +30,12 @@ DSH Web 的界面元素按 Codex 复刻：窗口边缘的阴影与发丝线、�
 
 | 编号 | 内容 |
 |---|---|
-| ⑫ | 模型选择器：原生触发器、不透明白菜单、行高 28px、勾选列常驻、pending 转圈 |
+| ⑫ | 模型选择器：原生触发器、不透明白菜单（圆角 18px）、行高 28px、行圆角 13px（同心：18 − 内衬 5）、勾选列常驻、pending 转圈 |
 | ⑬ | 输入区顶栏消隐、面板按钮保留官方图标 |
 | ⑬c | 顶栏两格**放开**：注册在两个槽里的条目恢复渲染（子代理后代计数 / jobs roster / 预设徽标 / 在应用中打开）；视图页签仍隐去。条目本身条件渲染，所以常态顶栏与放开前一致 |
-| ⑭ | 输入卡：圆角、阴影、几何、工具条、hero 布局 |
+| ⑭ | 输入卡：圆角（卡片 20/25，上栏条 = 卡片同值）、阴影、几何、工具条、hero 布局 |
 | ⑯ | 右栏展开选择组件：无描边无底色、行高 52px、图标 20px、快捷键灰底 pill |
-| ⑰ | composer 底部控件：加号默认无底色框、悬停才填；模型与权限控件同套悬停胶囊 |
+| ⑰ | composer 底部控件：加号默认无底色框、悬停才填；模型与权限控件同套悬停胶囊，且与加号一样是**全圆角**（Codex 参考图实测 R = h/2） |
 | ② | 侧栏配色对齐 Codex 亮色侧栏；侧栏列对齐工作区列表行 |
 | ②c | 会话窗口边缘：0.5px 发丝线加 24px 全向环境影 |
 | ②d | 右栏面板：左沿只留发丝线、影只往上泄；压掉 dockkit 的 1px 深边框 |
@@ -114,11 +114,13 @@ node scripts/install-skin.mjs --write  # 有漂移则覆盖
 |---|---|---|
 | `npm run check` | 语法、JSON、清单自洽、产物同源、编码、双语文档成对、机器专属路径 | 无 |
 | `node scripts/audit-codex-ink.mjs` | 皮肤结构、36 组 WCAG、彩色白名单 | 无 |
-| `node scripts/model-picker-verify.mjs` | ⑫ 与 pending 指示器，18 项 | 无 |
+| `node scripts/model-picker-verify.mjs` | ⑫ 与 pending 指示器，20 项 | 无 |
 | `node scripts/rightbar-verify.mjs` | 阴影层、右栏三件套、两条分界线，42 项 | 无 |
 | `node scripts/sidebar-align-verify.mjs` | 侧栏列对齐，6 项 | 无 |
 | `node scripts/sidebar-surface-verify.mjs` | 侧栏滚动渐隐（Codex mask 斜坡）的机制与观感：4 种状态并排、逐像素还原遮罩 alpha 曲线，13 项 | 无 |
-| `node scripts/hero-verify.mjs` | ⑬⑭⑰ 与焦点环、顶栏两格放开，17 项 | 无 |
+| `node scripts/hero-verify.mjs` | ⑬⑭⑰ 与焦点环、顶栏两格放开，25 项 | 无 |
+| `node scripts/composer-shadow-verify.mjs` | ⑱ 输入卡阴影对齐 Codex `--elevation-composer`：亮色三层的几何与 alpha 逐层断言、暗色 inset 且卡外零投影、窄屏远场 80→40px，外加真实渲染像素（衰减半径、卡内顶边亮度）与一条前提自检，23 项 | 无 |
+| `node scripts/elevation-verify.mjs` | ⑲ `--dsw-elevation-*` 令牌与 Codex 源码对账：逐层几何与 alpha、第 1 层跟随 stroke、第 2/3 层亮暗同值（Codex 无暗色变体），外加渲染出的菜单面板确实吃到该令牌，19 项 | 无 |
 | `node scripts/live-gui-probe.mjs --url <带 token 的 URL>` | 真 GUI：阴影、两条分界线、模型菜单 pending 窗口共 10 项断言 | `dsh web` 实例 |
 | `node scripts/settings-page-verify.mjs --url <带 token 的 URL>` | 真 GUI：组合包页的设置卡、8 行结构、默认不覆盖、开关与强调色写入、刷新后仍在，共 22 项断言 | `dsh web` 实例（profile 需启用插件管理） |
 | `node scripts/theme-flash-probe.mjs --url <带 token 的 URL>` | 按帧采样主题/页面切换时的「有效底色」（沿祖先找第一个不透明底色），看切换过程中是否出现既不属于起点也不属于终点的中间帧（实测 9 段约 720 帧、0 异常） | 同上 |
@@ -221,16 +223,17 @@ node scripts/live-gui-probe.mjs --url "http://127.0.0.1:3099/?token=..." --dpr 1
 | 角色 | 浅色 | 深色 | 令牌 |
 |---|---|---|---|
 | 强调色 | `#339CFF` | `#0169CC` | `--dsw-alias-link` |
-| 背景 | `#FFFFFF` | `#181818` | `--dsw-alias-bg-base` |
+| 背景 | `#FFFFFF` | `#111111` | `--dsw-alias-bg-base` |
+| 表面（输入卡所坐） | `#FFFFFF` | `#181818` | `--dsw-composer-surface` |
 | 前景 | `#1A1C1F` | `#FFFFFF` | `--dsw-alias-label-primary` |
 | 悬停底 | `#F2F2F3` | `rgba(255,255,255,.08)` | `--dsw-codex-hover-fill` |
 
-浅色三值来自取色面板 `codex-theme-light.png`；**深色三值自 0.2.0 起改用 Codex 应用自身的默认值**
-（`resources/app.asar` 里的 `jdi`：`surface #181818`、`ink #ffffff`、`accent #339cff`），不再用取色面板那三值。
+浅色三值来自取色面板 `codex-theme-light.png`；**深色自 0.5.6 起按**两个来源分层**：窗口背景取 Codex 主题取色面板 `codex-theme-dark.png` 上写的 `背景 #111111`，
+表面取 `resources/app.asar` 的 `jdi.dark.surface #181818`；前景与 accent 仍取 `jdi`（`ink #ffffff`、`accent #339cff`）。
+0.2.0~0.5.5 把这两层并成了 `#181818`，输入卡与背景的落差因此从 Codex 的 18 级掉到 12 级。
 深色链接仍是应用的 text-link 令牌 `#0169CC`，没有跟着 accent 走。
 
-深色层级自 `#181818` 向上抬：侧栏 `#181818`（与 surface 同面，分隔交给 0.5px 发丝线）、层1 `#212121`、
-层2 `#282828`、层3 `#303030`；alpha 家族随之由 `rgba(252,252,252,·)` 抬到 `rgba(255,255,255,·)`
+深色层级：窗口背景 `#111111` → 侧栏/表面 `#181818` → 层1 `#212121` → 层2 `#282828` → 层3 `#303030`；alpha 家族随之由 `rgba(252,252,252,·)` 抬到 `rgba(255,255,255,·)`
 （应用的深色 `--alpha-base` 是 `#fff`）。
 
 ### 侧栏配色
@@ -269,6 +272,7 @@ Codex 桌面应用的 webview CSS 在 `resources/app.asar` 的 `webview/assets/a
 | 发丝线 | `--shadow-hairline: 0 0 0 .5px #0000001a` | 会话窗口与面板发丝线同为 0.5px 环 |
 | 亮色前景 | `--color-text-foreground: #1a1c1f` | `--dsw-alias-label-primary` |
 | 控件填充 | `--background-button-secondary-hover`，前景色 8% | 浅色 `#f2f2f3`（实测），深色 `rgba(255,255,255,.08)` |
+| composer chip 圆角 | 全圆角胶囊（`codex-composer-chip-hover.png` 逐像素实测 R = h/2 = 21px） | `--dsw-radius-pill`（0.5.0 起显式声明；此前沿用宿主的 `--dsw-radius-sm` = 8px） |
 
 刻意保留的差异：
 

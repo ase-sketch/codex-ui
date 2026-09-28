@@ -23,7 +23,10 @@
       h: label ? Math.round(label.getBoundingClientRect().height) : null,
       font: cs(label, 'font-size'),
     },
+    card: { radius: cs(card, 'border-top-left-radius'), shadow: cs(card, 'box-shadow'), border: cs(card, 'border-top-width'), token: cs(document.documentElement, '--dsw-radius-card').trim(), h: card ? Math.round(card.getBoundingClientRect().height) : null, w: card ? Math.round(card.getBoundingClientRect().width) : null, bg: cs(card, 'background-color'), padTop: cs(card, 'padding-top') },
     heroRow: { present: row !== null, bg: cs(row, 'background-color'), radius: cs(row, 'border-top-left-radius'), height: row ? Math.round(row.getBoundingClientRect().height) : null },
-    card: { radius: cs(card, 'border-top-left-radius'), shadow: cs(card, 'box-shadow'), border: cs(card, 'border-top-width') },
+    /* ⑭·2 输入区纵向留白：Codex 实测（同一字号标定）编辑区 ≈79、底衬 ≈12，本层按此对齐。 */
+    editor: (() => { const e = q('[data-lexical-editor=true]'); return e ? { minH: cs(e, 'min-height'), h: Math.round(e.getBoundingClientRect().height) } : null; })(),
+    footPad: (() => { const s = q('[data-input-scroll]'); const r = s && s.nextElementSibling; return r ? cs(r, 'padding-bottom') : null; })(),
   });
 })()

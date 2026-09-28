@@ -146,6 +146,9 @@ body {
   --dsw-specific-sidebar-nav-item-active: #e2e9ed; /* Codex 选中行（PROJIECT）实测取样 */
   --dsw-specific-sidebar-nav-item-active-accent: rgba(13, 13, 13, 0.1);
   --dsw-specific-input-major: #ffffff;
+  /* 输入卡所坐的「表面色」。卡片底 = 5% 前景叠这个色（Codex 的 --card 公式）。
+     亮色 = 5% 墨叠白 = 243.55（参考图 codex-composer-reference.png 实测 240~246）。 */
+  --dsw-composer-surface: #ffffff;
   --dsw-specific-login-input: #f9f9f9;
   --dsw-specific-menu: rgba(255, 255, 255, 0.88);
   --dsw-specific-selector: #f1f1ef;
@@ -170,25 +173,30 @@ html[data-codex-ui-switching] *::after {
 
 /* html 在最外层，读不到 body 上那份深色令牌，只能用 :has() 自己取一次。 */
 :root:has(body[data-ds-dark-theme]) {
-  background-color: #181818;
+  background-color: #111111;
 }
 
 /* ── 暗色主题 ─────────────────────────────────────────────────────────────
-   基准 = Codex 应用自身的深色默认值（app.asar 的 jdi）：surface #181818 / ink #ffffff /
-   accent #339CFF。0.1.2 及以前用的是取色面板那三值（#111111 / #FCFCFC / #0169CC），
-   已按应用默认值重锚；链接色仍是应用的 text-link 令牌 #0169CC，未随 accent 走。
-   层级自基准向上抬：侧栏 #181818（与 surface 同面，分隔交给 0.5px 发丝线）→
-   层1 #212121 → 层2 #282828 → 层3 #303030。alpha 家族随之由 252 抬到 255
-   （Codex 深色 --alpha-base = #fff）。 */
+   两个来源各管一半，别再把它们合成一个（0.1.2~0.5.5 就是合错了）：
+     · 窗口**背景** = 主题取色面板（assets/reference/codex-theme-dark.png）里写的
+       「背景 #111111 / 前景 #FCFCFC / 强调色 #0169CC」；
+     · **表面** = app.asar 的 jdi.dark.surface #181818（卡片、侧栏这类抬起来的面）。
+   实测对账：用户给的 Codex 截图里，输入卡四周的背景恒为 17 = #111111 ✓，
+   卡片内部 35 = 5% 前景叠 #181818 ✓ —— 两个值同时成立，只有「背景/表面分层」能解释。
+   0.5.5 及以前把背景也写成 #181818，于是卡片与背景只差 12 级（Codex 差 18 级），
+   层次感就是这么丢的。
+   层级：背景 #111111 → 侧栏/表面 #181818 → 层1 #212121 → 层2 #282828 → 层3 #303030。
+   alpha 家族由 252 抬到 255（Codex 深色 --alpha-base = #fff）。 */
 body[data-ds-dark-theme] {
   color-scheme: dark;
 
   /* 画布自持（深色）：宿主只把 data-ds-dark-theme 打在 body 上，所以 html 那一份用 :has() 跟上。
      这里重复一次字面值而不是引用令牌 —— 令牌就定义在 body 上，html 自己读不到它的深色值。 */
-  background-color: #181818;
+  background-color: #111111;
 
-  /* 背景/侧栏同取 jdi.dark.surface #181818 —— Codex 深色里侧栏与内容同一个面。 */
-  --dsw-alias-bg-base: #181818;
+  /* 窗口背景取主题面板的 #111111；侧栏/表面取 jdi.dark.surface #181818。
+     输入卡坐在**表面**上（--dsw-composer-surface），不是坐在窗口背景上 —— 见下。 */
+  --dsw-alias-bg-base: #111111;
   --dsw-alias-bg-sidebar: #181818;
   --dsw-alias-bg-layer-1: #212121;
   --dsw-alias-bg-layer-2: #282828;
@@ -294,6 +302,9 @@ body[data-ds-dark-theme] {
   --dsw-specific-sidebar-nav-item-active: #282828;
   --dsw-specific-sidebar-nav-item-active-accent: rgba(255, 255, 255, 0.14);
   --dsw-specific-input-major: #212121;
+  /* 深色表面 = jdi.dark.surface #181818（**不是**窗口背景 #111111）：
+     5% 白叠 #181818 = 35.55 → 36，实测 Codex 卡片内部 35 ✓。 */
+  --dsw-composer-surface: #181818;
   --dsw-specific-login-input: #1f1f1f;
   --dsw-specific-menu: rgba(24, 24, 24, 0.88);
   --dsw-specific-selector: #282828;
@@ -329,13 +340,38 @@ body {
             --dsh-windows-content-radius: 16px）
        xl   输入卡（无 corner-shape 时的回退值）
        2xl  输入卡（corner-shape: superellipse 版；超椭圆要更大数值才视觉等圆）
-       pill 徽标 / 圆形按钮 */
+       menu 浮层菜单（模型菜单 / 触发菜单：参考仓库 composer-tool-menus 实测 18px，
+            比输入卡基准 20px 小 2px —— 与 Codex 自身 18/20 的关系一致）
+       pill 徽标 / 圆形按钮
+
+     同心纪律（2026-09-27 定，改圆角前先读这一段）：
+       嵌套圆角 = 外圆角 − 内衬。浮层菜单内衬 5px ⇒ 行圆角取
+       calc(var(--dsw-radius-menu) - 5px) = 13px。宿主原生菜单本来就是同心的
+       （MenuSurface 16px − 列表内衬 4px = 行 12px），本层不得再把它改散。
+       卡片内控件（模型 / 权限 chip）到卡片边的内衬是 8px，20/25 − 8 = 12~17，
+       大于控件高（28px）的一半 ⇒ 按同心规则控件必须取全圆角（pill），
+       与 assets/reference/codex-composer-chip-hover.png 实测 R = h/2 一致。 */
   --dsw-radius-xs: 4px;
   --dsw-radius-s: 8px;
   --dsw-radius-m: 12px;
   --dsw-radius-l: 16px;
   --dsw-radius-xl: 20px;
   --dsw-radius-2xl: 25px;
+  --dsw-radius-menu: 18px;
+  /* 输入卡圆角（单一真源）：卡片本体与它的上栏条共用这一个令牌，谁都不许再自己写数。 */
+  --dsw-radius-card: var(--dsw-radius-xl);
+  /* 上栏条（⑬·2 filebar / ⑭ hero 工作区行）只有上面两角是圆角，它探出在卡片背后，
+     与卡片同心叠放 —— 所以它取的是卡片的圆角本身，不是「卡片 − 4」。
+
+     2026-09-28 复核（用户提供的 DSH / Codex 同屏对照图，两块同一缩放）：
+     用合成真值标定过的角弧曲线法（±0.4px）+ 角亏损面积法逐像素量四条角弧，
+     Codex 条/卡 = 1.03（条 29 / 卡 28），本皮肤旧值 条/卡 = 0.79（条 16 / 卡 20）。
+     旧的「卡片 − 4」来自另一张参考图上的目视弧长，量错了：条并不比卡片紧，
+     它和卡片一样圆。比值 0.79 就是用户看到的那两条对不上的角弧。 */
+  /* 条不另立令牌：⑬·2 filebar 与 ⑭ hero 工作区行直接引用 --dsw-radius-card。
+     若写成 --dsw-radius-bar: var(--dsw-radius-card) 这种别名，var() 会在声明它的
+     body 上就解析完，之后再有人在中层元素上改写 --dsw-radius-card，条不会跟着变
+     —— 实测（scripts 之外的靶场）能复现「条 25 / 卡 20」的分家。 */
   --dsw-radius-pill: 999px;
 
   --dsw-content-max-width: 768px;
@@ -381,6 +417,15 @@ body {
   --dsh-composer-accessory-blur: 0px;
 }
 
+/* corner-shape 分支：卡片升到 25px 超椭圆，上栏条因为引用的是同一个令牌而自动跟随，
+   不需要第二处数字。卡片那一条 @supports 在 composer.css ⑭·1，两条必须同开同关。 */
+@supports (corner-shape: superellipse(1.5)) {
+  :root,
+  body {
+    --dsw-radius-card: var(--dsw-radius-2xl);
+  }
+}
+
 /* ── elevation：描边即层级，阴影近零 ─────────────────────────────────────── */
 /* 官方把 --dsw-elevation-* 声明在 body, body * 上，因此必须同样覆盖到 body *，
    否则每个后代元素都会用自身声明盖掉从 body 继承下来的值。 */
@@ -389,7 +434,14 @@ body * {
   --dsw-elevation-stroke-color: rgba(13, 13, 13, 0.08);
   --dsw-elevation-stroke: 0 0 0 0.5px rgba(13, 13, 13, 0.08);
   --dsw-elevation-panel: var(--dsw-elevation-stroke);
-  --dsw-elevation-prominent: var(--dsw-elevation-stroke), 0 4px 16px rgba(13, 13, 13, 0.08);
+  /* Codex --elevation-prominent 逐字（app.asar @67930856）：
+       var(--elevation-stroke), 0 3px 7.5px #0000000a, 0 0 20px #0000000d
+     旧值 0 4px 16px rgba(13,13,13,.08) 是自造单层，几何与层数都与 Codex 不同。
+     这个令牌是**宿主菜单与面板**的主阴影（.QsffPG_menu / ._7KE1Ra_menu / .JObwrW_panel
+     等 14 处消费），不是边角料。 */
+  --dsw-elevation-prominent: var(--dsw-elevation-stroke), 0 3px 7.5px #0000000a, 0 0 20px #0000000d;
+  /* --dsw-elevation-soft 在 Codex 里**没有同名令牌**（Codex 只有 stroke / stroke-subtle /
+     prominent / sidebar / composer / composer-dark）。这是本皮肤自造的一档，保留待验。 */
   --dsw-elevation-soft: var(--dsw-elevation-stroke), 0 8px 28px rgba(13, 13, 13, 0.1);
 }
 
@@ -398,7 +450,10 @@ body[data-ds-dark-theme] * {
   --dsw-elevation-stroke-color: rgba(255, 255, 255, 0.09);
   --dsw-elevation-stroke: 0 0 0 0.5px rgba(255, 255, 255, 0.09);
   --dsw-elevation-panel: var(--dsw-elevation-stroke);
-  --dsw-elevation-prominent: var(--dsw-elevation-stroke), 0 4px 16px rgba(0, 0, 0, 0.5);
+  /* 这里**不再覆盖** --dsw-elevation-prominent**：Codex 只在 :root 声明一次、没有暗色变体，
+     所以暗色沿用同一份字面值。后果是暗色菜单不再有 50% 黑的大外影，只剩发丝线 + 填充 ——
+     与 Codex 暗色的整体做法一致（0.5.7 已证输入卡暗色无外影，0.5.8 已证暗色靠填充分层）。
+     原先的 0 4px 16px rgba(0,0,0,.5) 无任何取证。 */
   --dsw-elevation-soft: var(--dsw-elevation-stroke), 0 8px 28px rgba(0, 0, 0, 0.55);
 }
 
