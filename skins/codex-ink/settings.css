@@ -1,13 +1,5 @@
-/* ============================================================================
-   codex-ink · L3 插件设置页层
-   ----------------------------------------------------------------------------
-   官方插件管理 → 组合包页里那块配置卡的版式（座位 plugins.bundle.config）。
-   取色只用 --dsw-alias-* / --dsw-specific-* 令牌，**不引入任何彩色** —— 与
-   skin.css 的「无彩色 chrome」纪律一致；唯一的彩色是强调色本身，由设置值给。
-
-   为什么放在皮肤层而不是卡片内联：这一层同样受 html[data-codex-ui] 作用域约束，
-   进同一份 theme.css，可被体检脚本与审计脚本一起看见。
-   ========================================================================== */
+/* codex-ink · L3 设置卡（插件管理 → 组合包页的 .cx-* 配置卡，src/client/settings-card.js）。
+   只用语义令牌，不引入彩色；唯一的彩色是用户设的强调色本身。 */
 
 .cx-form {
   display: flex;
@@ -55,16 +47,12 @@
   justify-self: end;
 }
 
-.cx-row--stack .cx-row__control {
-  justify-self: stretch;
-}
-
 .cx-swatch {
   width: 24px;
   height: 24px;
   padding: 0;
   border: 0.5px solid var(--dsw-alias-border-l2);
-  border-radius: var(--dsw-radius-s, 6px);
+  border-radius: var(--dsw-radius-s);
   background: none;
   cursor: pointer;
 }
@@ -75,15 +63,16 @@
 
 .cx-swatch::-webkit-color-swatch {
   border: none;
-  border-radius: calc(var(--dsw-radius-s, 6px) - 2px);
+  border-radius: calc(var(--dsw-radius-s) - 2px);
 }
 
+/* 十六进制输入与数值回显走元信息的 mono 规约 */
 .cx-hex {
   width: 96px;
   height: 24px;
   padding: 0 8px;
   border: 0.5px solid var(--dsw-alias-border-l2);
-  border-radius: var(--dsw-radius-s, 6px);
+  border-radius: var(--dsw-radius-s);
   background: var(--dsw-alias-bg-base);
   color: var(--dsw-alias-label-primary);
   font-family: var(--ds-font-family-code);
@@ -101,7 +90,7 @@
   height: 24px;
   padding: 0 8px;
   border: 0.5px solid var(--dsw-alias-border-l2);
-  border-radius: var(--dsw-radius-s, 6px);
+  border-radius: var(--dsw-radius-s);
   background: var(--dsw-alias-bg-base);
   color: var(--dsw-alias-label-primary);
   font-size: 12px;
@@ -134,8 +123,6 @@
 
 .cx-error {
   margin: 8px 0 0;
-  /* 旧值读的是 --dsw-alias-state-error —— 这个令牌宿主与本皮肤都没有，于是永远落到回退的
-     主文本色，「保存没生效」的提示看起来跟普通说明一样。改读真实存在的 error-primary。 */
   color: var(--dsw-alias-state-error-primary);
   font-size: 11px;
   line-height: 16px;

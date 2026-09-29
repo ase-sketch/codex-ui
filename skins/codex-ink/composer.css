@@ -1,71 +1,18 @@
-/* ============================================================================
-   codex-ink（墨白终端）· L3 输入区完整层
-   ----------------------------------------------------------------------------
-   源文件：skins/codex-ink/composer.css
-   由 src/build.mjs 与其余各层一起拼接，并作用域化到 html[data-codex-ui]。
-   本文件写「裸选择器」——不要自己再加 html[...] 前缀，那会被 scopeCss 直通。
+/* codex-ink · L3 输入区：卡片几何、表面与阴影，底栏控件带，建议菜单，新建页（hero）布局。
+   几何移植自 MichengAI/dsh-codex-ui（CodexSidebar / composer-tool-menus / new-conversation-style），只保留在
+   0.1.7 宿主上真实存在的锚点：[data-composer-card] [data-input-scroll] [data-composer-placeholder]
+   [data-lexical-editor] [data-conversation-scroll] [data-composer-seat] [data-trigger-menu] [data-phase]。
+   hero 区没有 data-* 可用，用 CSS-Modules 类名的后缀写法（_heroWorkspaceRow / _composerHero / _workspace / _primary）。 */
 
-   来源（上游仓库 MichengAI/dsh-codex-ui 的源码；行号是移植时那一版的）：
-     · src/client/CodexSidebar.tsx          L119-L137  → ⑭·1 ⑭·2 ⑭·3
-     · src/client/composer-tool-menus.ts    L6-L30     → ⑭·4（仅官方锚点部分）
-     · src/client/new-conversation-style.ts L3-L14     → ⑭·5
-
-   兼容性核对（对 rc1 0.1.7-rc.1 的 shipped 包逐条 grep，不是照抄）：
-     上游 README 只声明兼容到 0.1.6-alpha.2。逐条核对后，以下锚点在本机 rc1 上
-     不存在，一律**不移植**，免得留死规则：
-       ✗ [data-input-mirror]                      rc1 无此属性（conversation 包 0 命中）
-       ✗ [class*="_rail"]（附件轨道补偿）           rc1 无此类名段
-       ✗ [class*="_selected"] / [class*="_footer"] rc1 无此类名段
-       ✗ [data-dcu-tool-menu] / [data-gitgraph-popover]  由上游 JS 观察器打标，
-         本插件不含该半，规则永远不会命中 → 弹窗换肤留在「待移植 JS 半」清单
-       ✗ .dcu-home-*                            上游自有组件的类名，本皮肤没有这些节点
-     实测存在的锚点（本条全部基于它们）：
-       ✓ [data-composer-card] [data-input-scroll] [data-composer-placeholder]
-         [data-lexical-editor=true] [data-conversation-scroll] [data-composer-seat]
-         [data-trigger-menu] [data-phase]（取值 settling / hero / active）
-
-   锚点纪律例外（必须说清）：
-     ⑭·4 ⑭·5 用到 [class*="_heroWorkspaceRow"] / [class*="_composerHero"] /
-     [class$="_workspace"] / [class$="_primary"]。这类 CSS-Modules 哈希类名在
-     patches.css 头部是被禁止的——那条禁令针对 **skin-center 加载器**的
-     "reliance on CSS-Modules hash class names" 告警。本层走**插件路径**
-     （client.js 直接注入 style 标签），不经加载器，故放行。
-     已尽量取「后缀锚点」写法（[class$=_primary]），只依赖语义后缀、不依赖哈希前缀；
-     语义名若被上游改掉，由 scripts/hero-verify.mjs 的实测值暴露。
-     hero 区没有 data-* 可用：jYtg_G_heroWorkspaceRow / jYtg_G_composerHero 只有类名。
-   ============================================================================ */
-
-/* ── ⑭·1 卡片几何与表面 ───────────────────────────────────────────────────
-   上游把输入区放宽到 chat 内容宽 + 32px，左右留白 24px；卡片 20px 圆角（浏览器
-   支持 corner-shape 时升到 25px 超椭圆）。
-
-   表面：**亮暗两套机制相反** —— 这是本层最容易搞错的地方。
-
-   暗色 = 填充分层。卡片比页面亮一档：5% 白叠 surface #181818 = 35.6 → 36
-   （Codex 暗色参考裁图 layer-codex.png / codex-card-ref.png 众数实测：卡内
-   #232323 = 35、页面 #111111 = 17，落差 18）。暗色**没有投影**，见下方 inset 高光。
-
-   亮色 = 阴影分层，卡片**与页面同色**（都是 #ffffff）。三份独立实测同向：
-     codex-composer-reference.png 卡内众数 #fffeff/#ffffff/#fefdfe 合计 62%；
-     用户 2026-09-28 同屏截图卡内众数 #fffeff 73.8% + #fefdfe 23.0% = 96.8%；
-     codex-app-reference.png 整窗 #ffffff 76.5%。
-   0.5.6 及以前在亮色也叠了 5% 墨（= #f4f4f4，比实测暗 11 级），是把暗色模型错套到
-   亮色上。照抄的 --card: 5% foreground 属于 **widget 层**（codex.exe 的 artifact
-   契约），不是应用外壳的输入卡；外壳令牌里亮色 --gray-fixed-0 = #ffffff 与实测吻合
-   （--color-surface-elevated-secondary = gray-50 = #f9f9f9 差 5 级，不采用）。
-   该令牌映射本身仍是推断，见 CHANGELOG 0.5.8 的边界说明。
-
-   阴影按源码逐字取 Codex 的 --elevation-composer（见下方声明）。0.5.4 那轮把
-   0 4px 80px 8px 判为「比实测宽三倍」并删掉，是误判 —— Codex 确有该层（第三层，
-   仅 2.4% 墨），缺的是它前面的 8px 近场。0.5.7 已恢复三层。
-   注：亮色参考图里卡片边缘实测约 12% 墨，而源码的环只有 #0000000a = 4%，两者不一致；
-   本皮肤按源码取 4%，该差异未解释，见 CHANGELOG 0.5.8 边界说明。 */
+/* ── ⑭·1 卡片 ──
+   亮暗两套机制相反：亮色 = 阴影分层，卡片与页面同色（都是表面色 #fff；三份实测卡内众数都是白）；
+   暗色 = 填充分层，卡片比页面亮一档（5% 白叠表面 #181818 = 36，实测卡内 35、页面 17），而且完全没有外投影。
+   阴影是 Codex --elevation-composer 逐字（app.asar @67930943）三层：环 + 8px 近场 + 80px 远场，缺一不可
+   （只有远场会糊，只有环像贴纸）。环取 10% = Codex 实际走的 compact 路径 border: 1px var(--color-border)。 */
 [data-conversation-scroll] {
   --dsh-composer-card-max-width: calc(var(--dsh-chat-content-width) + 32px);
   --dsh-composer-side-clearance: 24px;
-  /* 亮色**不叠罩**：直接取表面色（= #ffffff）—— Codex 亮色卡与页面同色，见上。
-     仍写成不透明实色、不用 transparent：DSH 的输入卡浮在会话滚动内容之上，
-     留 transparent 会让身后的文件列表透出来（实测已复现）。 */
+  /* 不透明实色：卡片浮在会话滚动内容之上，transparent 会透出身后的列表 */
   --dcu-composer-bg: var(--dsw-composer-surface);
   /* 阴影：0.6.3 起按**实测像素**拟合，不再照抄源码 token —— 源码 token 与真机像素对不上
      （--elevation-composer 的 0 4px 80px 8px 远场在参考图里量不到，环的 1px 在 DPR 2 下也不是
@@ -79,15 +26,9 @@
   --dcu-composer-shadow: 0 0 0 0.5px rgba(13, 13, 13, 0.1), 0 2px 12px 0 rgba(0, 0, 0, 0.09);
 }
 
-/* 暗色：Codex 的 --elevation-composer-dark 是 inset 0 0 1px 0 #fff3 —— **完全外无投影**，
-   改用 1px 内嵌高光把顶边点亮（实测 Codex 卡体 36、顶边 40，本皮肤此前内侧全平 36/36）。
-   机制差异：外描边读作"画了一条线"，内嵌高光读作"边被光打到"，后者才是 Codex 的层次来源。
-   外层 0.5px 发丝线一并撤掉：暗色下 Codex 卡外就是页面底色，无任何环。 */
+/* 暗色：Codex --elevation-composer-dark 是 1px 内嵌高光（把顶边点亮），卡外零投影。
+   叠罩在 sRGB 里混（浏览器的 alpha 合成就是 sRGB，oklab 会压到 34），基色是表面 #181818 不是窗口背景。 */
 body[data-ds-dark-theme] [data-conversation-scroll] {
-  /* 叠罩**只用于暗色**：5% 白叠 surface #181818 = 35.6 → 36（Codex 实测 35）。
-     用 srgb 插值不用 oklab —— 浏览器那边就是 sRGB alpha 合成，oklab 会压到 34。
-     基色取 --dsw-composer-surface（#181818 = Codex 的 surface），**不是**
-     --dsw-alias-bg-base：后者是窗口背景 #111111，叠上去只有 29，卡片就不分层了。 */
   --dcu-composer-bg: color-mix(in srgb, var(--dsw-alias-label-primary) 5%, var(--dsw-composer-surface));
   --dcu-composer-shadow: inset 0 0 1px 0 #fff3;
 }
@@ -101,9 +42,9 @@ body[data-ds-dark-theme] [data-conversation-scroll] {
   box-shadow: var(--dcu-composer-shadow);
 }
 
+/* 超椭圆时圆角由 skin.css 同一个 @supports 把 --dsw-radius-card 升到 25px */
 @supports (corner-shape: superellipse(1.5)) {
   [data-conversation-scroll] [data-composer-card] {
-    border-radius: var(--dsw-radius-card);
     corner-shape: superellipse(1.5);
   }
 }
@@ -114,7 +55,7 @@ body[data-ds-dark-theme] [data-conversation-scroll] {
   }
 }
 
-/* ── ⑭·2 输入区几何：44px 编辑区 + 12px 内缩，占位元素与正文同轴 ────────── */
+/* ── ⑭·2 编辑区：44px、12px 内缩，占位与正文同轴 ── */
 [data-conversation-scroll] [data-composer-card] [data-input-scroll] {
   margin-right: 0;
 }
@@ -128,8 +69,7 @@ body[data-ds-dark-theme] [data-conversation-scroll] {
   inset: 0 12px auto;
 }
 
-/* ── ⑭·3 底栏行与发送键：28px 控件带，发送键改墨色圆点、无位移 ────────────
-   卡内结构是 card > [data-input-scroll] + row，故用相邻兄弟定位底栏。 */
+/* ── ⑭·3 底栏（卡内结构 card > [data-input-scroll] + row）：28px 控件带，发送键是墨色圆点 ── */
 [data-conversation-scroll] [data-composer-card] > [data-input-scroll] + div {
   padding: 0 8px 8px;
   gap: 5px;
@@ -143,7 +83,8 @@ body[data-ds-dark-theme] [data-conversation-scroll] {
   gap: 4px;
 }
 
-[data-conversation-scroll] [data-composer-card] > [data-input-scroll] + div :is(button, select):not([role]) {
+[data-conversation-scroll] [data-composer-card] > [data-input-scroll] + div button:not([role]),
+[data-conversation-scroll] [data-composer-card] > [data-input-scroll] + div select:not([role]) {
   min-height: 28px;
   height: 28px;
 }
@@ -159,15 +100,13 @@ body[data-ds-dark-theme] [data-conversation-scroll] {
   background: var(--dsw-alias-label-secondary);
 }
 
-[data-conversation-scroll] [data-composer-card] > [data-input-scroll] + div :is(button, select):focus-visible {
+[data-conversation-scroll] [data-composer-card] > [data-input-scroll] + div button:focus-visible,
+[data-conversation-scroll] [data-composer-card] > [data-input-scroll] + div select:focus-visible {
   outline: 2px solid var(--dsw-focus-ring-color);
   outline-offset: 2px;
 }
 
-/* ── ⑭·4 工具条与建议菜单（只保留官方锚点能命中的部分） ────────────────────
-   hero 的工作区行按钮 → Codex 胶囊；@ / 指令建议菜单 → 与输入区同宽，
-   圆角走浮层刻度 --dsw-radius-menu（18px），与模型菜单同一族；
-   旧值 12px（--dsw-radius-m）与菜单族的 18 不同源，已收回。 */
+/* ── ⑭·4 hero 工作区行的按钮是胶囊；@ / 指令建议菜单与输入区同宽、走浮层菜单那一族（18 / 行 13） ── */
 [class*="_heroWorkspaceRow"] button {
   min-height: 28px;
   border-radius: var(--dsw-radius-pill);
@@ -189,13 +128,8 @@ body[data-ds-dark-theme] [data-conversation-scroll] {
   max-width: none;
   padding: 5px;
   border-radius: var(--dsw-radius-menu);
-  background: #fff;
-  box-shadow: 0 8px 32px #0002, 0 0 0 1px #0000000a;
-}
-
-body[data-ds-dark-theme] [data-conversation-scroll] [data-trigger-menu] {
-  background: #292929;
-  box-shadow: 0 8px 32px #0003, 0 0 0 1px #ffffff08;
+  background: var(--dsw-codex-suggest-fill);
+  box-shadow: var(--dsw-codex-suggest-shadow);
 }
 
 [data-conversation-scroll] [data-trigger-menu] > [role=listbox] {
@@ -206,7 +140,6 @@ body[data-ds-dark-theme] [data-conversation-scroll] [data-trigger-menu] {
   scrollbar-width: thin;
 }
 
-/* 选项行圆角同「浮层 18 − 内衬 5 = 13」，与 ⑫·3 的菜单行同一公式 */
 [data-conversation-scroll] [data-trigger-menu] [role=option] {
   box-sizing: border-box;
   width: 100%;
@@ -223,9 +156,7 @@ body[data-ds-dark-theme] [data-conversation-scroll] [data-trigger-menu] {
   background: color-mix(in srgb, var(--dsw-alias-label-primary) 10%, transparent);
 }
 
-/* ── ⑭·5 新建页（hero）：输入区占满、工作区行贴在卡片上沿 ─────────────────
-   上游的 .dcu-home-* 建议卡属于它自己的组件，本皮肤没有这些节点，不移植；
-   container 声明只为那些卡片服务，一并省掉。 */
+/* ── ⑭·5 新建页：输入区占满，工作区行贴在卡片上沿 ── */
 [data-phase=hero] [data-conversation-scroll][class] {
   --dsh-composer-side-clearance: 16px;
   justify-content: flex-start;
@@ -237,7 +168,8 @@ body[data-ds-dark-theme] [data-conversation-scroll] [data-trigger-menu] {
   min-height: 100%;
 }
 
-[data-phase=hero] [data-composer-seat] > :has([class*="_composerHero"]) {
+/* hero 在席位下第三层（seat > 包裹 > 一层 > hero）：固定深度的子代 :has()，编辑区打字不再触发整棵子树的重判 */
+[data-phase=hero] [data-composer-seat] > :has(> * > [class*="_composerHero"]) {
   display: flex;
   flex: 1;
   flex-direction: column;
@@ -254,6 +186,7 @@ body[data-ds-dark-theme] [data-conversation-scroll] [data-trigger-menu] {
   padding-bottom: 32px;
 }
 
+/* 工作区行（上栏条）：圆角就是卡片圆角本身（同一个令牌），探在卡片背后与之同心叠放 */
 [data-phase=hero] [class*="_heroWorkspaceRow"] {
   box-sizing: border-box;
   flex: none;
@@ -265,9 +198,6 @@ body[data-ds-dark-theme] [data-conversation-scroll] [data-trigger-menu] {
   min-height: 48px;
   margin: 0 28px -10px;
   padding: 6px 12px 16px;
-  /* 上栏条圆角 = 卡片圆角（同一个 --dsw-radius-card）：它探在卡片背后，只有上面两角可见，
-     与卡片同心叠放。旧值 16px（卡片 20）时 条/卡 = 0.79，而 Codex 实测 1.03
-     —— 条比卡片紧 5px 就是那两条对不上的角弧。 */
   border-radius: var(--dsw-radius-card) var(--dsw-radius-card) 0 0;
   background: color-mix(in srgb, var(--dsw-alias-label-primary) 4%, var(--dsw-alias-bg-base));
 }

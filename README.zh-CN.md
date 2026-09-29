@@ -24,9 +24,8 @@ DSH Web 的界面元素按 Codex 复刻：窗口边缘的阴影与发丝线、�
 ## 宿主兼容性
 
 本工作区对照 DSH `0.1.7-rc.1`（npm 全局安装）与 `0.1.7-rc.2`（Windows 桌面壳的 `app.asar`）开发；
-0.6.0 的全套验收在 npm 发布的 `@deepseek-ai/dsh@0.1.7-rc.2` 上跑（真 `dsh web` 实例 + 由它打包的 asar，见「宿主路径」）。
-0.6.1 起另在**实机安装的 0.1.7-rc.1** 上对过账 —— 那一版的目录快照没有 `pending`，乐观显示改由席位自己那一笔承担（见下）。
-夹具脚本直接读 `app.asar` 里的 shipped CSS，宿主升级后若结构变化，夹具断言会失败。
+0.6.1 的全套验收在 npm 发布的 `@deepseek-ai/dsh@0.1.7-rc.2` 上跑（夹具读它的 `node_modules` 与由它打包的 `app.asar` 各一遍，
+真 GUI 用它起的 `dsh web`，见「宿主与浏览器」）。夹具直接读宿主 shipped 的 CSS 与渲染代码，宿主升级后若结构变化，夹具断言会失败。
 
 ## 功能
 
@@ -65,26 +64,31 @@ DSH Web 的界面元素按 Codex 复刻：窗口边缘的阴影与发丝线、�
 
 ## 安装
 
-```powershell
-npm run install:web        # node scripts/install-plugin.mjs --write
-npm run install:desktop    # 桌面壳，改完重启应用
-npm run build              # 由 skins/codex-ink 重新生成 theme.css 与 client.js
+标准的 DSH 插件安装，不需要本仓库的任何脚本：
 
-node scripts/install-plugin.mjs                              # 只读体检（默认 web profile）
-node scripts/install-plugin.mjs --bundle --write              # 注册方式改成 dsh.profile.bundles，并清掉冗余 insert
-node scripts/build.mjs --check                               # 只比对产物是否过期，不落盘
+```powershell
+dsh plugin --profile web add link:<仓库绝对路径>   # 加 link 依赖，并把包名写进 dsh.profile.bundles
+dsh web
+dsh plugin --profile web remove codex-ui          # 卸载：依赖与 bundles 条目一起去掉
 ```
 
-安装动作：把 `skins/codex-ink/` 的八份 CSS 作用域化到 `html[data-codex-ui]`，写出 `theme.css`，与 `src/client.template.js`
-（内嵌 `src/override.js`、`src/model-picker.js` 与 `src/settings-card.js`）合成 `client.js`，同步到 `profiles/<name>/vendor/codex-ui`，
-建 `node_modules/codex-ui` junction，并确保注册方式只有一种。作用域化与拼装只有一份实现，在 `src/build.mjs`。
+不想动日常 profile，先建一个试用 profile：
 
-注册方式二选一，**绝不能同时用**（同时存在会出现两个同名 loader 条目，市场校验判 fail 并把插件停用）：
+```powershell
+dsh codex --from-default-profile web --dump-config   # 由 web 模板建出 codex profile
+dsh plugin --profile codex add link:<仓库绝对路径>
+dsh codex --port 3099 --no-open
+```
 
-| 方式 | 写法 | 用在 |
-|---|---|---|
-| bundle | 包名进 profile `package.json` 的 `dsh.profile.bundles`，由包自带 `cordis.patch.yml` 完成 insert | 桌面壳 profile、web profile（`--bundle`） |
-| insert | 在 profile 的 `cordis.patch.yml` 手写 `- insert:` | 免 pnpm install 的临时验证 |
+桌面应用的 profile 由应用独占，CLI 会拒绝写入：在应用里打开侧栏「插件」→「添加插件」，填仓库绝对路径
+（对话框接受包名、Git 地址、压缩包或本地绝对路径）。`@deepseek-ai/schemastery` 声明在 `peerDependencies` 里，由宿主提供。
+
+`link:` 指向仓库本身：改完样式或组件跑一次 `npm run build`，刷新页面即生效；改了 `index.js` 的 `Config` 要重启 `dsh web`
+（宿主半在启动时加载）。
+
+**从 0.6.0 及更早版本迁移**：`install-plugin.mjs` 已删除。它装出来的是 `profiles/<name>/vendor/codex-ui` 副本加
+`node_modules/codex-ui` junction，注册方式是 `dsh.profile.bundles` 里的包名或 profile `cordis.patch.yml` 里手写的 `- insert:`。
+换成标准安装前先把这些删掉 —— 同一个 id 注册两次，市场校验会判 fail 并把插件停用。
 
 同一份样式正本也可由皮肤加载器收录：
 
@@ -93,83 +97,92 @@ node scripts/install-skin.mjs          # 与 $DSH_HOME/skins/codex-ink 逐文件
 node scripts/install-skin.mjs --write  # 有漂移则覆盖
 ```
 
+## 开发
+
+```powershell
+npm run build                    # 由 skins/codex-ink 与 src/client 重新生成 theme.css 与 client.js
+node scripts/build.mjs --check   # 只比对产物是否过期，不落盘
+```
+
+构建零依赖，只有 `scripts/build.mjs` 一份实现：八份样式去注释、作用域化到 `html[data-codex-ui]`，写出 `theme.css`；
+`src/client/` 的 ES 模块按依赖顺序打成一个经典脚本 `client.js`（DSH 的 `__ModuleLoader__.load` 形态，样式内联在里面，
+`react` 等宿主包走 loader 给的 `require`）。只认两种 import（`import { a, b as c } from '…'`、`import * as ns from '…'`）
+和三种 export（`export const | function | class`），其余写法构建直接报错，不会悄悄打错。
+
+加功能：`src/client/` 下加一个模块导出 `installXxx(ctx)`，在 `src/client/index.js` 的 `apply` 里加一行；
+要新样式就在 `skins/codex-ink/` 加一份 CSS，登记进 `scripts/build.mjs` 的 `SKIN_PARTS`。必需的宿主服务写进 `inject`
+（缺一个插件就不激活），可有可无的走 `ctx.inject([...], cb)` 子作用域，参照模型选择器。
+
 ## 目录
 
 | 路径 | 内容 |
 |---|---|
-| `index.js` `cordis.patch.yml` `package.json` | 插件宿主半与清单 |
-| `src/client.template.js` | 浏览器半模板（注入样式、覆盖层与设置卡座位） |
-| `src/override.js` | 设置页覆盖层纯函数（无 DOM，夹具直接单测） |
-| `src/settings-card.js` | 组合包页那张配置卡（构建期拼进 `client.js`） |
-| `src/model-picker.js` | 模型选择器 B 面组件：DOM 顶替席位、弹层、功率轨（纯函数部分由 `check-repo` 直接单测） |
-| `src/build.mjs` | 作用域化与产物生成，唯一实现 |
-| `theme.css` `client.js` | 生成物，由 `src/build.mjs` 从 `skins/codex-ink/` 写出 |
-| `skins/codex-ink/` | 样式正本（skin.css / patches.css / model-picker.css / sidebar-align.css / sidebar-surface.css / window-shadow.css / composer.css / settings.css） |
+| `index.js` `cordis.patch.yml` `package.json` | 插件宿主半（`Config` 设置结构）与清单 |
+| `src/client/index.js` | 浏览器半入口：`inject` 与 `apply`，按序装配下面各项 |
+| `src/client/stylesheet.js` | 注入皮肤样式（`style[data-plugin]`，卸载与热更新时由宿主收走） |
+| `src/client/settings.js` `theme-preview.js` `settings-card.js` | 设置：覆盖层 `<style>`、主题本地预览、组合包页那张配置卡 |
+| `src/client/override.js` | 覆盖层纯函数（无 DOM，`check.mjs` 直接单测） |
+| `src/client/model-picker/` | 模型选择器 B 面：`index.js` 等 `modelDirectories` 服务，`component.js` 是席位顶替、弹层与功率轨，`view.js` 是纯函数（`check.mjs` 单测） |
+| `src/client/constants.js` `host.js` | 共用的名字、读宿主服务的小工具 |
+| `skins/codex-ink/` | 样式正本（skin.css / patches.css / model-picker.css / sidebar-align.css / sidebar-surface.css / window-shadow.css / composer.css / settings.css）与 Skin v2 清单 |
+| `theme.css` `client.js` | 生成物，由 `scripts/build.mjs` 写出并提交（DSH 加载的是 `client.js`） |
+| `scripts/build.mjs` | 作用域化与打包 |
+| `scripts/check.mjs` | 不依赖宿主的仓库体检，CI 入口 |
+| `scripts/verify.mjs` `scripts/specs/` | 夹具验收：宿主 shipped 样式 + 复刻 DOM，在无头 Chromium 里断言 |
+| `scripts/live/` | 真 GUI 验收：`gui.mjs`、`settings.mjs`，以及 `parity.mjs`（改动前后逐元素计算样式对账） |
+| `scripts/lib/` | 找宿主与浏览器（`host.mjs`）、CDP 驱动（`cdp.mjs`）、断言汇总（`checks.mjs`） |
+| `scripts/install-skin.mjs` | 皮肤加载器路径的同步器 |
 | `docs/` | 计划与决策留档 |
-| `scripts/build.mjs` | 重新生成产物；`--check` 只比对不落盘 |
-| `scripts/check-repo.mjs` | 不依赖宿主的仓库体检，CI 入口 |
-| `scripts/host-paths.mjs` | 解析 `app.asar`、全局 `@deepseek-ai` 包与 Chromium |
-| `scripts/pack-host-asar.mjs` | 没有桌面壳时，把 npm 装的宿主包拼成夹具能读的 `app.asar` |
-| `scripts/install-plugin.mjs` `scripts/install-skin.mjs` | 安装器 |
-| `scripts/*-verify.mjs` `scripts/live-gui-probe.mjs` `scripts/settings-page-verify.mjs` | 夹具验收与真 GUI 探针 |
-| `scripts/make-verify-profile.mjs` | 造一次性验证 profile：插件管理页开着、只挂本插件、不碰现有 profile |
 | `assets/reference/` | Codex 实机参考图 |
-| `assets/screenshots/` | 验收出图 |
+| `assets/screenshots/` | README 用图 |
 | `.github/workflows/ci.yml` | CI |
 
 ## 验收
 
 | 命令 | 覆盖 | 前置 |
 |---|---|---|
-| `npm run check` | 语法、JSON、清单自洽、产物同源、编码、双语文档成对、机器专属路径 | 无 |
-| `node scripts/audit-codex-ink.mjs` | 皮肤结构、36 组 WCAG、彩色白名单 | 无 |
-| `node scripts/model-picker-verify.mjs` | ⑫（A 面宿主菜单）与 pending 指示器，20 项 | 无 |
-| `node scripts/power-rail-verify.mjs` | ⑳ B 面组件：席位顶替与复原、触发器与弹层几何、功率轨 Codex 逐字几何、拖动中不提交 / 松手对齐提交一次、慢往返（600ms）里轨不回弹 / 底部触发器同步换档 / 列表不清空 / 档位名旁转圈、键盘四键、焦点环、Escape、换模型带默认档、失败提示、reduced-motion、深色、开关，**形态对齐 dsh-claude-style 的滑杆（槽/填充/旋钮/两端刻度名）+ 顶档紫色点阵**，61 项。假目录按**安装中的**宿主形状造（快照不带 `pending`）—— 修前跑这套夹具 44/47 | 无（只要 Chromium） |
-| `node scripts/rightbar-verify.mjs` | 阴影层、右栏三件套、两条分界线，42 项 | 无 |
-| `node scripts/sidebar-align-verify.mjs` | 侧栏列对齐，6 项 | 无 |
-| `node scripts/sidebar-surface-verify.mjs` | 侧栏滚动渐隐（Codex mask 斜坡）的机制与观感：4 种状态并排、逐像素还原遮罩 alpha 曲线，13 项 | 无 |
-| `node scripts/sidebar-color-verify.mjs` | 侧栏底色按 Codex **实测像素**对齐，亮暗两套同页验收：亮 246/233/255、暗 15/31/17（全为中性，R=G=B），各自的侧栏到主区档差、层级方向，外加每套一组反例对照 —— 16 项 | 无 |
-| `node scripts/hero-verify.mjs` | ⑬⑭⑰ 与焦点环、顶栏两格放开，25 项 | 无 |
-| `node scripts/composer-shadow-verify.mjs` | ⑱ 输入卡阴影按**实测像素**对齐 Codex（0.6.3 起不再照抄源码 token）：亮色两层的几何与 alpha 逐层断言、暗色 inset 且卡外零投影、窄屏与宽屏同值（无远场可收），外加真实渲染像素（环像素最暗值、卡上沿衰减半径落进 Codex 实测带、卡内顶边亮度）与一条前提自检，21 项 | 无 |
-| `node scripts/elevation-verify.mjs` | ⑲ `--dsw-elevation-*` 令牌与 Codex 源码对账：逐层几何与 alpha、第 1 层跟随 stroke、第 2/3 层亮暗同值（Codex 无暗色变体），外加渲染出的菜单面板确实吃到该令牌，19 项 | 无 |
-| `node scripts/live-gui-probe.mjs --url <带 token 的 URL>` | 真 GUI：阴影与两条分界线 7 项，加模型位 —— B 面开着时 7 项（顶替、几何、键盘改档写进宿主 store 并改回），关着时量 A 面 pending 窗口 3 项（`--latency` 默认给往返加 800ms，本机往返 <60ms 采不到窗口） | `dsh web` 实例 |
-| `node scripts/settings-page-verify.mjs --url <带 token 的 URL>` | 真 GUI：组合包页的设置卡、9 行结构、默认不覆盖、开关与强调色写入、模型选择器关掉后宿主那一格复原、刷新后仍在，共 29 项断言 | `dsh web` 实例（profile 需启用插件管理） |
-| `node scripts/theme-flash-probe.mjs --url <带 token 的 URL>` | 按帧采样主题/页面切换时的「有效底色」（沿祖先找第一个不透明底色），看切换过程中是否出现既不属于起点也不属于终点的中间帧（实测 9 段约 720 帧、0 异常） | 同上 |
+| `npm run check` | 语法、JSON、清单与 `peerDependencies`、产物与源码同源、`client.js` 的 DSH 插件契约（隔离执行一遍）、作用域化、覆盖层与功率轨纯函数、36 组 WCAG、彩色白名单、编码、双语文档成对、机器专属路径，60 项 | 无 |
+| `npm run verify` | 全部夹具，195 项（见下表） | 宿主包 + Chromium |
+| `node scripts/live/gui.mjs --url <带 token 的 URL>` | 真 GUI：阴影与两条分界线，加模型位 —— B 面开着时 14 项（顶替、几何、键盘改档写进宿主 store 并改回），关着时 10 项（A 面 pending 窗口；`--latency` 默认给往返加 800ms，本机往返 <60ms 采不到） | `dsh web` 实例 |
+| `node scripts/live/settings.mjs --url <…>` | 真 GUI：组合包页设置卡、9 行结构、默认不覆盖、开关与强调色写入、模型选择器关掉后宿主那一格复原、刷新后仍在、主题切换逐帧无中间帧；结束时全部重置，30 项 | 同上（profile 需启用插件管理） |
+| `node scripts/live/parity.mjs snap --url <…> --out <目录>`<br>`node scripts/live/parity.mjs diff <改前> <改后>` | 14 个界面状态逐元素存下全部计算样式再逐项比，0 差异时退出码 0；重构靠它证明外观没变。`--ignore` 可跳过指定属性或新加的 `--变量` | 同上 |
 
-`npm run check` 不需要宿主。夹具验证在本机跑：取 `app.asar` 的 shipped CSS 加按渲染代码复刻的 DOM，
-用 `getComputedStyle` 读值。夹具没有标题栏条、真实 AppFrame 网格与真 RPC，阴影层、分界线悬停与 pending
-反馈由真 GUI 探针取证。
+夹具：`node scripts/verify.mjs [spec…]`，不写 spec 就全跑。
 
-### 宿主路径
+| spec | 小节 | 覆盖 | 项数 |
+|---|---|---|---|
+| `composer` | composer-shadow · hero | ⑱ 输入卡阴影对齐 Codex `--elevation-composer`（逐层几何与 alpha、暗色 inset、窄屏 80→40px、渲染像素）；⑬⑭⑰ 与焦点环、顶栏两格放开 | 23 + 25 |
+| `elevation` | elevation | ⑲ `--dsw-elevation-*` 与 Codex 源码对账，外加渲染出的菜单面板 | 19 |
+| `model-picker` | host-menu · power-rail | ⑫ A 面宿主菜单与 pending 指示器；⑳ B 面：席位顶替与复原、几何、拖动中不提交 / 松手对齐提交一次、慢往返不回弹且转圈、键盘四键、焦点环、Escape、换模型带默认档、失败提示、reduced-motion、深色、开关 | 20 + 47 |
+| `rightbar` | rightbar | 阴影层、右栏三件套、两条分界线 | 42 |
+| `sidebar` | align · surface | 侧栏列对齐；侧栏滚动渐隐（Codex mask 斜坡）的机制与逐像素 alpha | 6 + 13 |
 
-验收脚本读的是它跑在其中的宿主，三个路径按同一优先级解析：
+选项：`--host <app.asar | node_modules>` 指定宿主，`--shots <目录>` 指定截图位置（默认系统临时目录下的 `codex-ui-shots/`），
+`--verbose` 打印读数。夹具取宿主 shipped CSS 加按渲染代码复刻的 DOM，用 `getComputedStyle` 读值；它没有标题栏条、真实
+AppFrame 网格与真 RPC，阴影层、分界线悬停与 pending 反馈由真 GUI 取证。
 
-1. 环境变量 `DSH_ASAR`、`DSH_GLOBAL_MODULES`、`DSH_CHROME`；
-2. `scripts/host.local.json`（本机配置，已 gitignore），例：`{ "asar": "D:/.../resources/app.asar" }`；
-3. 扫描常见安装位置、Playwright 的浏览器缓存与 `npm root -g`。
+### 宿主与浏览器
 
-仓库里不含任何一台机器的绝对路径（`npm run check` 对 JS、样式与文档逐个扫描，含 `client.js` 里 JSON 转义过的形式）。
+夹具读的是它跑在其中的宿主，按下面的顺序取第一个可用的（显式给出却不存在的路径直接报错）：
 
-没有桌面壳时，用 npm 发布的同一批包拼一份：
+1. 环境变量 `DSH_ASAR`（桌面壳的 `app.asar`）或 `DSH_GLOBAL_MODULES`（任何含 `@deepseek-ai/*` 的 `node_modules`）；
+2. `scripts/host.local.json`（本机配置，已 gitignore），字段 `asar` / `globalModules` / `chrome`；
+3. 扫描桌面壳的常见安装位置与 `npm root -g`。
+
+浏览器取 `DSH_CHROME`，未设时依次找 Playwright 的 Chromium、本机 Chrome、Edge。仓库里不含任何一台机器的绝对路径
+（`npm run check` 逐个扫描，含 `client.js` 里 JSON 转义过的形式）。
+
+没有桌面壳时，npm 上的同一批包就够，不必拼 asar：
 
 ```powershell
 npm install @deepseek-ai/dsh@0.1.7-rc.2 --prefix <临时目录>
-node scripts/pack-host-asar.mjs --from <临时目录>/node_modules --out <临时目录>/app.asar
-$env:DSH_ASAR = "<临时目录>/app.asar"; $env:DSH_GLOBAL_MODULES = "<临时目录>/node_modules"
-$env:DSH_CHROME = "C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe"   # 没装 Playwright 时用系统 Edge
+$env:DSH_GLOBAL_MODULES = "<临时目录>/node_modules"
+npm run verify
 ```
 
-同一个 npm 包也能起真实例：`$env:DSH_HOME = "<临时目录>/home"; node <临时目录>/node_modules/@deepseek-ai/dsh/lib/bin.js web --port 3098 --no-open`
-（首次运行会建 web profile；再跑一次 `install-plugin.mjs --profile web --write`）。
-
-真 GUI 探针用法：
-
-```powershell
-dsh --profile web --port 3099 --no-open      # 终端打印带 token 的 URL
-node scripts/live-gui-probe.mjs --url "http://127.0.0.1:3099/?token=..." --dpr 1.5
-```
-
-探针在量 pending 窗口前自己先开一个新会话，断言不过时退出码非 0。token 有存活期，约半小时后返回 401，重起一次取新 token。
+同一个包也能起真实例（首次运行会建 web profile，之后按「安装」一节加插件）：
+`$env:DSH_HOME = "<临时目录>/home"; node <临时目录>/node_modules/@deepseek-ai/dsh/lib/bin.js web --port 3098 --no-open`。
+终端打印的带 token 的 URL 就是真 GUI 验收的 `--url`。
 
 ## 设置页
 
@@ -294,16 +307,20 @@ node scripts/live-gui-probe.mjs --url "http://127.0.0.1:3099/?token=..." --dpr 1
 
 - 夹具验证不是登录态截屏。`dsh web` 的 launch token 有存活期且只在进程内。
 - headless 单窗口只有前台页签处理 `:hover`，多页夹具把 web 形态页最后打开。
-- 模型位的 B 面（⑳）**不注册 slot**：宿主的 `conversation.input.model` 席位照常渲染，组件把自己的触发器追加进同一席位、
-  用一条直接子代 `:has()` 把宿主那一格隐藏；数据与提交只走宿主的 `ctx.modelDirectories`。Codex 功率轨的三个进阶态
+- 模型位的 B 面（⑳）**不注册 slot**：宿主的 `conversation.input.model` 席位照常渲染，组件把自己的触发器追加进同一席位并给席位打上
+  `data-codex-ui-seated`，一条子代规则把宿主那一格隐藏（它仍在 React 树里）；撤走触发器时标记一起摘掉，宿主那一格立即复原。
+  数据与提交只走宿主的 `ctx.modelDirectories`。Codex 功率轨的三个进阶态
   —— 高亮（未开 Fast）、Fast 模式圆点飞出、超出最大档的紫蓝渐变 —— 未做：DSH 没有 Fast 模式，也没有「超出最大档」这一态；
   触发器上 Max 档的紫色（`--color-chart-purple`）同样不做，它在彩色白名单之外。
 - ⑯ 保留宿主页签条：整条隐藏会连带去掉全屏与收起按钮。
 - 会话行文字列 40px，比工作区行、新会话、插件行短 2px，来自官方 `Rows.module.css` 的 `.sessionRow .title` margin，未改。
 - 顶栏两格自 0.3.0 起放开（⑬·3c），因此**会话顶栏会比参考图多出条目**：只有当会话真有子代理 /
   后台 job / 预设 / 工作目录时才出现，此时它同时是"子代理在跑"的唯一可见面。取舍写在 CHANGELOG。
-- `composer.css`、`patches.css` 与 `sidebar-surface.css` 使用哈希类名后缀锚点（`[class$=…]`、`[class*=…]`），宿主没有对应 `data-*` 的位置只能如此；
-  计数由 `node scripts/build.mjs` 每次自报（0.6.0：composer 18 · patches 12 · sidebar-surface 2，含注释里的提及）。`model-picker.css` 为 0。
+- `composer.css`、`patches.css`、`sidebar-align.css` 与 `sidebar-surface.css` 使用哈希类名后缀锚点（`[class$=…]`、`[class*=…]`），
+  宿主没有对应 `data-*` 的位置只能如此（0.6.1：composer 10 · patches 10 · sidebar-align 9 · sidebar-surface 2）。sidebar-align 的 9 处
+  是同一个锚点 `_collapsed`（侧栏折叠态），替掉原先落在祖先位置的 `:has()`。`model-picker.css` 为 0。
+- 选择器不把 `:has()` 放在祖先位置：会话区流式插入节点时，Chromium 要为每个受影响的祖先重配整片子树，
+  实测样式重算从 ~0.3s 涨到 4s 以上。剩下的 `:has()` 都在主语位置或只看直接子代；`model-picker.css` 由 `check.mjs` 强制为 0。
 
 ## 与 Codex 源码对账
 
@@ -340,8 +357,8 @@ Codex 桌面应用的 webview CSS 在 `resources/app.asar` 的 `webview/assets/a
 
 ## CI
 
-`.github/workflows/ci.yml` 在 Ubuntu 与 Windows、Node 22 与 24 上跑 `scripts/check-repo.mjs` 与
-`scripts/build.mjs --check`。夹具验收与真 GUI 探针要桌面壳与 Chromium，留在本机跑。
+`.github/workflows/ci.yml` 在 Ubuntu 与 Windows、Node 22 与 24 上跑 `scripts/check.mjs`（已含产物与源码同源比对）。
+夹具与真 GUI 验收要宿主与 Chromium，留在本机跑。
 
 ## 许可
 

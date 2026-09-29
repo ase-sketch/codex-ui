@@ -1,8 +1,8 @@
 # codex-ink
 
-Codex / ChatGPT direction. These stylesheets are the sources for the codex-ui plugin: `src/build.mjs` reads the eight
-CSS files here, scopes their selectors to `html[data-codex-ui]`, and writes `theme.css` and `client.js`;
-`scripts/install-plugin.mjs` installs them. The same directory satisfies the Skin v2 manifest format and can be picked
+Codex / ChatGPT direction. These stylesheets are the sources for the codex-ui plugin: `scripts/build.mjs` reads the eight
+CSS files here, scopes their selectors to `html[data-codex-ui]`, and writes `theme.css`, which is inlined into `client.js`;
+see the repository README for installing (`dsh plugin add link:`). The same directory satisfies the Skin v2 manifest format and can be picked
 up by a skin loader on its own.
 
 ## Files
@@ -12,9 +12,9 @@ up by a skin loader on its own.
 | `skin.json` | Manifest | id, accent, light and dark previews |
 | `skin.css` | L1 tokens and L2 typography | `--dsw-alias-*` remapping; spacing, radius, type scale, motion and elevation token layers |
 | `patches.css` | L3 components | Focus ring, links, card contract, mono pills, tag tone normalization, reduced motion, ⑫ host model menu (face A), ⑬ composer header and card, ⑯ right panel guide entries, ⑰ composer control hover |
-| `model-picker.css` | L3 model picker component | Face B: the trigger, popover and reasoning power rail built by `src/model-picker.js` (Codex `_Track` / `_Tick` / `_Thumb` geometry verbatim); paints only `.codex-mp-*` plus one seat-hiding rule, never the host menu. Verified by `scripts/power-rail-verify.mjs` |
+| `model-picker.css` | L3 model picker component | Face B: the trigger, popover and reasoning power rail built by `src/client/model-picker/` (Codex `_Track` / `_Tick` / `_Thumb` geometry verbatim); paints only `.codex-mp-*` plus one seat-hiding rule, never the host menu. Verified by `scripts/verify.mjs model-picker` |
 | `sidebar-align.css` | L3 sidebar alignment | New session and plugin rows land on the same two columns as the workspace list (icon column 20px, text column 42px); selectors cover both the rc.1 flat DOM and the rc.2 nested DOM |
-| `sidebar-surface.css` | L3 sidebar surface | Sidebar scroll fade: the host's 24px overlay steps aside for Codex's 40px four-stop mask ramp, applied to the scroller with the rightmost 12px left unmasked for the scrollbar. Verified by `scripts/sidebar-surface-verify.mjs` |
+| `sidebar-surface.css` | L3 sidebar surface | Sidebar scroll fade: the host's 24px overlay steps aside for Codex's 40px four-stop mask ramp, applied to the scroller with the rightmost 12px left unmasked for the scrollbar. Verified by `scripts/verify.mjs sidebar` |
 | `window-shadow.css` | L3 window edges | Conversation window 0.5px hairline plus a 24px ambient shadow; right panel keeps a hairline on its left edge only and bleeds upward; right divider handle hover gradient |
 | `composer.css` | L3 composer | Card geometry and surface, 44px editor area, 28px bottom control row, suggestion menu, hero layout. This layer is allowed to use `[class*=…]` suffix anchors |
 | `settings.css` | L3 settings | Layout of the configuration card on the plugin manager bundle page (`.cx-*`) |
@@ -41,17 +41,17 @@ up by a skin loader on its own.
 ## Verification
 
 ```bash
-node scripts/audit-codex-ink.mjs
+node scripts/check.mjs
 ```
 
-The script checks the `skin.json` structure, measures 36 WCAG contrast pairs, and audits the color whitelist in `patches.css`.
+The checks that concern this directory: the `skin.json` structure, 36 measured WCAG contrast pairs, and the color whitelist in `patches.css`.
 Current result: 36/36 pass, 19 AAA pairs, zero colors outside the whitelist.
 
 ## Install
 
 ```powershell
-node scripts/install-plugin.mjs --write      # plugin path, the primary route
-node scripts/install-skin.mjs --write        # skin loader path: sync to $DSH_HOME/skins/codex-ink
+dsh plugin --profile web add link:<absolute repo path>   # plugin path, the primary route
+node scripts/install-skin.mjs --write                    # skin loader path: sync to $DSH_HOME/skins/codex-ink
 ```
 
 ## Not covered

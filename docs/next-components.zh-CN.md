@@ -115,7 +115,7 @@ README 已承认：只做「文本往 ink 混合 + alpha 按比例缩放」，�
 | 批次 | 内容 | 验收 |
 |---|---|---|
 | P0 | §1.4 定点实测（决定动不动那批令牌）+ §1.2 圆角家族对齐（4 条声明，消除陷阱）+ §1.1b 10 条 box-shadow 环的颜色 | `npm run check` + 真 GUI 取样；§1.4 的取样命令见下 |
-| P1 | §2 的 P0/P1 组件（tool / approval / skill / reference / commands / settings-* …） | 每项一条真 GUI 断言（沿用 `live-gui-probe.mjs` 的写法） |
+| P1 | §2 的 P0/P1 组件（tool / approval / skill / reference / commands / settings-* …） | 每项一条真 GUI 断言（沿用 `scripts/live/gui.mjs` 的写法） |
 | P2 | 字号行 + §4.1 漂移检查 + §4.2 覆盖矩阵 | 设置卡断言从 22 条扩到 24 条；漂移检查进 `npm run check` |
 | 不做 | §3 的「不做」列 + §5 | — |
 
@@ -124,12 +124,12 @@ P1 才是真正「补组件」的工作量所在。
 
 ## 7. 本轮真 GUI 实测记录（可复跑）
 
-临时 profile + 真 GUI（步骤与 `settings-page-verify.mjs` 相同）：
+临时 profile + 真 GUI（0.6.1 起用标准安装，见 README「安装」）：
 
 ```
-node scripts/build.mjs && node scripts/make-verify-profile.mjs
-$env:DSH_HOME = "$env:TEMP\codex-ui-verify-home"
-node scripts/install-plugin.mjs --profile verify --write
+node scripts/build.mjs
+dsh verify --from-default-profile web --dump-config
+dsh plugin --profile verify add link:<仓库绝对路径>
 dsh --profile verify --port 3098 --no-open      # 终端会打印带 token 的 URL
 node <codex-ref>/focus-ring-probe.mjs     --url "<URL>" --chrome "<Chromium>" --dialog
 node <codex-ref>/focus-mimic-probe.mjs   --url "<URL>" --chrome "<Chromium>"
@@ -161,7 +161,7 @@ node <codex-ref>/focus-mimic-probe.mjs   --url "<URL>" --chrome "<Chromium>"
 | 侧栏行几何 | **不动**（会改现有观感，见 §3 的边界纪律）。宿主实测：新会话/面板行 36px、工作区行 34px、会话行 32px，圆角 12px；Codex 参考图约 42px 行高。要做必须先拍板。 |
 | 侧栏面 = 滚动渐隐 | **已做**（⑱ `skins/codex-ink/sidebar-surface.css`）。 |
 
-**这一项的诚实结论（可复跑：`node scripts/sidebar-surface-verify.mjs`）**：宿主那 24px 覆盖层
+**这一项的诚实结论（可复跑：`node scripts/verify.mjs sidebar`）**：宿主那 24px 覆盖层
 与 Codex 的 40px mask 斜坡前 24px **逐点差 ≤0.122**，底边亮度差 8.0/255 —— 按外观判据它**不值得做**。
 做它的理由是机制：覆盖层靠不透明底色成立，而本皮肤有 `translucentSidebar` 开关
 （`--dsw-specific-sidebar-fill` 变 `rgba(…,0.72)`）；夹具四列并排实测，半透明底下
