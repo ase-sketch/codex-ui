@@ -1,0 +1,46 @@
+/* ⑬·补：「轨迹」视图的退出出口。
+ *
+ * ⑬ 按参考图把会话视图页签条整条隐去（[data-slot="conversation.session.header"] > [data-conversation-tabs]
+ * { display: none }），而「轨迹」正是那条页签条里的一格。入口没被删（工具卡展开后的 Inspect 走
+ * openView('trajectory', callId)），出口却只剩页签条 —— 进了轨迹就出不来。
+ *
+ * 这里不动页签条（那是与参考图的对齐面），只给轨迹视图浮一个「← 对话」。
+ * 节点由 src/client/trajectory-exit.js 挂到 body 上、position: fixed，所以下面不依赖宿主结构；
+ * 圆角取 h/2（与输入区底部控件同一套「全圆角」）；面板沿用 ⑫·2 的菜单契约：不透明 layer-1 + 软影 + 1px 环。
+ * 显示与否全在 JS 里判，这里只管长相。 */
+.codex-te-exit {
+  position: fixed;
+  z-index: 1090;
+  box-sizing: border-box;
+  display: inline-flex;
+  align-items: center;
+  height: 26px;
+  padding: 0 11px;
+  border: 0;
+  border-radius: 999px;
+  background: var(--dsw-alias-bg-layer-1);
+  color: var(--dsw-alias-label-secondary);
+  box-shadow: var(--dsw-codex-menu-shadow);
+  font-family: inherit;
+  font-size: 13px;
+  line-height: 20px;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: color var(--dsw-motion-fast), background-color var(--dsw-motion-fast);
+}
+
+.codex-te-exit:hover {
+  color: var(--dsw-alias-label-primary);
+  background: var(--dsw-alias-interactive-bg-hover);
+}
+
+.codex-te-exit:focus-visible {
+  outline: 2px solid var(--dsw-focus-ring-color);
+  outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .codex-te-exit {
+    transition: none;
+  }
+}

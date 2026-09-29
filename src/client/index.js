@@ -9,6 +9,7 @@ import { installModelPicker } from './model-picker/index.js';
 import { installSettings } from './settings.js';
 import { installSettingsModal } from './settings-modal.js';
 import { installStylesheet } from './stylesheet.js';
+import { installTrajectoryExit } from './trajectory-exit.js';
 
 /**
  * cordis **服务名**（不是包名）：loader 逐个等它们就绪，缺一个本插件就不激活。
@@ -34,5 +35,11 @@ export function apply(ctx) {
     installSettingsModal(ctx);
   } catch (error) {
     console.warn('[codex-ui] 设置模态框结构层挂载失败，其余功能照常：', error);
+  }
+  /* ⑬ 隐去页签条后「轨迹」只剩入口没有出口：浮一个「← 对话」。宿主结构不符就整体不挂。 */
+  try {
+    installTrajectoryExit(ctx);
+  } catch (error) {
+    console.warn('[codex-ui] 轨迹退出出口挂载失败，其余功能照常：', error);
   }
 }

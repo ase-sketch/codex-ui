@@ -2,6 +2,37 @@
 
 [English](CHANGELOG.md)
 
+## 0.7.1 - 2026-09-29
+
+### ⑬d 「轨迹」视图的退出出口
+
+⑬ 按参考图把会话视图页签条整条隐去（`[data-slot="conversation.session.header"] > [data-conversation-tabs]
+{ display: none }`），而 DSH 原生的「轨迹」（`@deepseek-ai/dsh-client-ui-trajectory`）正是那条页签条里的一格。
+入口没被删 —— 工具卡展开后的 Inspect 走 `openView('trajectory', callId)` —— 出口却只剩页签条，
+于是**进了轨迹就出不来**：真 `dsh web` 实测，切到轨迹后全页可见控件里能切回对话的为零。
+
+- **不动页签条**（那是与参考图的对齐面）：轨迹视图显示时，在视图区左下角浮一个「← 对话」。
+  点击就是**点那一格页签本身** —— 与用户手点走同一条 `selectView` 回调，不绕宿主内部 API、
+  也不去猜宿主的状态。
+- 结构在 `src/client/trajectory-exit.js`，外观在 `skins/codex-ink/trajectory-exit.css`（新增皮肤分片）。
+- **「对话是哪一格」先标定再兜底**：视图区在渲染对话时，`aria-selected` 的那一格就是它
+  （与界面语言、页签注册顺序都无关，页面一进来就停在对话，正常一次就标定到）；标定不到才退回
+  页签文字 `Chat` / `对话`。两者都没有就**不出按钮** —— 宁可不出，也不点错格。
+- **页签条哪天重新可见，本层自动让位**（`offsetParent` 判定），不需要跟着改代码。
+- 按钮文字直接抄那一格页签的文字，本模块不维护词表。
+- 宿主结构不符只 warn 并跳过，这一层会降级，绝不抛。
+- 几何锚点取 `[data-slot="conversation.view"]` 的**父元素**：那个 slot 容器是 `display: contents`，
+  自己的 rect 恒为 0。
+
+### 排查记录：同一条皮肤规则经两条通道下发
+
+归因时踩到的坑，写下来免得下次再踩：本机同时装着 **plugin 通道**（`style[data-plugin=codex-ui]` 内联的
+`codex-ui/theme.css`）与 **skin 通道**（skin-center 注入的
+`<link href="/api/skin-center/v2/skins/codex-ink/patches">`），**同一条隐藏规则两份都在**。
+所以「禁用可疑样式表」不构成证伪 —— 禁用内联那份后页签条照旧不可见。要归因就得问浏览器本身：
+CDP `CSS.getMatchedStylesForNode` 逐条列出命中规则并回溯 `styleSheetId` 到表头，再用一条自插的
+`display:flex !important` 确认隐藏完全由 CSS 决定。
+
 ## 0.7.0 - 2026-09-28
 
 架构整理（原 PR #3）与设置界面全页化（原 PR #1）一起落在 0.6.4 之上。0.6.2–0.6.4 的东西一样没丢：

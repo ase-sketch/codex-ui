@@ -2,6 +2,39 @@
 
 [简体中文](CHANGELOG.zh-CN.md)
 
+## 0.7.1 - 2026-09-29
+
+### ⑬d An exit for the Trajectory view
+
+⑬ hides the whole conversation view tab strip to match the reference screenshot, and DSH's native Trajectory
+(`@deepseek-ai/dsh-client-ui-trajectory`) is one cell of that strip. The entrance was never removed — a tool card's
+expanded Inspect goes through `openView('trajectory', callId)` — but the only way back was the strip, so **you could
+get into Trajectory and not out**: on a live `dsh web`, once the view switched there were zero visible controls that
+returned to Chat.
+
+- **The strip is left alone** (it is the alignment surface for the reference screenshot). While the Trajectory view is
+  showing, a "← Chat" pill floats at the lower-left of the view area. Clicking it **clicks that very tab** — the same
+  `selectView` callback a real click uses, with no host internals and no guessing at host state.
+- Structure in `src/client/trajectory-exit.js`, looks in `skins/codex-ink/trajectory-exit.css` (a new skin part).
+- **Which tab is Chat is calibrated, then guessed at**: while the view area renders Chat, the tab with
+  `aria-selected` is the one (independent of UI language and of tab registration order — the app starts on Chat, so one
+  pass usually calibrates it); only if that fails does it fall back to the tab's own text `Chat` / `对话`. With neither,
+  **no button is shown at all** — better absent than clicking the wrong cell.
+- **If the strip ever becomes visible again this layer steps aside** (an `offsetParent` test), with no code change.
+- The button copies its label from that tab, so the module keeps no word list.
+- A mismatch with the host layout warns and skips; this layer degrades, it never throws.
+- The geometry anchor is the **parent** of `[data-slot="conversation.view"]`: that slot container is
+  `display: contents` and its own rect is always 0.
+
+### Debugging note: one skin rule, two delivery channels
+
+A trap worth recording. This machine has both the **plugin channel** (`style[data-plugin=codex-ui]` inlining
+`codex-ui/theme.css`) and the **skin channel** (skin-center's
+`<link href="/api/skin-center/v2/skins/codex-ink/patches">`) — and the same hiding rule ships in both. So "disable the
+suspicious stylesheet" proves nothing: with the inline copy disabled the strip stayed invisible. Attribution has to ask
+the browser itself: CDP `CSS.getMatchedStylesForNode` lists the matching rules and resolves `styleSheetId` back to the
+sheet, and a self-injected `display:flex !important` confirms the hiding is CSS and nothing else.
+
 ## 0.7.0 - 2026-09-28
 
 The architecture cleanup (originally PR #3) and the full-page settings work (originally PR #1) land together on top of

@@ -2242,3 +2242,40 @@ html[data-codex-ui] [data-codex-ui-injected="settings-modal"],
 html[data-codex-ui] [data-codex-ui-injected="settings-modal"] * {
   box-sizing: border-box;
 }
+
+html[data-codex-ui] .codex-te-exit {
+  position: fixed;
+  z-index: 1090;
+  box-sizing: border-box;
+  display: inline-flex;
+  align-items: center;
+  height: 26px;
+  padding: 0 11px;
+  border: 0;
+  border-radius: 999px;
+  background: var(--dsw-alias-bg-layer-1);
+  color: var(--dsw-alias-label-secondary);
+  box-shadow: var(--dsw-codex-menu-shadow);
+  font-family: inherit;
+  font-size: 13px;
+  line-height: 20px;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: color var(--dsw-motion-fast), background-color var(--dsw-motion-fast);
+}
+
+html[data-codex-ui] .codex-te-exit:hover {
+  color: var(--dsw-alias-label-primary);
+  background: var(--dsw-alias-interactive-bg-hover);
+}
+
+html[data-codex-ui] .codex-te-exit:focus-visible {
+  outline: 2px solid var(--dsw-focus-ring-color);
+  outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html[data-codex-ui] .codex-te-exit {
+    transition: none;
+  }
+}

@@ -31,6 +31,7 @@ export const SKIN_PARTS = [
   'composer.css', // L3 输入区
   'settings.css', // L3 插件设置卡
   'settings-modal.css', // L3 设置模态框 Codex 化层
+  'trajectory-exit.css', // L3 轨迹视图的退出出口
 ];
 /** 虚拟模块：客户端代码从这里取内联样式（DSH 只下发 client.js，样式必须在 JS 里）。 */
 const THEME_MODULE = 'codex-ui:theme.css';
