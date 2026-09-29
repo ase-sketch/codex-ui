@@ -139,7 +139,11 @@ function mountWithFakeDirectory(picker) {
   window.__picker = picker.mountModelPicker({
     models: { directoryFor: (id) => { if (id !== 'session-a') throw new Error('ui-model-selection: session "' + id + '" resolved no scope'); return dir; } },
     sessionFallback: () => null,
-    locale: null,
+    /* 语言必须**钉死**，不能让夹具读 navigator.language：组件的 t() 在宿主字典缺席时用它判断语言，
+       而 headless Chromium 的 navigator.language 随机器/浏览器走（本机实测 en-US，Emulation.setLocaleOverride
+       也改不动它）—— 「更快 / 更强」那条断言会变成随机红。这里给一个只有 getSnapshot 的快照，
+       既固定为中文，又保留「宿主字典缺席 → 落本表」这条路径（没有 bind 方法，hostT 仍是 null）。 */
+    locale: { getSnapshot: () => ({ active: 'zh-CN' }) },
   });
 }
 
