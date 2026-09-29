@@ -1,30 +1,16 @@
-/* ============================================================================
-   codex-ink（墨白终端）· L3 模型选择器组件（B 面：功率轨）
-   ----------------------------------------------------------------------------
-   源文件：skins/codex-ink/model-picker.css
-   消费者：src/model-picker.js（自建 DOM，不是宿主的菜单）。
-   由 src/build.mjs 与其余各层一起拼接，并作用域化到 html[data-codex-ui]；
-   本文件写裸选择器，注释里不写花括号（scopeCss 按花括号配对）。
-
-   纪律（0.5.0 卡顿的教训，check-repo 有一条断言守着）：
-     · 本层只画自建节点（.codex-mp-*），外加宿主席位的**一条**隐藏规则；
-     · 一条选择器都不挂宿主的菜单 portal（body 直属的 role=menu），
-       也不改宿主菜单的 display / height / padding。
-
-   取值来源：
-     Codex = app.asar 模型选择器实现块 _Root_xwb5v_19 / _Track_xwb5v_212 /
-             _Tick_xwb5v_40 / _Thumb_xwb5v_12 的逐字值（复刻提示词第六节）；
-     宿主  = dsh-client-ui-model-selection 0.1.7-rc.2 的 ModelSelect.module.css
-             （触发器几何与 z-index 照抄，好让我们的触发器在工具条里与原生那一格同位同高）；
-     本皮肤 = 已有令牌（⑫ 菜单面板契约、⑰ 胶囊、同心圆角）。
-   ============================================================================ */
+/* codex-ink · L3 模型选择器组件（B 面：模型列表 + 推理等级功率轨），消费者 src/client/model-picker/component.js。
+   纪律（0.5.0 卡顿的教训，scripts/check.mjs 守着）：只画自建节点 .codex-mp-* 加席位的一条隐藏规则，
+   不挂宿主菜单 portal（body 直属的 role=menu），不改宿主菜单的 display / height / padding。
+   取值：Codex = app.asar 模型选择器实现块 _Root / _Track / _Tick / _Thumb 逐字值；
+         宿主 = dsh-client-ui-model-selection 的 ModelSelect.module.css（触发器几何、z-index，与原生那一格同位同高）。 */
 
 
 /* ── ① 席位顶替 ─────────────────────────────────────────────────────────
-   我们的触发器在席时，宿主那一格隐藏（仍在 React 树里，生命周期不动）。
-   直接子代 :has() 的失效范围只有席位自己的几个子节点，不是 0.5.0 那种挂在
-   portal 菜单上的长链。触发器一摘（设置里关掉、或组件卸载），宿主那一格立刻复原。 */
-[data-slot="conversation.input.model"]:has(> .codex-mp-trigger) > :not(.codex-mp-trigger) {
+   我们的触发器在席时宿主那一格隐藏（仍在 React 树里）。组件在把触发器放进席位的同一步给席位出口打
+   data-codex-ui-seated，撤走触发器时摘掉 —— 宿主换掉自己的子节点也不影响。
+   不用 :has(> .codex-mp-trigger)：它落在祖先位置，会话区每插入一个带 data-slot 的节点都会让
+   Chromium 重配整片子树，实测流式插入时样式重算 ~50ms → ~1000ms。 */
+[data-slot="conversation.input.model"][data-codex-ui-seated] > :not(.codex-mp-trigger) {
   display: none;
 }
 
@@ -132,15 +118,11 @@
   border-radius: var(--dsw-radius-menu);
   background: var(--dsw-alias-bg-layer-1);
   color: var(--dsw-alias-label-primary);
-  box-shadow: 0 8px 32px rgba(13, 13, 13, 0.13), 0 0 0 1px rgba(13, 13, 13, 0.04);
+  box-shadow: var(--dsw-codex-menu-shadow);
   font-size: 13px;
   line-height: 20px;
   transform-origin: bottom right;
   animation: codex-mp-enter 0.32s cubic-bezier(0.23, 1, 0.32, 1) 30ms both;
-}
-
-body[data-ds-dark-theme] .codex-mp-popover {
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(236, 236, 236, 0.05);
 }
 
 .codex-mp-popover[hidden] {

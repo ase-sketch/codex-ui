@@ -32,8 +32,6 @@ jobs:
         with:
           node-version: ${{ matrix.node }}
 
+      # 含产物与源码同源（等价于 build.mjs --check）；夹具与真 GUI 验收要宿主与浏览器，留在本机跑。
       - name: Repository checks
-        run: node scripts/check-repo.mjs
-
-      - name: Build is reproducible
-        run: node scripts/build.mjs --check
+        run: node scripts/check.mjs

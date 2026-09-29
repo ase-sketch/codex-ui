@@ -1,6 +1,6 @@
 {
   "name": "codex-ui",
-  "version": "0.6.4",
+  "version": "0.7.0",
   "private": true,
   "description": "DSH Web 的 Codex 化界面插件 · A Codex-style interface plugin for DSH Web",
   "license": "MIT",
@@ -16,11 +16,13 @@
   "engines": {
     "node": ">=22"
   },
+  "peerDependencies": {
+    "@deepseek-ai/schemastery": "~3.18.4"
+  },
   "scripts": {
     "build": "node scripts/build.mjs",
-    "check": "node scripts/check-repo.mjs",
-    "install:web": "node scripts/install-plugin.mjs --write",
-    "install:desktop": "node scripts/install-plugin.mjs --profile desktop --write"
+    "check": "node scripts/check.mjs",
+    "verify": "node scripts/verify.mjs"
   },
   "main": "index.js",
   "exports": {

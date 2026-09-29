@@ -1,97 +1,18 @@
-/* ============================================================================
-   codex-ink（墨白终端）· L3 侧栏面层
-   ----------------------------------------------------------------------------
-   源文件：skins/codex-ink/sidebar-surface.css
-   由 scripts/build.mjs 与 skin.css / patches.css 一起拼接，并作用域化到
-   html[data-codex-ui]。因此本文件写「裸选择器」——不要自己再加 html[...] 前缀。
+/* codex-ink · L3 侧栏滚动渐隐：宿主那条 24px 覆盖层让位，换成 Codex 的 40px mask 斜坡
+   （codex-app-initial.css 的 --sidebar-scroll-mask-image：最后 40px 内四段 1 → .878 → .522 → .180 → 0）。
+   为什么不用覆盖层：它刷的是不透明侧栏底色，侧栏开了半透明（设置页）就挡不住内容；mask 与底色是否透明无关。
+   与 Codex 的两处差别：footer-edge 取 100%（DSH 的滚动区与底栏是上下两块，滚动区底边就是底栏顶边）；
+   顶部不做渐入（DSH 的分组标题不在滚动容器里，照抄 8px 只会让第一行永远发虚）。
+   宿主没给滚动容器与覆盖层 data-*：从 sidebar.workspaces 出口往下按类名后缀 _list / _fade 取
+   （写成 div > 出口，特异性与旧的 div:has(> 出口) 相同；不用 :has，理由见 sidebar-align.css）。 */
 
-   组件：**侧栏滚动渐隐**（Codex 的 --sidebar-scroll-mask-image）。
-   验收：scripts/sidebar-surface-verify.mjs（夹具 A/B + 像素斜坡）。
-
-   ── 为什么是「面」而不是「样式」 ──────────────────────────────────────────
-   宿主对同一件事有自己的实现：滚动容器旁边放一个 24px 的绝对定位覆盖层，
-   底色是 linear-gradient(transparent → var(--dsw-specific-sidebar-fill))。
-   覆盖层成立的前提是**底色不透明**；本皮肤支持侧栏半透明
-   （src/override.js 的 SIDEBAR_ALPHA 会改写 --dsw-specific-sidebar-fill 的 alpha），
-   一旦半透明，覆盖层就只能糊上一层半透明的色，内容在它下面仍然看得见。
-   Codex 用的是 mask：直接对内容做 alpha 遮罩，与底色是否透明无关。
-   所以本层把宿主那条覆盖层让位，换成 Codex 的 mask 形状。
-
-   ── Codex 原文（codex-app-initial.css，_headerFadeMask_n9nga_1） ──────────
-   为免触发 scopeCss 的括号解析，这里用行式记法，不写花括号：
-
-     --edge-fade-distance                  calc(var(--spacing) * 10)
-     --sidebar-scroll-footer-edge          calc(100% - var(--sidebar-footer-height))
-     --sidebar-scroll-footer-fade-distance calc(var(--spacing) * 10)      → 40px
-     --sidebar-scroll-footer-fade-start    calc(footer-edge - fade-distance)
-     --sidebar-scroll-header-mask-distance var(--sidebar-scroll-header-fade-distance,
-                                             var(--sidebar-scroll-header-spacing, spacing*2))
-     --sidebar-scroll-mask-image           linear-gradient(to bottom,
-                                             transparent 0,
-                                             transparent <header-mask-start>,
-                                             black <header-mask-start + header-mask-distance>,
-                                             black <footer-fade-start>,
-                                             #000000e0 <footer-edge - spacing*6>,
-                                             #00000085 <footer-edge - spacing*3>,
-                                             #0000002e <footer-edge - spacing>,
-                                             transparent <footer-edge>,
-                                             transparent 100%)
-     -webkit-mask-image / mask-image       var(--sidebar-scroll-mask-image)
-     mask-size                             100% 100% ／ mask-repeat: no-repeat
-
-   --spacing 是 Tailwind 的 4px 刻度（Codex 根块 --padding-panel-base: spacing*3 = 12px
-   可反推）。于是底部那段斜坡在 40px 内四段收敛：1 → 0.878 → 0.522 → 0.180 → 0。
-
-   ── 两处按 DSH 现场的改写（逐条给依据） ──────────────────────────────────
-   ① footer-edge 取 100%，不取 calc(100% - footer 高度)。
-      Codex 的滚动视口与底部固定区**同层**（footer 压在滚动内容之上），
-      所以它的斜坡要在 footer 顶边就收敛完；DSH 的 regionArea 与 footArea
-      是 flex 列的**上下两块**，滚动容器底边本身就是 footArea 的顶边
-      （真 GUI 实测：regionArea y=154 h=690 → 底边 844；footArea y=844）。
-      所以 100% 就是 Codex 的 footer-edge，不需要再减。
-   ② 顶部不做渐入。
-      Codex 的 header-mask-start 默认 0、距离 8px，是给「吸顶分组标题」用的：
-      内容从标题下面滚过去时在顶部渐隐。DSH 的分组标题（工作区表头）不在滚动
-      容器里，是常驻的一行，滚动视口顶上没有任何覆盖层——照抄这 8px 只会让
-      列表第一行永远发虚。Codex 自己在 _stickySectionHeaders 上也把这段距离
-      收到 spacing/2（2px）。
-
-   ── 锚点纪律 ────────────────────────────────────────────────────────────
-   宿主没有给侧栏列表发任何语义锚点（真 GUI 实测：整个 [data-slot] 集合里
-   只有 sidebar.*、settings.*、conversation.* 这些席位出口，滚动容器与覆盖层
-   都没有 data-*）。本层因此分两类：
-     · 作用域根：div:has(> [data-slot="sidebar.workspaces"]) —— 语义锚点，
-       唯一命中 regionArea；沿用 sidebar-align.css 已经建立的用法。
-     · 容器/覆盖层：副作用后缀锚点 class 后缀 _list / _fade（选择器写作方括号
-       class 属性后缀匹配）。
-       后缀是 CSS-Modules 的**源类名**（哈希前缀每次构建会变：桌面壳 asar 是
-       n_2Q3W_/MnE-JG_，npm 全局安装是 hHd-Xa_/bhn1Oq_），所以后缀形式
-       跨版本反而比哈希全名稳。代价是 build.mjs 的 hash 锚点计数 +2，
-       与 patches.css / composer.css 已有的 29 处同一类，写在这里备查。
-   ============================================================================ */
-
-
-/* ── ① 宿主那条 24px 覆盖层让位 ───────────────────────────────────────────
-   它刷的是 --dsw-specific-sidebar-fill。半透明底时它挡不住内容，
-   且与下面的 mask 叠加会变成双渐隐（实测见验收脚本的 A/B 像素读数）。
-   只在本层作用域内摘除，区域外一律不动。 */
-
-div:has(> [data-slot="sidebar.workspaces"]) [class$="_fade"] {
+div > [data-slot="sidebar.workspaces"] [class$="_fade"] {
   display: none;
 }
 
-
-/* ── ② 滚动容器：Codex 的 mask 斜坡 ──────────────────────────────────────
-   两层 mask，默认 mask-composite: add 叠加：
-     第一层 = 斜坡本体，横向只铺到「列表右内边距」为止；
-     第二层 = 右侧那一条不透明遮罩。
-   为什么分两层：mask-image 配 mask-repeat: no-repeat 时，图像没铺到的区域
-   mask 值是 0（= 隐藏），所以只写第一层会把右侧 12px（宿主的滚动条槽，
-   由 --dsh-session-list-edge-inset / scrollbar-gutter: stable 预留）
-   整条抹掉。第二层把那一条补回不透明，宿主「渐隐不压滚动条」的既有取舍
-   就被保住了 —— 宿主的覆盖层也是 right: var(--dsh-session-list-edge-inset)。 */
-
-div:has(> [data-slot="sidebar.workspaces"]) [class$="_list"] {
+/* 两层 mask：第一层是斜坡，横向只铺到列表右内边距为止；第二层把右侧滚动条槽补回不透明
+   （no-repeat 的 mask 没铺到的地方 = 隐藏，只写第一层会把滚动条槽整条抹掉）。 */
+div > [data-slot="sidebar.workspaces"] [class$="_list"] {
   -webkit-mask-image:
     linear-gradient(
       to bottom,

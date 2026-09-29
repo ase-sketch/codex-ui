@@ -235,6 +235,61 @@ high → max 之后有一段往返窗口。在窗口内切回 high：
   （可复用的硬条件）、强调色是单一来源、两条关闭口子都在。
 - 顺带修了 `check-repo` 的一个夹具精度问题：keyframes 关键帧选择器的过滤只认单个 `0%`，
   逗号并列的 `0%, 100%` 会被当成 CSS 选择器误报。
+## 0.6.1 - 2026-09-28
+
+架构整理：功能不变，流式输出时明显更快，工程脚本收拢成三个入口。重构前后在真 `dsh web` 上把 14 个界面状态逐元素比对计算样式：
+除「修正」一节那一处有意的变化外，零差异。
+
+### 性能
+
+- **去掉落在祖先位置的 `:has()`**：侧栏对齐 9 条、侧栏渐隐 2 条、模型选择器席位 1 条；输入区 hero 那条改成固定深度的子代 `:has()`。
+  祖先位置的 `:has()` 让会话区每插入一个带 `data-slot` 的节点，Chromium 都要把受影响祖先下的整片子树重配一遍样式。
+  模拟流式输出（200 帧，每帧 30 个 span 加 1 个 `data-slot` 节点），5 次取中位：
+
+  | 形态 | 样式重算 | 整段耗时 |
+  |---|---|---|
+  | web | 4264 → 267 ms | 6.3 → 2.3 s |
+  | Windows 桌面壳（标题栏形态） | 9518 → 442 ms | 11.7 → 2.5 s |
+
+  桌面壳形态下皮肤相对裸宿主的额外重算已在噪声以内。新锚点的特异性与旧写法逐条相同，与宿主规则的先后关系不变。
+- **模型选择器席位**：原先靠 `席位:has(> .codex-mp-trigger) > :not(触发器)` 隐藏宿主那一格；现在触发器挂进席位时给**席位本身**
+  打 `data-codex-ui-seated`，撤走时一起摘掉。标记在席位出口上、不在宿主子节点上，React 换掉宿主子节点不影响它
+  （0.6.0 不打标记的顾虑因此不成立；夹具「宿主换掉自己的子节点后仍隐藏」照常通过）。
+- **观察器收窄**：模型选择器的 MutationObserver 只在属性变化、席位增删时全量扫描，其余只重同步被触及的席位与尚未落定的席位。
+  流式时脚本耗时 47.5 → 10.1 ms。
+
+### 修正
+
+- **深色下 `html` 底色从未生效**：`skin.css` 的 `:root:has(body[data-ds-dark-theme])` 被作用域化成了
+  `html[data-codex-ui] :root:has(…)`（后代选择器，永远匹配不到），深色时 `html` 一直是浅色的 `#fff`，只是平时被 `body` 盖住。
+  作用域器现在把以 `:root` 开头的复合选择器映射到根本身。这是本版唯一的可见差异：深色状态下 `html` 的底色 `#fff` → `#111111`
+  （本来就是这么设计的，见 README「设置页」最后一条）。它单独一个提交（249e6d1），要回退可以单独 revert。
+
+### 结构
+
+- 浏览器半拆成 `src/client/` 下的 ES 模块：`index.js`（`inject` 与 `apply`）、`stylesheet.js`、`settings.js`、`theme-preview.js`、
+  `settings-card.js`、`override.js`、`model-picker/{index,component,view}.js`、`constants.js`、`host.js`。
+  旧的字符串拼接模板 `src/client.template.js` 与 `src/build.mjs` 删除。加功能 = 一个模块导出 `installXxx(ctx)` + `apply` 里一行。
+- `scripts/build.mjs` 是唯一的构建：零依赖打包器把模块按依赖顺序打成 IIFE（相对导入 → 解构，宿主包 → loader 的 `require`），
+  样式作为虚拟模块 `codex-ui:theme.css` 内联；不认识的 import / export 写法直接报错。CSS 作用域器认得注释与字符串，产物去掉注释。
+- 删掉走不到的代码：设置卡的摘要分支、无 primitives 时的降级与主题回退表，`settings.css` 里对应的 `.cx-row--stack` 与回退样式。
+- 样式去重：重复的阴影与底色收成 4 个令牌（`--dsw-codex-ambient`、`--dsw-codex-menu-shadow`、`--dsw-codex-suggest-shadow`、
+  `--dsw-codex-suggest-fill`），去掉深色里与浅色同值的重复声明，注释瘦身；八份 CSS 2491 → 约 1820 行。
+
+### 工程
+
+- 脚本从 25 个文件 / 4886 行收成 15 个 / 3356 行，三个入口，公共部分在 `scripts/lib/`（host / cdp / checks）：
+  - `scripts/check.mjs`：原 `check-repo.mjs` + `audit-codex-ink.mjs`，60 项，CI 入口；新增 `client.js` 的 DSH 插件契约检查
+    （隔离执行一遍：loader id = 包名、`inject` 恰为三个必需服务、内嵌样式与 `theme.css` 一致）与 `peerDependencies` 检查。
+  - `scripts/verify.mjs` + `scripts/specs/`：原 8 个 `*-verify.mjs` 夹具，断言名与项数不变，共 195 项；`npm run verify`。
+  - `scripts/live/`：`gui.mjs`、`settings.mjs`（并入原 `theme-flash-probe.mjs`：主题切换逐帧无中间帧），新增 `parity.mjs`（改动前后逐元素计算样式对账）。
+- **安装改走 DSH 标准的 `dsh plugin add link:`**：删掉 `install-plugin.mjs`、`make-verify-profile.mjs`、`pack-host-asar.mjs`
+  （npm 装出来的 `node_modules` 直接就能当夹具宿主）、`make-preview.mjs` 与 `scripts/fixtures/`；`package.json` 去掉 `install:*`、
+  加 `verify`，并在 `peerDependencies` 声明 `@deepseek-ai/schemastery`（`index.js` 导入它，由宿主提供）。**迁移**见 README「安装」。
+- 夹具修正：旧 hero / composer-shadow 夹具在第一个 `content:""` 处截断了宿主会话根样式（6717 字符只读到 2672）；按全文读后阴影会被
+  滚动容器裁掉，夹具改成像真应用一样把留白放在滚动容器里，读数不变（边缘 224、衰减 42px）。0.6.0 上已跑不通的 A 面菜单夹具与
+  右栏夹具修好。settings 验收结束时重置全部覆盖，不再污染之后的比对。
+- 删掉 `docs/plan-settings-page.zh-CN.md`（已执行的旧计划，结论已在更新日志里）与 README 不再引用的验收截图。
 
 ## 0.6.0 - 2026-09-28
 

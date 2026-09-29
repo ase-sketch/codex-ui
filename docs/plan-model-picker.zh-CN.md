@@ -3,6 +3,9 @@
 > **状态：已执行（0.6.0，2026-09-28）。** 组件 `src/model-picker.js`，样式 `skins/codex-ink/model-picker.css`，
 > 设置卡开关 `modelPicker`（默认开）。验收：`scripts/power-rail-verify.mjs` 夹具 47/47、`check-repo` 3 条纯函数与样式纪律断言、
 > 真 GUI（`dsh web` 0.1.7-rc.2）`live-gui-probe.mjs` B 面 7 条 + `settings-page-verify.mjs` 开关 5 条。
+> 0.6.1 起：组件拆到 `src/client/model-picker/`（`index.js` / `component.js` / `view.js`），开关在 `src/client/settings-card.js`；
+> 夹具并入 `scripts/verify.mjs model-picker`，真 GUI 并入 `scripts/live/gui.mjs` 与 `scripts/live/settings.mjs`；
+> 席位隐藏改为给席位打 `data-codex-ui-seated` 标记（下文的直接子代 `:has()` 是 0.6.0 的做法）。下文保留 0.6.0 的原始计划。
 >
 > 注：606faea 曾以同名 0.6.0 提交过一次，但那次只提交了生成物 `client.js`，组件与样式的源文件、构建改动、
 > 体检与真 GUI 探针都没进仓库（`build.mjs --check` 在它上面必然过期），随即 revert。本次是完整重做。
