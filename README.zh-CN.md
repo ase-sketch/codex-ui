@@ -35,6 +35,7 @@ DSH Web 的界面元素按 Codex 复刻：窗口边缘的阴影与发丝线、�
 | ⑫ | 模型选择器 A 面（关掉 ⑳ 时的宿主原生菜单）：不透明白菜单（圆角 18px）、行高 28px、行圆角 13px（同心：18 − 内衬 5）、勾选列常驻、pending 转圈 |
 | ⑬ | 输入区顶栏消隐、面板按钮保留官方图标 |
 | ⑬c | 顶栏两格**放开**：注册在两个槽里的条目恢复渲染（子代理后代计数 / jobs roster / 预设徽标 / 在应用中打开）；视图页签仍隐去。条目本身条件渲染，所以常态顶栏与放开前一致 |
+| ⑬d | **「轨迹」视图的退出出口**：⑬ 隐去页签条之后，「轨迹」只剩入口没有出口 —— 工具卡展开后的 Inspect 走 `openView('trajectory', callId)`，回来的路却只有那条页签条。轨迹视图显示时在视图区左下角浮一个「← 对话」，点击就是**点那一格页签本身**（与用户手点同一条 `selectView` 回调，不绕宿主内部 API）。结构在 `src/client/trajectory-exit.js`，外观在 `skins/codex-ink/trajectory-exit.css`。「对话是哪一格」先按 `aria-selected` 标定、再按页签文字兜底，两者都没有就**不出按钮**；页签条哪天重新可见本层自动让位。任何一步与宿主结构不符都只 warn 并跳过 |
 | ⑭ | 输入卡：圆角（卡片 20/25，上栏条 = 卡片同值）、阴影、几何、工具条、hero 布局 |
 | ⑯ | 右栏展开选择组件：无描边无底色、行高 52px、图标 20px、快捷键灰底 pill |
 | ⑰ | composer 底部控件：加号默认无底色框、悬停才填；模型与权限控件同套悬停胶囊，且与加号一样是**全圆角**（Codex 参考图实测 R = h/2） |
@@ -122,10 +123,12 @@ node scripts/build.mjs --check   # 只比对产物是否过期，不落盘
 | `src/client/index.js` | 浏览器半入口：`inject` 与 `apply`，按序装配下面各项 |
 | `src/client/stylesheet.js` | 注入皮肤样式（`style[data-plugin]`，卸载与热更新时由宿主收走） |
 | `src/client/settings.js` `theme-preview.js` `settings-card.js` | 设置：覆盖层 `<style>`、主题本地预览、组合包页那张配置卡 |
+| `src/client/settings-modal.js` | ㉑ 设置模态框结构层：分组侧栏、搜索过滤、页头、属性优先的隐藏。只用宿主锚点 —— 宿主节点从不搬移或克隆，任一步与宿主结构不符都只 warn 并跳过 |
 | `src/client/override.js` | 覆盖层纯函数（无 DOM，`check.mjs` 直接单测） |
 | `src/client/model-picker/` | 模型选择器 B 面：`index.js` 等 `modelDirectories` 服务，`component.js` 是席位顶替、弹层与功率轨，`view.js` 是纯函数（`check.mjs` 单测） |
+| `src/client/trajectory-exit.js` | ⑬d 轨迹退出出口：浮一个「← 对话」，点击就是**点那一格页签本身**（与用户手点同一条 `selectView` 回调，不碰宿主内部）。「对话是哪一格」先按 `aria-selected` 标定、再按页签文字兜底，两者都没有就**不出按钮** |
 | `src/client/constants.js` `host.js` | 共用的名字、读宿主服务的小工具 |
-| `skins/codex-ink/` | 样式正本（skin.css / patches.css / model-picker.css / sidebar-align.css / sidebar-surface.css / window-shadow.css / composer.css / settings.css）与 Skin v2 清单 |
+| `skins/codex-ink/` | 样式正本（skin.css / patches.css / model-picker.css / sidebar-align.css / sidebar-surface.css / window-shadow.css / composer.css / settings.css / settings-modal.css / trajectory-exit.css）与 Skin v2 清单 |
 | `theme.css` `client.js` | 生成物，由 `scripts/build.mjs` 写出并提交（DSH 加载的是 `client.js`） |
 | `scripts/build.mjs` | 作用域化与打包 |
 | `scripts/check.mjs` | 不依赖宿主的仓库体检，CI 入口 |
@@ -133,7 +136,7 @@ node scripts/build.mjs --check   # 只比对产物是否过期，不落盘
 | `scripts/live/` | 真 GUI 验收：`gui.mjs`、`settings.mjs`，以及 `parity.mjs`（改动前后逐元素计算样式对账） |
 | `scripts/lib/` | 找宿主与浏览器（`host.mjs`）、CDP 驱动（`cdp.mjs`）、断言汇总（`checks.mjs`） |
 | `scripts/install-skin.mjs` | 皮肤加载器路径的同步器 |
-| `docs/` | 计划与决策留档 |
+| `docs/` | 计划、侦察报告与决策留档 —— 哪些是现行、哪些是历史记录见 `docs/README.md` |
 | `assets/reference/` | Codex 实机参考图 |
 | `assets/screenshots/` | README 用图 |
 | `.github/workflows/ci.yml` | CI |
@@ -142,10 +145,12 @@ node scripts/build.mjs --check   # 只比对产物是否过期，不落盘
 
 | 命令 | 覆盖 | 前置 |
 |---|---|---|
-| `npm run check` | 语法、JSON、清单与 `peerDependencies`、产物与源码同源、`client.js` 的 DSH 插件契约（隔离执行一遍）、作用域化、覆盖层与功率轨纯函数、36 组 WCAG、彩色白名单、编码、双语文档成对、机器专属路径，60 项 | 无 |
+| `npm run check` | 语法、JSON、清单与 `peerDependencies`、产物与源码同源、`client.js` 的 DSH 插件契约（隔离执行一遍）、作用域化、覆盖层与功率轨纯函数、36 组 WCAG、彩色白名单、编码、双语文档成对、机器专属路径、设置模态框契约（源文件 / 作用域化 / 宿主锚点优先 / 装配），67 项 | 无 |
 | `npm run verify` | 全部夹具，224 项（见下表） | 宿主包 + Chromium |
 | `node scripts/live/gui.mjs --url <带 token 的 URL>` | 真 GUI：阴影与两条分界线，加模型位 —— B 面开着时 14 项（顶替、几何、键盘改档写进宿主 store 并改回），关着时 10 项（A 面 pending 窗口；`--latency` 默认给往返加 800ms，本机往返 <60ms 采不到） | `dsh web` 实例 |
 | `node scripts/live/settings.mjs --url <…>` | 真 GUI：组合包页设置卡、9 行结构、默认不覆盖、开关与强调色写入、模型选择器关掉后宿主那一格复原、刷新后仍在、主题切换逐帧无中间帧；结束时全部重置，30 项 | 同上（profile 需启用插件管理） |
+| `node scripts/live/settings-modal.mjs --url <…>` | 真 GUI：㉑ 的结构层与视觉层一起验 —— 分组侧栏、「← 返回应用」行、搜索过滤、分组标题、宿主节点同一性（不搬移不克隆），以及宿主重写 `className` 后仍生效的属性优先隐藏。需要启用了插件管理的真 `dsh web`；`--explore` 只导结构不断言 | 同上 |
+| `node scripts/live/settings-sweep.mjs --url <…> --out <目录> --prefix c1` | 亮暗各扫一遍全部设置页，逐页截图并量版面健康度。**一页都没扫到就是硬失败**（非零退出）：空扫绝不能报 PASS | 同上 |
 | `node scripts/live/parity.mjs snap --url <…> --out <目录>`<br>`node scripts/live/parity.mjs diff <改前> <改后>` | 14 个界面状态逐元素存下全部计算样式再逐项比，0 差异时退出码 0；重构靠它证明外观没变。`--ignore` 可跳过指定属性或新加的 `--变量` | 同上 |
 
 夹具：`node scripts/verify.mjs [spec…]`，不写 spec 就全跑。

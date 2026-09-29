@@ -1,6 +1,6 @@
 # codex-ink
 
-Codex / ChatGPT direction. These stylesheets are the sources for the codex-ui plugin: `scripts/build.mjs` reads the eight
+Codex / ChatGPT direction. These stylesheets are the sources for the codex-ui plugin: `scripts/build.mjs` reads the ten
 CSS files here, scopes their selectors to `html[data-codex-ui]`, and writes `theme.css`, which is inlined into `client.js`;
 see the repository README for installing (`dsh plugin add link:`). The same directory satisfies the Skin v2 manifest format and can be picked
 up by a skin loader on its own.
@@ -18,6 +18,8 @@ up by a skin loader on its own.
 | `window-shadow.css` | L3 window edges | Conversation window 0.5px hairline plus a 24px ambient shadow; right panel keeps a hairline on its left edge only and bleeds upward; right divider handle hover gradient |
 | `composer.css` | L3 composer | Card geometry and surface, 44px editor area, 28px bottom control row, suggestion menu, hero layout. This layer is allowed to use `[class*=…]` suffix anchors |
 | `settings.css` | L3 settings | Layout of the configuration card on the plugin manager bundle page (`.cx-*`) |
+| `settings-modal.css` | L3 settings modal | The ㉑ full-page Codex pass over the settings dialog: grouped sidebar, search box, page header, white cards with hairlines, sticky save bars. Hiding is driven by a durable `data-*` attribute, so it survives the host rewriting `className`. Structure comes from `src/client/settings-modal.js` |
+| `trajectory-exit.css` | L3 trajectory exit | The ⑬d "← Chat" pill: floats at the lower-left of the view area while the Trajectory view is showing, giving that view an exit once ⑬ hides the tab strip. Structure comes from `src/client/trajectory-exit.js` |
 | `preview/` | Assets | Light and dark previews |
 
 ## Design rules

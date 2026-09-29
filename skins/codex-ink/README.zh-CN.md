@@ -1,6 +1,6 @@
 # codex-ink · 墨白终端
 
-代码方向为 Codex / ChatGPT。这是 codex-ui 插件的样式正本：`scripts/build.mjs` 读本目录的八份 CSS，把选择器作用域化到
+代码方向为 Codex / ChatGPT。这是 codex-ui 插件的样式正本：`scripts/build.mjs` 读本目录的十份 CSS，把选择器作用域化到
 `html[data-codex-ui]`，写出 `theme.css` 并内联进 `client.js`；安装见仓库 README（`dsh plugin add link:`）。同一份目录也满足
 Skin v2 清单格式，可由皮肤加载器单独收录。
 
@@ -17,6 +17,8 @@ Skin v2 清单格式，可由皮肤加载器单独收录。
 | `window-shadow.css` | L3 窗口边缘 | 会话窗口 0.5px 发丝线加 24px 环境影；右栏面板左沿只留 0.5px 发丝线、影只往上泄；右分界线拖拽柄悬停渐变 |
 | `composer.css` | L3 输入区 | 卡片几何与表面、编辑区 44px、底部控件行 28px、候选菜单、hero 布局。本层允许使用 `[class*=…]` 后缀锚点 |
 | `settings.css` | L3 设置页 | 插件管理 → 组合包页那张配置卡的版式（`.cx-*`） |
+| `settings-modal.css` | L3 设置模态框 | ㉑ 设置对话框的全页 Codex 化：分组侧栏、搜索框、页头、发丝线白卡、粘底保存条。隐藏态靠持久 `data-*` 属性兜底，宿主重写 `className` 也不失效。结构来自 `src/client/settings-modal.js` |
+| `trajectory-exit.css` | L3 轨迹退出出口 | ⑬d 的「← 对话」浮标：轨迹视图显示时浮在视图区左下角，让 ⑬ 隐去页签条之后该视图仍有出口。结构来自 `src/client/trajectory-exit.js` |
 | `preview/` | 资源 | 明暗预览图 |
 
 ## 设计规则

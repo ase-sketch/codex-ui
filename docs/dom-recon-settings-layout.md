@@ -1,5 +1,10 @@
 # 设置界面 DOM 侦察报告（codex-ui 改造基线）
 
+> **状态：历史留档 · 改造已落地（㉑ 设置模态框，0.7.0，2026-09-28）。**
+> 本文是动手前的侦察基线，侦察对象是另一份检出 `E:\codex-ui` @ `d590248`（当时 6 份样式、`client.js` 102393 B）。
+> 落地后的形态是：结构层 `src/client/settings-modal.js`、外观 `skins/codex-ink/settings-modal.css`（现行 `client.js` 177065 B）。
+> **文中的行号、体积与截图路径都已过期**，`docs/recon/` 的 8 张截图也未随仓库提交；selector 与尺寸读数仍按实测原样保留。
+
 > 侦察对象：`E:\codex-ui` @ `d590248699a6a2708035af639596ab33cd6caf91`，装在一个一次性验证 profile 上
 > 验证实例：`http://127.0.0.1:3199`，DSH `0.1.7-rc.2`，窗口 1440×960 @ DPR 1.5
 > 侦察方式：Python Playwright（headless Chromium）+ 直接 `Runtime.evaluate` 取证。**所有 selector 与尺寸均为实测值**，推断项单独标注。
