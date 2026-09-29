@@ -1824,3 +1824,421 @@ html[data-codex-ui] .cx-error {
   font-size: 11px;
   line-height: 16px;
 }
+
+html[data-codex-ui] {
+
+  --cx-sm-sidebar-w: 236px;
+  --cx-sm-row-h: 46px;
+  --cx-sm-panel-w: 760px;
+  --cx-sm-gutter: 24px;
+  --cx-sm-radius-card: var(--dsw-radius-m, 12px);
+
+  --cx-sm-radius-field: 10px;
+  --cx-sm-radius-pill: 999px;
+
+}
+
+@media (max-width: 900px) {
+  html[data-codex-ui] {
+    --cx-sm-sidebar-w: 196px;
+    --cx-sm-gutter: 14px;
+  }
+}
+
+html[data-codex-ui] div[data-cx-sm-panel] {
+  --cx-sm-surface-backdrop: var(--dsw-alias-bg-sidebar);
+
+  --cx-sm-card-edge: var(--dsw-alias-bg-sidebar);
+
+  --dsw-alias-bg-layer-2: var(--dsw-alias-bg-layer-1);
+  --dsw-alias-bg-layer-3: var(--dsw-alias-bg-layer-1);
+}
+
+html[data-codex-ui] body[data-ds-dark-theme] div[data-cx-sm-panel] {
+  --cx-sm-card-edge: var(--dsw-alias-border-l1);
+}
+
+html[data-codex-ui] div[data-cx-sm-panel] {
+  position: fixed;
+  inset: 0;
+  box-sizing: border-box;
+  width: auto;
+  height: auto;
+  max-width: none;
+  max-height: none;
+  border-radius: 0;
+  box-shadow: none;
+  overflow: hidden;
+
+  background: var(--cx-sm-surface-backdrop);
+}
+
+html[data-codex-ui][data-windows-titlebar] div[data-cx-sm-panel] {
+  padding-top: var(--dsh-windows-titlebar-height, 40px);
+}
+
+html[data-codex-ui][data-windows-titlebar] div[data-cx-sm-panel] button,
+html[data-codex-ui][data-windows-titlebar] div[data-cx-sm-panel] input,
+html[data-codex-ui][data-windows-titlebar] div[data-cx-sm-panel] a {
+  -webkit-app-region: no-drag;
+}
+
+html[data-codex-ui] div[data-cx-sm-panel] > nav {
+  position: relative;
+  box-sizing: border-box;
+  flex: 0 0 var(--cx-sm-sidebar-w);
+  width: var(--cx-sm-sidebar-w);
+  min-height: 0;
+  padding: 12px 12px 16px;
+  gap: 8px;
+  background: none;
+  overflow: hidden;
+}
+
+html[data-codex-ui] div[data-cx-sm-panel] > nav > div:not([data-codex-ui-injected]):not(:has(> button)) {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+html[data-codex-ui] div[data-cx-sm-panel] > nav > div:has(> button),
+html[data-codex-ui] div[data-cx-sm-panel] > nav > div:last-child {
+  box-sizing: border-box;
+  min-height: 0;
+  flex: 1 1 auto;
+  gap: 2px;
+}
+
+html[data-codex-ui] div[data-cx-sm-panel] > nav > div:has(> button) > button {
+  box-sizing: border-box;
+  width: 100%;
+  min-height: 32px;
+  padding: 6px 10px;
+  gap: 9px;
+  border: 0;
+  border-radius: var(--dsw-radius-s, 8px);
+  background: none;
+  color: var(--dsw-alias-label-secondary);
+  font-size: 14px;
+  line-height: 20px;
+  text-align: left;
+}
+
+html[data-codex-ui] div[data-cx-sm-panel] > nav > div:has(> button) > button:hover {
+  background: var(--dsw-alias-interactive-bg-hover);
+  color: var(--dsw-alias-label-primary);
+}
+
+html[data-codex-ui] div[data-cx-sm-panel] > nav > div:has(> button) > button[aria-current="true"] {
+  background: var(--dsw-alias-interactive-bg-active);
+  color: var(--dsw-alias-label-primary);
+  font-weight: 500;
+}
+
+html[data-codex-ui] div[data-cx-sm-panel] > nav > div:has(> button) > button[aria-current="true"]:hover {
+  background: var(--dsw-alias-interactive-bg-active);
+}
+
+html[data-codex-ui] div[data-cx-sm-panel] > nav > div:has(> button) > button:focus-visible {
+  outline-offset: -2px;
+}
+
+html[data-codex-ui] div[data-cx-sm-panel] > nav > div:has(> button) > button svg {
+  width: 16px;
+  height: 16px;
+  flex: 0 0 auto;
+  stroke-width: 1.4;
+  opacity: 0.72;
+}
+
+html[data-codex-ui] div[data-cx-sm-panel] > nav > div:has(> button) > button:hover svg,
+html[data-codex-ui] div[data-cx-sm-panel] > nav > div:has(> button) > button[aria-current="true"] svg {
+  opacity: 1;
+}
+
+html[data-codex-ui] .cx-sm-group {
+  margin: 12px 0 4px;
+  padding: 0 10px;
+  color: var(--dsw-alias-label-caption);
+  font-size: 12px;
+  line-height: 18px;
+  font-weight: 500;
+  letter-spacing: 0.01em;
+  user-select: none;
+}
+
+html[data-codex-ui] :lang(zh) .cx-sm-group {
+  letter-spacing: 0;
+}
+
+html[data-codex-ui] .cx-sm-search + .cx-sm-group {
+  margin-top: 4px;
+}
+
+html[data-codex-ui] .cx-sm-back {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  box-sizing: border-box;
+  width: fit-content;
+  min-height: 28px;
+  padding: 2px 6px 2px 4px;
+  border-radius: var(--dsw-radius-s, 8px);
+  color: var(--dsw-alias-label-secondary);
+  font-size: 13px;
+  line-height: 20px;
+  cursor: pointer;
+  user-select: none;
+}
+
+html[data-codex-ui] .cx-sm-back:hover {
+  background: var(--dsw-alias-interactive-bg-hover);
+  color: var(--dsw-alias-label-primary);
+}
+
+html[data-codex-ui] .cx-sm-back svg {
+  width: 14px;
+  height: 14px;
+  flex: 0 0 auto;
+  stroke-width: 1.6;
+  opacity: 0.8;
+}
+
+html[data-codex-ui] .cx-sm-search {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  box-sizing: border-box;
+  width: 100%;
+  height: 32px;
+
+  padding: 0 14px;
+  border: 0;
+  border-radius: var(--cx-sm-radius-pill);
+  background: var(--dsw-alias-bg-layer-1);
+  color: var(--dsw-alias-label-tertiary);
+}
+
+html[data-codex-ui] .cx-sm-search:focus-within {
+  box-shadow: inset 0 0 0 1px var(--dsw-alias-border-l3);
+}
+
+html[data-codex-ui] .cx-sm-search svg {
+  width: 14px;
+  height: 14px;
+  flex: 0 0 auto;
+  stroke-width: 1.6;
+  opacity: 0.7;
+}
+
+html[data-codex-ui] .cx-sm-search input {
+  box-sizing: border-box;
+  flex: 1 1 auto;
+  min-width: 0;
+  height: 100%;
+  padding: 0;
+  border: 0;
+  outline: 0;
+  background: none;
+  color: var(--dsw-alias-label-primary);
+  font: inherit;
+  font-size: 13px;
+  line-height: 20px;
+}
+
+html[data-codex-ui] .cx-sm-search input::placeholder {
+  color: var(--dsw-alias-label-caption);
+}
+
+html[data-codex-ui] div[data-cx-sm-panel] > div:last-child {
+  box-sizing: border-box;
+  flex: 1 1 auto;
+  min-width: 0;
+  min-height: 0;
+
+  background: var(--dsw-alias-bg-base);
+
+  overflow: hidden;
+}
+
+html[data-codex-ui] div[data-cx-sm-panel] > div:last-child > div:first-child {
+  box-sizing: border-box;
+  flex: 0 0 auto;
+  align-items: center;
+  min-height: 52px;
+  padding: 12px var(--cx-sm-gutter) 8px;
+}
+
+html[data-codex-ui] div[data-cx-sm-panel] > div:last-child > div:last-child {
+  box-sizing: border-box;
+  flex: 1 1 auto;
+  min-height: 0;
+  padding: 2px var(--cx-sm-gutter) 0;
+}
+
+html[data-codex-ui] div[data-cx-sm-panel] > div:last-child > div:last-child [data-slot="settings.section"] > * {
+  box-sizing: border-box;
+  width: 100%;
+  max-width: var(--cx-sm-panel-w);
+  margin-left: auto;
+  margin-right: auto;
+
+  padding-bottom: 40px;
+}
+
+html[data-codex-ui] div[data-cx-sm-panel] [data-slot="settings.action"] button {
+  box-sizing: border-box;
+  height: 32px;
+  padding: 0 12px;
+
+  white-space: nowrap;
+  border: 0.5px solid var(--dsw-alias-border-l2);
+  border-radius: var(--dsw-radius-s, 8px);
+  background: var(--dsw-alias-button-elevated-fill);
+  color: var(--dsw-alias-label-primary);
+  font-size: 13px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+html[data-codex-ui] div[data-cx-sm-panel] [data-slot="settings.action"] button:hover {
+  background: var(--dsw-alias-interactive-bg-hover);
+  border-color: var(--dsw-alias-border-l3);
+}
+
+html[data-codex-ui] div[data-cx-sm-panel] button:has([data-slot="settings.close"]) {
+  display: none;
+}
+
+html[data-codex-ui] .cx-sm-pagehead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  box-sizing: border-box;
+  width: 100%;
+  min-height: 36px;
+  margin: 0 0 12px;
+}
+
+html[data-codex-ui] .cx-sm-title,
+html[data-codex-ui] .cx-sm-pagehead > h1,
+html[data-codex-ui] .cx-sm-pagehead > h2 {
+  margin: 0;
+  padding: 0;
+  color: var(--dsw-alias-label-primary);
+
+  font-size: 20px;
+  line-height: 26px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+
+html[data-codex-ui] :lang(zh) .cx-sm-title,
+html[data-codex-ui] :lang(zh) .cx-sm-pagehead > h1,
+html[data-codex-ui] :lang(zh) .cx-sm-pagehead > h2 {
+  letter-spacing: 0;
+}
+
+html[data-codex-ui] div[data-cx-sm-panel] [data-slot="settings.section"] > * {
+  box-sizing: border-box;
+  width: 100%;
+  gap: 0;
+  padding-top: 2px;
+}
+
+html[data-codex-ui] div[data-cx-sm-panel] [data-slot="settings.general.item"] > * {
+  box-sizing: border-box;
+  min-height: var(--cx-sm-row-h);
+  padding: 8px 16px;
+  border-style: solid;
+  border-color: var(--cx-sm-card-edge);
+  border-width: 0.5px 0;
+
+  background: var(--dsw-alias-bg-layer-1);
+  transition: background-color var(--dsw-motion-fast, 150ms) var(--dsw-ease, ease);
+}
+
+html[data-codex-ui] div[data-cx-sm-panel] [data-slot="settings.section"] > :first-child > [data-slot="settings.general.item"] > *:first-child {
+  border-top-width: 0.5px;
+  border-left-width: 0.5px;
+  border-right-width: 0.5px;
+  border-radius: var(--cx-sm-radius-card) var(--cx-sm-radius-card) 0 0;
+}
+
+html[data-codex-ui] div[data-cx-sm-panel] [data-slot="settings.section"] > :first-child > [data-slot="settings.general.item"] > *:last-child {
+  border-bottom-width: 0.5px;
+  border-left-width: 0.5px;
+  border-right-width: 0.5px;
+  border-radius: 0 0 var(--cx-sm-radius-card) var(--cx-sm-radius-card);
+}
+
+     html[data-codex-ui] .<hash>_card { background: var(--dsw-alias-settings-card-fill) }
+     html[data-codex-ui] .<hash>_cardActive { background: var(--dsw-alias-bg-module-platform) }
+   html[data-codex-ui] —— 它们**吃令牌**，不是硬编码灰。该令牌由宿主主题包 dsh-client-ui-theme 在
+   **body** 上声明为 var(--dsw-alias-settings-card-fill: var(--dsw-alias-bg-layer-2))；
+   本机 app.asar 全文扫描里，该令牌的**声明**只有这一处，另 4 处都是 background 消费点。
+   皮肤把它同名重定义成 layer-1（skin.css：html[data-codex-ui],
+html[data-codex-ui] body），
+   特异性与顺序都压过宿主的 body 声明 —— 白卡 / 深色 #212121 因此**自动生效**。
+
+   旧注释怎么错的（一并记下，免得后人再被同一个坑骗）：
+   旧文写「#f3f3f3 硬编码、换色试验证明不走任何令牌」。那个换色试验是在 §4.3 规则**还在**的
+   前提下做的 —— §4.3 以特异性 (0,3,3) 压过宿主的 (0,1,0)，无论令牌被改成什么，卡都会保持
+   §4.3 写死的 layer-1，于是「0 个元素跟随」是这条规则生效的**必然结果**，推不出「卡不读令牌」。
+   定案靠的是宿主源码里那两条 background 声明，不是那个试验。
+   （二审结论见 docs/recon/second-pass-review.md 的 M1/M2。）
+
+   **删除理由**（三条，任一条都够）：
+     ① 同值重复：皮肤已把该令牌定成 layer-1，§1 的 layer-2/3→layer-1 重定向同样落上去，
+        这条规则写的是**同一个值**，三层路径同值，将来改一处根本无法判断谁在生效；
+     ② 覆盖面无意义：它靠特异性 (0,3,3) 压过宿主 .rowCard/.card 的 (0,1,0)，
+        而值相同 —— 赢了也没有任何视觉差异；
+     ③ **会漂**：[class$="_card"] 匹配的是「整条 class 属性以该后缀结尾」，
+        覆盖面随宿主状态类的书写顺序漂移。实测 Agent 预设的选中卡是
+        class="rtSEdW_card rtSEdW_cardActive"（以 _cardActive 结尾）→ 今天**不命中**、
+        靠宿主自己的 .cardActive {background: var(--dsw-alias-bg-module-platform)} html[data-codex-ui] 保住选中底色，
+        纯属侥幸；一旦宿主把状态类挪到前面，选中卡会被压成 layer-1，**选中态视觉当场丢失，
+        而没有任何断言会红**。删除即消除这条会随宿主改版静默劣化的路径。
+
+   删除后的着色机制**唯一**：--dsw-alias-settings-card-fill（skin.css 定义）
+   → 未选中卡 = layer-1（浅 #ffffff / 深 #212121）。选中卡保持宿主自己的
+   bg-module-platform（浅 #f9f9f9）—— 与未选中卡不同色，选中态仍可区分。
+   这条路径由 scripts/settings-modal-verify.mjs 的两条集成断言把守
+   （未选中卡 == var(--dsw-alias-bg-layer-1) 的计算值；选中卡背景 ≠ 未选中卡背景）。 */
+
+html[data-codex-ui] div[data-cx-sm-panel] [data-slot="settings.section"] > :first-child > [data-slot="settings.general.item"] > *:not(:first-child):not(:last-child) {
+  border-radius: 0;
+}
+
+html[data-codex-ui] div[data-cx-sm-panel] [data-slot="settings.general.item"] > *:hover {
+  background: var(--dsw-alias-interactive-bg-hover);
+}
+
+html[data-codex-ui] div[data-cx-sm-panel] [data-slot="settings.general.item"] > * > :first-child > div:not(:first-child) {
+  color: var(--dsw-alias-label-caption);
+}
+
+html[data-codex-ui] [data-cx-sm-hidden],
+html[data-codex-ui] .cx-sm-hidden {
+  display: none !important;
+}
+
+html[data-codex-ui] .cx-sm-empty {
+  box-sizing: border-box;
+  padding: 32px 8px;
+  color: var(--dsw-alias-label-tertiary);
+  font-size: 13px;
+  line-height: 20px;
+  text-align: center;
+}
+
+html[data-codex-ui] [data-codex-ui-injected="settings-modal"],
+html[data-codex-ui] [data-codex-ui-injected="settings-modal"] * {
+  box-sizing: border-box;
+}

@@ -307,7 +307,30 @@ h4{margin:0 0 10px 24px;font:600 12px/18px ui-monospace,Consolas,monospace;color
   t.check('右侧工具条目可见（顶栏两格已放开）', hdr.header.utilityItem === true);
   t.check('页签仍隐去', hdr.header.tabs === false);
   t.check('右上角按钮仍在', hdr.header.corner === true);
-  t.check('徽标配色 = 本皮肤 --dsw-alias-label-tertiary', hdr.presetLabel.color === 'rgb(118, 118, 118)', hdr.presetLabel.color);
+  /* 期望值不硬编码 rgb：令牌在重锚后是 rgba 字面量，浏览器算出来的徽标色是它
+     在顶栏底色上的合成结果。临时元素走一遍 var() 让浏览器自己算，再与徽标比。 */
+  const tertiaryExpected = await page.evaluate(() => {
+    const el = document.createElement('span');
+    el.style.color = 'var(--dsw-alias-label-tertiary)';
+    document.body.appendChild(el);
+    const c = getComputedStyle(el).color;
+    el.remove();
+    return c;
+  });
+  t.log('TERTIARY expected ' + tertiaryExpected);
+  /* 徽标圆角同样**不硬编码**：上游 v0.3.0 已把 .SVAs4q_label 的字面量 6px 换成
+     var(--dsw-radius-xs)（宿主自己在 dsh-client-ui-theme 里声明该令牌为 4px），皮肤也定义同名令牌。
+     写死 6px 会同时冤枉宿主与皮肤 —— 改成「徽标圆角 == 该令牌在本页面的计算值」，临时元素法同配色那条。 */
+  const badgeRadiusExpected = await page.evaluate(() => {
+    const el = document.createElement('span');
+    el.style.borderRadius = 'var(--dsw-radius-xs)';
+    document.body.appendChild(el);
+    const c = getComputedStyle(el).borderTopLeftRadius;
+    el.remove();
+    return c;
+  });
+  t.log('BADGE radius expected ' + badgeRadiusExpected);
+  t.check('徽标配色 = 本皮肤 --dsw-alias-label-tertiary', hdr.presetLabel.color === tertiaryExpected, hdr.presetLabel.color + ' vs ' + tertiaryExpected);
   t.check('徽标圆角保持宿主原值 ' + labelRadius + '（未被皮肤改写）', hdr.presetLabel.radius === labelRadius, hdr.presetLabel.radius);
   t.check('徽标高 22px（官方控件高度，未改写）', hdr.presetLabel.h === 22, hdr.presetLabel.h);
   t.check('徽标不填底色（令牌未定义即透明，不另配色）', hdr.presetLabel.bg === 'rgba(0, 0, 0, 0)', hdr.presetLabel.bg);
